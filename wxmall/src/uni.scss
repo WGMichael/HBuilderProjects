@@ -1,0 +1,66 @@
+/**
+ * uni-app 内置的常用样式变量
+ * 全局主题：特产小店（品牌红）
+ */
+
+/* ==========================================================================
+ * uni-ui / uni-id-pages 组件依赖的变量（仅列出组件实际引用到的，勿随意增删）
+ * 说明：uni.scss 会被自动注入到每个组件样式顶部，故这些裸变量必须在此定义。
+ * ========================================================================== */
+
+/* 主题色（主色统一品牌红） */
+$uni-primary: #e64340;
+$uni-color-primary: #e64340;
+$uni-success: #18bc37;
+$uni-warning: #f3a73f;
+$uni-error: #e43d33;
+$uni-color-error: #e43d33;
+$uni-info: #8f939c;
+
+/* 背景 / 边框 */
+$uni-bg-color: #ffffff;
+$uni-bg-color-hover: #f1f1f1;
+$uni-border-1: #f0f0f0;
+$uni-border-color: #c8c7cc;
+
+/* 文本 */
+$uni-text-color-grey: #999;
+
+/* 字号 */
+$uni-font-size-sm: 12px;
+$uni-font-size-base: 14px;
+$uni-font-size-lg: 16px;
+
+/* 图标尺寸 */
+$uni-img-size-sm: 20px;
+$uni-img-size-base: 26px;
+$uni-img-size-lg: 40px;
+
+/* 间距 */
+$uni-spacing-row-sm: 5px;
+$uni-spacing-row-base: 10px;
+$uni-spacing-row-lg: 15px;
+$uni-spacing-col-lg: 12px;
+
+/* ==========================================================================
+ * 项目自有主题变量（页面样式在用，保持不变）
+ * ========================================================================== */
+
+/* 品牌色 */
+$brand: #e64340;
+$brand-dark: #c73631;
+$brand-light: #fff3f3;
+
+/* 文本色 */
+$text-main: #1a1a1a;
+$text-sub: #8a8f99;
+$text-price: #e64340;
+
+/* 背景 / 分割线 */
+$bg-page: #f4f5f7;
+$bg-card: #ffffff;
+$border-line: #eceef1;
+
+/* 常用圆角 / 间距 */
+$radius-card: 16rpx;
+$gap: 20rpx;

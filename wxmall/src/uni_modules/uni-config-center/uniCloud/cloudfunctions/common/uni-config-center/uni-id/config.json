@@ -1,0 +1,48 @@
+{
+  "passwordSecret": "1312ea1dd50a7f5b9e6dc389d5e71974d24ff74d3c90186b",
+  "passwordStrength": "medium",
+  "tokenSecret": "97fb0c90237c83f4751750fdf7bf0cd94237f5c3a308ffd9",
+  "tokenExpiresIn": 259200,
+  "tokenExpiresThreshold": 43200,
+  "passwordErrorLimit": 6,
+  "passwordErrorRetryTime": 3600,
+  "autoSetInviteCode": false,
+  "forceInviteCode": false,
+  "app": {
+    "tokenExpiresIn": 2592000
+  },
+  "mp-weixin": {
+    "oauth": {
+      "weixin": {
+        "appid": "",
+        "appsecret": ""
+      }
+    }
+  },
+  "h5-weixin": {
+    "oauth": {
+      "weixin-h5": {
+        "appid": "",
+        "appsecret": ""
+      }
+    }
+  },
+  "service": {
+    "sms": {
+      "name": "特产小店",
+      "codeExpiresIn": 300,
+      "smsKey": "",
+      "smsSecret": "",
+      "scene": {
+        "bind-mobile-by-sms": {
+          "templateId": "",
+          "codeExpiresIn": 300
+        },
+        "login-by-sms": {
+          "templateId": "",
+          "codeExpiresIn": 300
+        }
+      }
+    }
+  }
+}

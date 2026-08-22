@@ -1,0 +1,57 @@
+// 文档教程: https://uniapp.dcloud.net.cn/uniCloud/schema
+{
+	"bsonType": "object",
+	"required": ["name"],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": true
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"name": {
+			"title": "姓名",
+			"bsonType": "string"
+		},
+		"pwd": {
+			"title": "密码",
+			"defaultValue":"888",
+			"bsonType": "string"
+		},
+		"openid": {
+			"title": "openid",
+			"bsonType": "string"
+		},
+		"exp": {
+			"title": "exp",
+			"forceDefaultValue":0,
+			"bsonType": "double"
+		},
+		"logo": {
+			"title": "logo",
+			"defaultValue":"",
+			"bsonType": "string"
+		},
+		"createtime" :{
+			"title": "创建时间",
+			"bsonType": "double"
+		},
+		"ip" :{
+			"title": "IP地址",
+			"bsonType": "string",
+			"forceDefaultValue":{
+				"$env": "clientIP"
+			}
+		},
+		"avatar" : {
+			"title": "头像",
+			"bsonType": "array",
+			"arrayType": "file",
+			"fileMediaType": "image", // 可选值 all|image|video 默认值为all,表示所有文件，image表示图片类型文件，video表示视频类型文件
+			"fileExtName": "jpg,png" // 扩展名过滤，多个用 , 分割
+		}
+	}
+}

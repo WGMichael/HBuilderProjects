@@ -1,0 +1,9 @@
+{
+  "name": "shop",
+  "version": "1.0.0",
+  "description": "特产小店商城云对象:商品/分类/轮播只读接口 + 收货地址 CRUD",
+  "main": "index.obj.js",
+  "dependencies": {
+    "uni-id-common": "file:../../../src/uni_modules/uni-id-common/uniCloud/cloudfunctions/common/uni-id-common"
+  }
+}

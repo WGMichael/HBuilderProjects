@@ -1,0 +1,114 @@
+{
+  "tc-categories": {
+    "data": [
+      { "id": 1, "name": "水果", "icon": "🍎", "sort": 1 },
+      { "id": 2, "name": "坚果", "icon": "🌰", "sort": 2 },
+      { "id": 3, "name": "零食", "icon": "🍬", "sort": 3 },
+      { "id": 4, "name": "礼盒", "icon": "🎁", "sort": 4 },
+      { "id": 5, "name": "蜂蜜", "icon": "🍯", "sort": 5 }
+    ],
+    "index": [
+      { "IndexName": "id", "MgoKeySchema": { "MgoIndexKeys": [{ "Name": "id", "Direction": "1" }], "MgoIsUnique": true } }
+    ]
+  },
+  "tc-banners": {
+    "data": [
+      { "id": 1, "title": "山货直供 · 顺丰包邮", "sub": "老家现摘现做,一件也发货", "image": "", "link": "", "sort": 1, "enable": true },
+      { "id": 2, "title": "新到土蜂蜜", "sub": "深山一年一割,天然无添加", "image": "", "link": "", "sort": 2, "enable": true }
+    ],
+    "index": [
+      { "IndexName": "id", "MgoKeySchema": { "MgoIndexKeys": [{ "Name": "id", "Direction": "1" }], "MgoIsUnique": true } }
+    ]
+  },
+  "tc-products": {
+    "data": [
+      {
+        "id": 101,
+        "title": "若羌灰枣 500g 新疆自然晾晒",
+        "subtitle": "甜度高 · 无添加",
+        "categoryId": 1,
+        "cover": "🌰",
+        "images": ["🫐", "🌰", "🏜️"],
+        "price": 39,
+        "oldPrice": 59,
+        "sold": 532,
+        "stock": 999,
+        "rating": 5,
+        "tags": ["顺丰包邮", "7天退换"],
+        "desc": "新疆若羌自然晾晒,颗粒饱满,甜度高,无添加。",
+        "detailImages": ["📷 商品实拍详情图", "📷 产地 / 包装图"],
+        "skus": [
+          { "id": 1011, "name": "500g", "price": 39, "stock": 500 },
+          { "id": 1012, "name": "1000g", "price": 72, "stock": 300 },
+          { "id": 1013, "name": "礼盒装", "price": 128, "stock": 100 }
+        ],
+        "onSale": true
+      },
+      {
+        "id": 102,
+        "title": "纸皮核桃 500g 薄皮易剥",
+        "subtitle": "当年新货",
+        "categoryId": 2,
+        "cover": "🥜",
+        "images": ["🥜", "🌰"],
+        "price": 59,
+        "sold": 210,
+        "stock": 800,
+        "rating": 5,
+        "tags": ["顺丰包邮"],
+        "desc": "薄皮易剥,仁大饱满,当年新货。",
+        "detailImages": ["📷 商品实拍详情图"],
+        "skus": [
+          { "id": 1021, "name": "500g", "price": 59, "stock": 400 },
+          { "id": 1022, "name": "1000g", "price": 108, "stock": 400 }
+        ],
+        "onSale": true
+      },
+      {
+        "id": 103,
+        "title": "吐鲁番葡萄干 300g 无核",
+        "subtitle": "颗颗爆汁",
+        "categoryId": 3,
+        "cover": "🍇",
+        "images": ["🍇", "🏜️"],
+        "price": 29,
+        "oldPrice": 39,
+        "sold": 156,
+        "stock": 600,
+        "rating": 5,
+        "tags": ["无核", "包邮"],
+        "desc": "吐鲁番无核葡萄干,自然晾晒,颗颗饱满。",
+        "detailImages": ["📷 商品实拍详情图"],
+        "skus": [
+          { "id": 1031, "name": "300g", "price": 29, "stock": 300 },
+          { "id": 1032, "name": "600g", "price": 55, "stock": 300 }
+        ],
+        "onSale": true
+      },
+      {
+        "id": 104,
+        "title": "农家土蜂蜜 500g 现摘现装",
+        "subtitle": "深山一年一割",
+        "categoryId": 5,
+        "cover": "🍯",
+        "images": ["🍯", "🐝", "🏞️"],
+        "price": 88,
+        "sold": 97,
+        "stock": 200,
+        "rating": 5,
+        "tags": ["顺丰包邮", "7天退换"],
+        "desc": "深山养蜂场,一年一割,未经加工浓缩。冲水温不超过 40℃,风味更佳。",
+        "detailImages": ["📷 商品实拍详情图", "📷 产地 / 包装图"],
+        "skus": [
+          { "id": 1041, "name": "500g 瓶装", "price": 88, "stock": 120 },
+          { "id": 1042, "name": "1kg 礼盒装", "price": 158, "stock": 80 }
+        ],
+        "onSale": true
+      }
+    ],
+    "index": [
+      { "IndexName": "id", "MgoKeySchema": { "MgoIndexKeys": [{ "Name": "id", "Direction": "1" }], "MgoIsUnique": true } },
+      { "IndexName": "categoryId", "MgoKeySchema": { "MgoIndexKeys": [{ "Name": "categoryId", "Direction": "1" }], "MgoIsUnique": false } }
+    ]
+  }
+}

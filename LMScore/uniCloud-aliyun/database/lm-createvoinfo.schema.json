@@ -1,0 +1,150 @@
+// 文档教程: https://uniapp.dcloud.net.cn/uniCloud/schema
+{
+	"bsonType": "object",
+	"required": [],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": true
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"rootvoid":{
+			"bsonType": "string",
+			"defaultValue": ""
+		},
+		"title":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "string"
+			}
+		},
+		"status": {
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "int" // Vo_StatusType
+			}
+		},
+		"groupid":{
+			"bsonType": "string",
+			"foreignKey": ""
+		},
+		"issystem":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "bool"
+			}
+		},
+		"issingle":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "bool"
+			}
+		},
+		"creatorid":{
+			"bsonType": "string",
+			"foreignKey": "lm-userinfo._id"
+		},
+		"voobjcount":{
+			"bsonType": "int",
+			"defaultValue":1
+		},
+		"istotalresult":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "bool" // 是否总ju结算
+			}
+		},
+		"create_cost":{
+			"bsonType": "double",
+			"defaultValue":"0"
+		},
+		"allexp_gap":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "double" // 差额
+			}
+		},
+		"min_vote":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "double"
+			}
+		},
+		"max_vote":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "double"
+			}
+		},
+		"endtime":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "double"
+			}
+		},
+		"setlocktime":{
+			"bsonType": "array",
+			"items": {
+			    "bsonType": "double"
+			}
+		},
+		"subtitles":{
+			"bsonType": "array",
+			"items": {
+				"bsonType": "array",
+				"items": {
+				    "bsonType": "string"
+				}
+			}
+		},
+		"rates":{
+			"bsonType": "array",
+			"items": {
+				"bsonType": "array",
+				"items": {
+				    "bsonType": "double"
+				}
+			}
+		},
+		"user_vote_times":{
+			"bsonType": "array",
+			"items": {
+				"bsonType": "array",
+				"items": {
+				    "bsonType": "int"   //投票人次
+				}
+			}
+		},
+		"cur_expins":{
+			"bsonType": "array",
+			"items": {
+				"bsonType": "array",
+				"items": {
+				    "bsonType": "double"
+				}
+			}
+		},
+		"lock_expins":{
+			"bsonType": "array",
+			"items": {
+				"bsonType": "array",
+				"items": {
+				    "bsonType": "double"   //锁定投入
+				}
+			}
+		},
+		"createtime":{
+			"bsonType" : "double"
+		},
+		"creatorip":{
+			"bsonType" : "timestamp",
+			"forceDefaultValue" :{
+				"$env": "clientIP"
+			}
+		}
+	}
+}

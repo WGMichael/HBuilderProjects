@@ -1,0 +1,42 @@
+{
+  // 商品分类表
+  // 字段与 src/types/index.ts 的 Category 对齐,小程序端只读,后台(uni-admin)可增删改
+  "bsonType": "object",
+  "required": ["id", "name"],
+  "permission": {
+    "read": true,
+    "create": "'admin' in auth.role",
+    "update": "'admin' in auth.role",
+    "delete": "'admin' in auth.role"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID,系统自动生成"
+    },
+    "id": {
+      "bsonType": "int",
+      "title": "分类ID",
+      "description": "业务分类ID(前端使用的数字ID)",
+      "label": "分类ID"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "分类名称",
+      "label": "分类名称",
+      "trim": "both"
+    },
+    "icon": {
+      "bsonType": "string",
+      "title": "图标",
+      "description": "emoji 或图标 URL",
+      "label": "图标"
+    },
+    "sort": {
+      "bsonType": "int",
+      "title": "排序",
+      "description": "数字越小越靠前",
+      "label": "排序",
+      "defaultValue": 0
+    }
+  }
+}

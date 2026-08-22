@@ -1,0 +1,37 @@
+{
+  // 商品标签库（预设标签,供后台快捷选择;选中后标签名写入商品的 tags 文本数组）
+  // 仅后台使用,前端商品的 tags 仍是字符串数组,不依赖本表
+  "bsonType": "object",
+  "required": ["id", "name"],
+  "permission": {
+    "read": true,
+    "create": "'admin' in auth.role",
+    "update": "'admin' in auth.role",
+    "delete": "'admin' in auth.role"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID,系统自动生成"
+    },
+    "id": {
+      "bsonType": "int",
+      "title": "标签ID",
+      "description": "业务数字ID",
+      "label": "标签ID"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "标签名称",
+      "description": "如 自有品牌/时令/新品",
+      "label": "标签名称",
+      "trim": "both"
+    },
+    "sort": {
+      "bsonType": "int",
+      "title": "排序",
+      "description": "数字越小越靠前",
+      "label": "排序",
+      "defaultValue": 0
+    }
+  }
+}

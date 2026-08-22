@@ -1,0 +1,163 @@
+{
+  // 商品表
+  // 字段与 src/types/index.ts 的 Product 对齐;额外增加 onSale(上下架)/createTime,
+  // 这两个字段仅供后台管理与云端过滤,不返回给前端(云对象里会剔除)。
+  "bsonType": "object",
+  "required": ["id", "title", "categoryId", "price"],
+  "permission": {
+    "read": true,
+    "create": "'admin' in auth.role",
+    "update": "'admin' in auth.role",
+    "delete": "'admin' in auth.role"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID,系统自动生成"
+    },
+    "id": {
+      "bsonType": "int",
+      "title": "商品ID",
+      "description": "业务商品ID(前端 detail 页用的数字ID)",
+      "label": "商品ID"
+    },
+    "title": {
+      "bsonType": "string",
+      "title": "商品标题",
+      "label": "商品标题",
+      "trim": "both"
+    },
+    "subtitle": {
+      "bsonType": "string",
+      "title": "副标题",
+      "label": "副标题"
+    },
+    "categoryId": {
+      "bsonType": "int",
+      "title": "主分类",
+      "description": "= categoryIds[0]，保留以兼容单分类逻辑",
+      "label": "主分类",
+      "foreignKey": "tc-categories.id",
+      "enum": {
+        "collection": "tc-categories",
+        "field": "id as value, name as text"
+      }
+    },
+    "categoryIds": {
+      "bsonType": "array",
+      "title": "所属分类(多选)",
+      "description": "商品可属于多个分类，元素为 tc-categories.id",
+      "label": "所属分类"
+    },
+    "cover": {
+      "bsonType": "string",
+      "title": "封面",
+      "description": "封面图 URL 或 emoji 占位",
+      "label": "封面"
+    },
+    "images": {
+      "bsonType": "array",
+      "title": "轮播图",
+      "description": "商品头图组",
+      "label": "轮播图"
+    },
+    "price": {
+      "bsonType": "double",
+      "title": "售价",
+      "label": "售价(元)",
+      "minimum": 0
+    },
+    "oldPrice": {
+      "bsonType": "double",
+      "title": "原价",
+      "label": "原价(元)",
+      "minimum": 0
+    },
+    "sold": {
+      "bsonType": "int",
+      "title": "销量",
+      "label": "销量",
+      "defaultValue": 0
+    },
+    "stock": {
+      "bsonType": "int",
+      "title": "库存",
+      "label": "库存",
+      "defaultValue": 0
+    },
+    "rating": {
+      "bsonType": "int",
+      "title": "评分",
+      "label": "评分(1-5)"
+    },
+    "tags": {
+      "bsonType": "array",
+      "title": "标签",
+      "description": "如 顺丰包邮 / 7天退换",
+      "label": "标签"
+    },
+    "features": {
+      "bsonType": "array",
+      "title": "商品特色",
+      "description": "简短描述商品特色的文本数组,如 无添加/顺丰冷链/古法工艺",
+      "label": "商品特色"
+    },
+    "desc": {
+      "bsonType": "string",
+      "title": "商品描述",
+      "label": "商品描述"
+    },
+    "detailImages": {
+      "bsonType": "array",
+      "title": "详情图",
+      "description": "商品详情页图片组",
+      "label": "详情图"
+    },
+    "skus": {
+      "bsonType": "array",
+      "title": "规格(SKU)",
+      "description": "规格数组,元素含 id/name/price/oldPrice/stock/limitPerOrder(各 sku 的单次限购)",
+      "label": "规格"
+    },
+    "limitPerOrder": {
+      "bsonType": "int",
+      "title": "单次限购",
+      "description": "无规格(skus为空)商品:一次下单最多可购数量;缺省按默认1处理。有规格时限购配在各 sku 上",
+      "label": "单次限购(件)",
+      "minimum": 1
+    },
+    "heat": {
+      "bsonType": "int",
+      "title": "热度",
+      "description": "热度值，前端可按此降序排序，越大越靠前",
+      "label": "热度",
+      "defaultValue": 0
+    },
+    "isNew": {
+      "bsonType": "bool",
+      "title": "新品",
+      "label": "新品",
+      "defaultValue": false
+    },
+    "isHot": {
+      "bsonType": "bool",
+      "title": "热卖",
+      "label": "热卖",
+      "defaultValue": false
+    },
+    "onSale": {
+      "bsonType": "bool",
+      "title": "是否上架",
+      "description": "true=上架(小程序可见) false=下架",
+      "label": "上架状态",
+      "defaultValue": true
+    },
+    "createTime": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "label": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

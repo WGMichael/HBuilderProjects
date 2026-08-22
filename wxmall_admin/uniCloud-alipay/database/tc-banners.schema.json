@@ -1,0 +1,57 @@
+{
+  // 首页轮播图表
+  // 字段与 src/types/index.ts 的 Banner 对齐;额外 enable(启用)/sort(排序) 供后台运营。
+  "bsonType": "object",
+  "required": ["id", "title"],
+  "permission": {
+    "read": true,
+    "create": "'admin' in auth.role",
+    "update": "'admin' in auth.role",
+    "delete": "'admin' in auth.role"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID,系统自动生成"
+    },
+    "id": {
+      "bsonType": "int",
+      "title": "轮播ID",
+      "label": "轮播ID"
+    },
+    "title": {
+      "bsonType": "string",
+      "title": "主标题",
+      "label": "主标题",
+      "trim": "both"
+    },
+    "sub": {
+      "bsonType": "string",
+      "title": "副标题",
+      "label": "副标题"
+    },
+    "image": {
+      "bsonType": "string",
+      "title": "图片",
+      "description": "轮播图 URL(留空则前端用标题渐变块占位)",
+      "label": "图片"
+    },
+    "link": {
+      "bsonType": "string",
+      "title": "跳转链接",
+      "description": "点击后跳转的页面路径,可空",
+      "label": "跳转链接"
+    },
+    "sort": {
+      "bsonType": "int",
+      "title": "排序",
+      "label": "排序",
+      "defaultValue": 0
+    },
+    "enable": {
+      "bsonType": "bool",
+      "title": "是否启用",
+      "label": "启用",
+      "defaultValue": true
+    }
+  }
+}

@@ -1,0 +1,76 @@
+// 文档教程: https://uniapp.dcloud.net.cn/uniCloud/schema
+{
+	"bsonType": "object",
+	"required": [],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": true
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"userid": {
+			"bsonType": "string",
+			"description": "玩家id"
+		},
+		"groupid" : {
+			"bsonType": "string",
+			"description": "群id"
+		},
+		"username": {
+			"bsonType": "string",
+			"description": "玩家nickname"
+		},
+		"voteid": {
+			"bsonType": "string",
+			"description": "纪录id"
+		},
+		"votetitleindex": {
+			"bsonType": "int"
+		},
+		"vote_targetindex": {
+			"bsonType": "int",
+			"description": ""
+		},
+		"votetitle": {
+			"bsonType": "string",
+			"description": "纪录id"
+		},
+		"vote_target_title": {
+			"bsonType": "string",
+			"description": "标题名字"
+		},
+		"ispriority": {
+			"bsonType": "bool"
+		},
+		"votecount" :{
+			"bsonType": "double"
+		},
+		"votecountvalid" :{
+			"bsonType": "double"
+		},
+		"voterate":{
+			"bsonType": "double",
+			"description": "要做成管理员有权可改动"
+		},
+		"awardcount":{
+			"bsonType": "double",
+			"defaultValue": 0
+		},
+		"votestatus":{
+			"bsonType": "int",
+			"defaultValue": "UserVote_status"
+		},
+		"createtime":{
+			"bsonType": "double",
+			"defaultValue":0
+		},
+		"endtime":{
+			"bsonType": "double",
+			"defaultValue":0
+		}
+	}
+}

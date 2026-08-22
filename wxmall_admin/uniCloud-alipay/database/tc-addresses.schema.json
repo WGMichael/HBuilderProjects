@@ -1,0 +1,67 @@
+{
+  // 收货地址表
+  // 字段与 src/types/index.ts 的 Address 对齐;额外补 uid(所属用户)/createTime。
+  // 用户私有数据:本人可读写自己的,admin 可管理全部。
+  "bsonType": "object",
+  "required": ["id", "uid", "name", "phone"],
+  "permission": {
+    "read": "auth.uid == doc.uid || 'admin' in auth.role",
+    "create": "auth.uid == doc.uid || 'admin' in auth.role",
+    "update": "auth.uid == doc.uid || 'admin' in auth.role",
+    "delete": "auth.uid == doc.uid || 'admin' in auth.role"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID,系统自动生成"
+    },
+    "id": {
+      "bsonType": "int",
+      "title": "地址ID",
+      "description": "业务数字ID",
+      "label": "地址ID"
+    },
+    "uid": {
+      "bsonType": "string",
+      "title": "所属用户",
+      "description": "关联 uni-id-users._id",
+      "label": "所属用户",
+      "foreignKey": "uni-id-users._id"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "收货人",
+      "label": "收货人",
+      "trim": "both"
+    },
+    "phone": {
+      "bsonType": "string",
+      "title": "手机号",
+      "label": "手机号"
+    },
+    "region": {
+      "bsonType": "string",
+      "title": "所在地区",
+      "description": "省/市/区",
+      "label": "所在地区"
+    },
+    "detail": {
+      "bsonType": "string",
+      "title": "详细地址",
+      "label": "详细地址"
+    },
+    "isDefault": {
+      "bsonType": "bool",
+      "title": "默认地址",
+      "label": "默认地址",
+      "defaultValue": false
+    },
+    "createTime": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "label": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

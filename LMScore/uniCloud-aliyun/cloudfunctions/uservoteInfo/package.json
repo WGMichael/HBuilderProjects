@@ -1,0 +1,7 @@
+{
+  "name": "uservoteInfo",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

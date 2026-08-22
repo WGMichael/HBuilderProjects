@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>特产小店 · 小程序原型</title>
+<style>
+  :root{
+    --brand:#e64340; --brand-d:#c73631; --bg:#f4f5f7; --card:#fff;
+    --txt:#1a1a1a; --sub:#8a8f99; --line:#eceef1; --ok:#07c160; --tag:#fff3f3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#e9ebef;color:var(--txt);padding:28px 16px 60px}
+  h1.page-title{text-align:center;font-size:22px;margin-bottom:6px}
+  p.page-sub{text-align:center;color:#666;font-size:13px;margin-bottom:26px}
+  .grid{display:flex;flex-wrap:wrap;gap:30px 26px;justify-content:center;align-items:flex-start}
+  .phone{width:300px;background:#000;border-radius:34px;padding:8px;box-shadow:0 12px 34px rgba(0,0,0,.22)}
+  .screen-label{color:#fff;text-align:center;font-size:13px;font-weight:600;padding:6px 0 8px}
+  .screen{background:var(--bg);border-radius:27px;overflow:hidden;height:600px;display:flex;flex-direction:column;position:relative}
+  /* status + nav bar */
+  .statusbar{height:26px;background:var(--brand);display:flex;justify-content:space-between;align-items:center;padding:0 14px;color:#fff;font-size:11px}
+  .navbar{background:var(--brand);color:#fff;text-align:center;padding:8px 0 12px;font-size:16px;font-weight:600;position:relative}
+  .navbar .back{position:absolute;left:12px;top:8px;font-size:15px;font-weight:400}
+  .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .body::-webkit-scrollbar{width:0}
+  /* tab bar */
+  .tabbar{display:flex;background:#fff;border-top:1px solid var(--line)}
+  .tabbar .tab{flex:1;text-align:center;padding:7px 0 8px;font-size:10px;color:var(--sub)}
+  .tabbar .tab.on{color:var(--brand)}
+  .tabbar .tab .ic{font-size:19px;display:block;line-height:1.4}
+  /* common */
+  .sec{background:#fff;margin:8px 10px;border-radius:12px;padding:12px}
+  .search{margin:10px;background:#fff;border-radius:20px;padding:8px 14px;color:var(--sub);font-size:13px}
+  .banner{margin:0 10px;height:120px;border-radius:12px;background:linear-gradient(120deg,#ff7a5c,#e64340);color:#fff;display:flex;flex-direction:column;justify-content:center;padding:16px}
+  .banner b{font-size:19px}.banner span{font-size:12px;opacity:.9;margin-top:4px}
+  .quick{display:flex;justify-content:space-around;text-align:center;margin:10px;background:#fff;border-radius:12px;padding:12px 0}
+  .quick div{font-size:11px;color:#555}.quick .ic{font-size:22px;display:block;margin-bottom:3px}
+  .sec-title{font-size:14px;font-weight:600;margin:12px 10px 6px;display:flex;justify-content:space-between}
+  .sec-title span{font-size:11px;color:var(--sub);font-weight:400}
+  .prods{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 10px}
+  .card{background:#fff;border-radius:10px;overflow:hidden}
+  .card .img{height:96px;background:#f0ddd0 center/cover;display:flex;align-items:center;justify-content:center;font-size:30px}
+  .card .info{padding:7px 8px}
+  .card .nm{font-size:12px;line-height:1.35;height:32px;overflow:hidden}
+  .card .pr{color:var(--brand);font-weight:700;font-size:14px;margin-top:4px}
+  .card .pr small{font-size:10px}
+  .card .old{color:#bbb;text-decoration:line-through;font-size:10px;margin-left:4px;font-weight:400}
+  .card .sold{color:var(--sub);font-size:10px;margin-top:2px}
+  .tagline{display:inline-block;background:var(--tag);color:var(--brand);font-size:10px;padding:1px 5px;border-radius:4px;margin-right:4px}
+  /* detail */
+  .det-img{height:220px;background:linear-gradient(135deg,#f6c48b,#e8a55f);display:flex;align-items:center;justify-content:center;font-size:70px}
+  .det-price{background:#fff;padding:12px;display:flex;align-items:baseline;gap:8px}
+  .det-price .p{color:var(--brand);font-size:24px;font-weight:800}
+  .det-price .o{color:#bbb;text-decoration:line-through;font-size:13px}
+  .det-title{background:#fff;padding:0 12px 12px;font-size:16px;font-weight:600}
+  .det-row{background:#fff;margin-top:8px;padding:12px;font-size:13px;color:#555;display:flex;justify-content:space-between}
+  .det-desc{background:#fff;margin-top:8px;padding:12px;font-size:13px;color:#444;line-height:1.7}
+  .det-desc .ph{height:150px;background:#f3ede7;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:34px;color:#caa;margin-top:8px}
+  .buybar{display:flex;background:#fff;border-top:1px solid var(--line);align-items:center;padding:8px 10px;gap:8px}
+  .buybar .icons{display:flex;gap:14px;font-size:10px;color:#666;text-align:center}
+  .buybar .icons .ic{font-size:18px;display:block}
+  .btn{flex:1;text-align:center;padding:11px 0;border-radius:22px;font-size:14px;font-weight:600;color:#fff}
+  .btn.cart{background:#ffb100}.btn.buy{background:var(--brand)}
+  /* cart */
+  .cart-item{background:#fff;margin:8px 10px;border-radius:12px;padding:10px;display:flex;gap:10px;align-items:center}
+  .cart-item .th{width:56px;height:56px;border-radius:8px;background:#f0ddd0;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+  .cart-item .cn{flex:1;font-size:12px}
+  .cart-item .cp{color:var(--brand);font-weight:700;margin-top:6px}
+  .stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px;width:fit-content}
+  .stepper b{padding:2px 9px;background:#f6f7f9;font-size:14px}
+  .stepper i{padding:2px 12px;font-style:normal;font-size:12px}
+  .settlebar{display:flex;align-items:center;background:#fff;border-top:1px solid var(--line);padding:10px 12px;gap:8px;font-size:12px}
+  .settlebar .total{flex:1}.settlebar .total b{color:var(--brand);font-size:18px}
+  /* order/list rows */
+  .orow{background:#fff;margin:8px 10px;border-radius:12px;padding:12px;font-size:13px}
+  .orow .top{display:flex;justify-content:space-between;color:#888;font-size:12px;margin-bottom:8px}
+  .orow .st{color:var(--brand)}
+  .orow .line{display:flex;gap:10px;align-items:center}
+  .orow .th{width:48px;height:48px;border-radius:8px;background:#f0ddd0;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .orow .act{text-align:right;margin-top:10px}
+  .mini-btn{display:inline-block;border:1px solid #ddd;border-radius:16px;padding:4px 14px;font-size:12px;margin-left:6px;color:#555}
+  .mini-btn.primary{border-color:var(--brand);color:var(--brand)}
+  /* mine */
+  .mine-head{background:linear-gradient(120deg,#e64340,#ff7a5c);padding:20px 16px;color:#fff;display:flex;align-items:center;gap:12px}
+  .mine-head .av{width:52px;height:52px;border-radius:50%;background:#fff3;display:flex;align-items:center;justify-content:center;font-size:26px}
+  .mine-head .nm{font-size:16px;font-weight:600}.mine-head .lv{font-size:11px;opacity:.9;margin-top:3px}
+  .mine-stats{background:#fff;margin:-14px 10px 0;border-radius:12px;padding:14px;display:flex;justify-content:space-around;text-align:center;position:relative}
+  .mine-stats b{font-size:16px;color:var(--brand)}.mine-stats div{font-size:11px;color:#888}
+  .mine-orders{background:#fff;margin:10px;border-radius:12px;padding:12px}
+  .mine-orders .hd{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:12px}
+  .mine-orders .hd span{color:var(--sub);font-size:11px;font-weight:400}
+  .mine-orders .row{display:flex;justify-content:space-around;text-align:center;font-size:11px;color:#666}
+  .mine-orders .ic{font-size:22px;display:block;margin-bottom:3px}
+  .menu{background:#fff;margin:10px;border-radius:12px;overflow:hidden}
+  .menu a{display:flex;justify-content:space-between;padding:13px 14px;font-size:13px;border-bottom:1px solid var(--line);color:#333}
+  .menu a:last-child{border-bottom:none}
+  .menu a .r{color:#ccc}
+  /* addr / checkout */
+  .addr{background:#fff;margin:8px 10px;border-radius:12px;padding:14px;display:flex;gap:10px;align-items:center;font-size:13px}
+  .addr .pin{font-size:20px;color:var(--brand)}
+  .co-row{background:#fff;margin:8px 10px;border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;font-size:13px}
+  .radio{display:flex;gap:8px;font-size:13px}
+  .radio span{border:1px solid #ddd;border-radius:16px;padding:4px 12px}
+  .radio span.on{border-color:var(--brand);color:var(--brand);background:var(--tag)}
+  .note{color:var(--sub);font-size:11px;text-align:center;margin:16px 10px}
+  .clickable{cursor:pointer}
+  .flow{max-width:760px;margin:0 auto 30px;background:#fff;border-radius:12px;padding:18px 20px;font-size:13px;line-height:1.9;color:#444}
+  .flow h3{font-size:15px;margin-bottom:8px;color:var(--brand)}
+  .legend{max-width:760px;margin:0 auto 24px;color:#555;font-size:13px;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">特产小店 · 微信小程序原型</h1>
+<p class="page-sub">轻量起步版 · 点击商品/按钮可在页面间跳转体验 · 手机尺寸预览</p>
+
+<div class="legend">
+  下方 8 个页面覆盖<b>「逛 → 看 → 买 → 付 → 收 → 复购」</b>完整链路。点卡片进详情，点"立即购买/去结算"走下单流程。
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="flow">
+  <h3>核心下单流程</h3>
+  首页/分类浏览 → 商品详情（选规格/数量）→ 加入购物车 或 立即购买 → 确认订单（选收货方式：快递配送 / 同城自提）→ 微信支付 → 支付成功 → 待发货 → 已发货（填物流单号）→ 确认收货 → 可评价 / 一键再买。
+  <h3 style="margin-top:14px">会员与复购（轻量）</h3>
+  微信一键登录即成为会员 → 每单累计成长值/积分 → "我的"可见历史订单，一键再买 → 商家可发优惠券/新品推送提醒回购。
+</div>
+
+<script>
+const screens = [
+  {label:"① 首页", html:`
+    ${bar('特产小店')}
+    <div class="body">
+      <div class="search clickable" onclick="go(1)">🔍 搜一搜：土蜂蜜、腊肠、笋干…</div>
+      <div class="banner"><b>山货直供 · 顺丰包邮</b><span>老家现摘现做，一件也发货</span></div>
+      <div class="quick">
+        <div class="clickable" onclick="go(1)"><span class="ic">🍯</span>蜂蜜</div>
+        <div class="clickable" onclick="go(1)"><span class="ic">🥓</span>腊味</div>
+        <div class="clickable" onclick="go(1)"><span class="ic">🍄</span>菌菇</div>
+        <div class="clickable" onclick="go(1)"><span class="ic">🍵</span>茶叶</div>
+        <div class="clickable" onclick="go(1)"><span class="ic">🎁</span>礼盒</div>
+      </div>
+      <div class="sec-title">热销推荐 <span>大家都在买 ></span></div>
+      <div class="prods">
+        ${prodCard('🍯','农家土蜂蜜 500g','39','59','已售 328')}
+        ${prodCard('🥓','手工烟熏腊肠 400g','45','','已售 210')}
+        ${prodCard('🍄','高山野生菌干货','58','78','已售 156')}
+        ${prodCard('🍵','明前高山绿茶 250g','88','','已售 97')}
+      </div>
+      <div class="note">已经到底啦 · 更多好物上架中</div>
+    </div>
+    ${tabbar(0)}`},
+
+  {label:"② 分类 / 列表", html:`
+    ${bar('全部商品')}
+    <div class="body" style="display:flex">
+      <div style="width:74px;background:#fff;font-size:12px">
+        ${['全部','蜂蜜','腊味','菌菇','茶叶','礼盒'].map((c,i)=>`<div class="clickable" style="padding:14px 6px;text-align:center;${i==0?'background:#f4f5f7;color:var(--brand);font-weight:600;border-left:3px solid var(--brand)':'color:#666'}">${c}</div>`).join('')}
+      </div>
+      <div style="flex:1;padding:0 6px">
+        <div class="search clickable" style="margin:8px 4px" onclick="go(2)">🔍 搜索商品</div>
+        <div class="prods" style="grid-template-columns:1fr;margin:0 4px">
+          ${listItem('🍯','农家土蜂蜜 500g','纯天然 无添加','39','59')}
+          ${listItem('🥓','手工烟熏腊肠 400g','柴火熏制 咸香','45','')}
+          ${listItem('🍄','高山野生菌干货 200g','煲汤鲜味足','58','78')}
+          ${listItem('🍵','明前高山绿茶 250g','当季新茶','88','')}
+        </div>
+        <div class="note">共 24 件商品</div>
+      </div>
+    </div>
+    ${tabbar(1)}`},
+
+  {label:"③ 商品详情", html:`
+    ${bar('商品详情',true)}
+    <div class="body">
+      <div class="det-img">🍯</div>
+      <div class="det-price"><span class="p">¥39</span><span class="o">¥59</span><span style="margin-left:auto;font-size:11px;color:#888">已售 328 件</span></div>
+      <div class="det-title"><span class="tagline">顺丰包邮</span><span class="tagline">7天退换</span><br style="line-height:2">农家自产土蜂蜜 500g · 现摘现装</div>
+      <div class="det-row clickable" onclick="go(3)"><span>选择规格</span><span style="color:#333">500g / 1kg 礼盒装 ></span></div>
+      <div class="det-row"><span>发货</span><span style="color:#333">浙江丽水 · 48h内发货</span></div>
+      <div class="det-desc">
+        深山养蜂场，一年一割，未经加工浓缩。冲水温不超过40℃，风味更佳。
+        <div class="ph">📷 商品实拍详情图</div>
+        <div class="ph" style="margin-top:8px">📷 产地/包装图</div>
+      </div>
+      <div class="note">已经到底啦</div>
+    </div>
+    <div class="buybar">
+      <div class="icons"><div class="clickable" onclick="go(0)"><span class="ic">🏠</span>首页</div><div class="clickable" onclick="go(6)"><span class="ic">🎧</span>客服</div></div>
+      <div class="btn cart clickable" onclick="go(4)">加入购物车</div>
+      <div class="btn buy clickable" onclick="go(5)">立即购买</div>
+    </div>`},
+
+  {label:"④ 购物车", html:`
+    ${bar('购物车')}
+    <div class="body">
+      <div class="cart-item"><span style="font-size:16px;color:var(--brand)">✓</span><div class="th">🍯</div><div class="cn">农家土蜂蜜 500g<br><span style="color:#999">规格：500g</span><div class="cp">¥39</div></div><div class="stepper"><b>-</b><i>2</i><b>+</b></div></div>
+      <div class="cart-item"><span style="font-size:16px;color:var(--brand)">✓</span><div class="th">🥓</div><div class="cn">手工烟熏腊肠 400g<br><span style="color:#999">规格：400g</span><div class="cp">¥45</div></div><div class="stepper"><b>-</b><i>1</i><b>+</b></div></div>
+      <div class="note">凑单再逛逛 ></div>
+    </div>
+    <div class="settlebar">
+      <span style="color:var(--brand)">✓</span> 全选
+      <div class="total">合计：<b>¥123</b></div>
+      <div class="btn buy clickable" style="flex:none;padding:10px 26px" onclick="go(5)">去结算(3)</div>
+    </div>
+    ${tabbar(2)}`},
+
+  {label:"⑤ 确认订单", html:`
+    ${bar('确认订单',true)}
+    <div class="body">
+      <div class="addr clickable" onclick="go(5)"><span class="pin">📍</span><div><b>张女士 138****6688</b><br><span style="color:#888">浙江省杭州市西湖区文一西路 xx 号</span></div><span style="margin-left:auto;color:#ccc">></span></div>
+      <div class="co-row"><span>配送方式</span><div class="radio"><span class="on">快递配送</span><span>同城自提</span></div></div>
+      <div class="cart-item" style="margin-top:0"><div class="th">🍯</div><div class="cn">农家土蜂蜜 500g ×2<div class="cp">¥78</div></div></div>
+      <div class="cart-item" style="margin-top:0"><div class="th">🥓</div><div class="cn">手工烟熏腊肠 ×1<div class="cp">¥45</div></div></div>
+      <div class="co-row clickable" onclick="go(5)"><span>优惠券</span><span style="color:var(--brand)">-¥5 满100可用 ></span></div>
+      <div class="co-row"><span>运费</span><span>¥0（满99包邮）</span></div>
+      <div class="co-row"><span>备注</span><span style="color:#bbb">选填，如口味/收货时间</span></div>
+    </div>
+    <div class="settlebar">
+      <div class="total">实付：<b>¥118</b></div>
+      <div class="btn buy clickable" style="flex:none;padding:10px 30px" onclick="go(7)">微信支付</div>
+    </div>`},
+
+  {label:"⑥ 我的", html:`
+    ${bar('个人中心')}
+    <div class="body" style="padding-bottom:10px">
+      <div class="mine-head"><div class="av">👩</div><div><div class="nm">张女士</div><div class="lv">🏅 银牌会员 · 积分 320</div></div></div>
+      <div class="mine-stats"><div><b>320</b><div>积分</div></div><div><b>2</b><div>优惠券</div></div><div><b>¥0</b><div>余额</div></div><div><b>8</b><div>收藏</div></div></div>
+      <div class="mine-orders">
+        <div class="hd">我的订单 <span class="clickable" onclick="go(8)">全部 ></span></div>
+        <div class="row">
+          <div class="clickable" onclick="go(7)"><span class="ic">💰</span>待付款</div>
+          <div class="clickable" onclick="go(8)"><span class="ic">📦</span>待发货</div>
+          <div class="clickable" onclick="go(8)"><span class="ic">🚚</span>待收货</div>
+          <div class="clickable" onclick="go(8)"><span class="ic">⭐</span>待评价</div>
+          <div class="clickable" onclick="go(6)"><span class="ic">↩️</span>退款</div>
+        </div>
+      </div>
+      <div class="menu">
+        <a class="clickable" onclick="go(5)">收货地址 <span class="r">></span></a>
+        <a class="clickable" onclick="go(6)">我的优惠券 <span class="r">2 张 ></span></a>
+        <a class="clickable" onclick="go(6)">邀请好友得优惠 <span class="r">></span></a>
+        <a class="clickable" onclick="go(6)">联系客服 <span class="r">></span></a>
+      </div>
+    </div>
+    ${tabbar(3)}`},
+
+  {label:"⑦ 支付成功", html:`
+    ${bar('支付结果',true)}
+    <div class="body" style="text-align:center">
+      <div style="font-size:60px;margin:44px 0 10px">✅</div>
+      <div style="font-size:18px;font-weight:600">支付成功</div>
+      <div style="color:#888;font-size:13px;margin-top:8px">实付 ¥118 · 商家将尽快为你发货</div>
+      <div style="margin-top:30px;display:flex;gap:12px;justify-content:center">
+        <div class="mini-btn clickable" onclick="go(0)">返回首页</div>
+        <div class="mini-btn primary clickable" onclick="go(8)">查看订单</div>
+      </div>
+      <div class="sec" style="margin-top:24px;text-align:left">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">🎁 下单有礼</div>
+        <div style="font-size:12px;color:#666;line-height:1.7">已获得 118 成长值，再消费 ¥82 升级金牌会员；分享小程序给好友，双方各得 ¥5 券。</div>
+      </div>
+    </div>`},
+
+  {label:"⑧ 订单列表", html:`
+    ${bar('我的订单')}
+    <div class="body">
+      <div class="orow">
+        <div class="top"><span>订单号 20260701001</span><span class="st">待发货</span></div>
+        <div class="line"><div class="th">🍯</div><div style="flex:1;font-size:12px">农家土蜂蜜 500g ×2<br><span style="color:#999">共3件 实付 ¥118</span></div></div>
+        <div class="act"><span class="mini-btn clickable" onclick="go(6)">联系商家</span><span class="mini-btn primary clickable" onclick="go(8)">查看物流</span></div>
+      </div>
+      <div class="orow">
+        <div class="top"><span>订单号 20260628007</span><span class="st" style="color:#07c160">已完成</span></div>
+        <div class="line"><div class="th">🍵</div><div style="flex:1;font-size:12px">明前高山绿茶 250g ×1<br><span style="color:#999">实付 ¥88</span></div></div>
+        <div class="act"><span class="mini-btn clickable" onclick="go(6)">评价</span><span class="mini-btn primary clickable" onclick="go(2)">再次购买</span></div>
+      </div>
+      <div class="note">仅显示近三个月订单</div>
+    </div>
+    ${tabbar(3)}`}
+];
+
+function bar(t,back){return `<div class="statusbar"><span>9:41</span><span>📶 🔋</span></div><div class="navbar">${back?'<span class="back clickable" onclick="go(0)">‹ 返回</span>':''}${t}</div>`}
+function tabbar(a){const t=[['🏠','首页',0],['📂','分类',1],['🛒','购物车',4],['👤','我的',6]];return `<div class="tabbar">${t.map((x,i)=>`<div class="tab ${i==a?'on':''} clickable" onclick="go(${x[2]})"><span class="ic">${x[0]}</span>${x[1]}</div>`).join('')}</div>`}
+function prodCard(e,n,p,o,s){return `<div class="card clickable" onclick="go(3)"><div class="img">${e}</div><div class="info"><div class="nm">${n}</div><div class="pr"><small>¥</small>${p}${o?`<span class="old">¥${o}</span>`:''}</div><div class="sold">${s}</div></div></div>`}
+function listItem(e,n,d,p,o){return `<div class="card clickable" onclick="go(3)" style="display:flex"><div class="img" style="width:96px;height:96px;flex-shrink:0">${e}</div><div class="info" style="flex:1"><div class="nm" style="height:auto">${n}</div><div style="color:#999;font-size:11px;margin:3px 0">${d}</div><div class="pr"><small>¥</small>${p}${o?`<span class="old">¥${o}</span>`:''}</div></div></div>`}
+
+const grid=document.getElementById('grid');
+screens.forEach((s,i)=>{
+  const ph=document.createElement('div');ph.className='phone';
+  ph.innerHTML=`<div class="screen-label">${s.label}</div><div class="screen" id="scr${i}">${s.html}</div>`;
+  grid.appendChild(ph);
+});
+function go(i){const el=document.getElementById('scr'+i);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.closest('.phone').animate([{transform:'scale(1.03)'},{transform:'scale(1)'}],{duration:400});}}
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+// 文档教程: https://uniapp.dcloud.net.cn/uniCloud/schema
+{
+	"bsonType": "object",
+	"required": [],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": true
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		}
+	},
+	"wxopenid": {
+		"title": "wx-apid",
+		"bsonType": "string"
+	},
+	"vocreatecost": {
+		"title": "创建扣除",
+		"bsonType": "double"
+	},
+	"createallrate": {
+		"title": "1.7",
+		"bsonType": "double"
+	},
+	"reserve2": {
+		"title": "备用2",
+		"bsonType": "string"
+	},
+	"reserve3": {
+		"title": "备用3",
+		"bsonType": "string"
+	}
+	
+}

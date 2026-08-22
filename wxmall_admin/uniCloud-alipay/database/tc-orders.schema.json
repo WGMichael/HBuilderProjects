@@ -1,0 +1,105 @@
+{
+  // 订单表
+  // 字段与 src/types/index.ts 的 Order/OrderGoods 对齐;额外补 uid(下单用户)/remark(备注)。
+  // 订单由用户下单生成(create),后台管理员负责发货/退款等状态流转(update)。
+  "bsonType": "object",
+  "required": ["id", "uid", "status"],
+  "permission": {
+    "read": "auth.uid == doc.uid || 'admin' in auth.role",
+    "create": "auth.uid == doc.uid || 'admin' in auth.role",
+    "update": "'admin' in auth.role",
+    "delete": "'admin' in auth.role"
+  },
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID,系统自动生成"
+    },
+    "id": {
+      "bsonType": "string",
+      "title": "订单号",
+      "description": "下单时生成的订单号(字符串)",
+      "label": "订单号"
+    },
+    "uid": {
+      "bsonType": "string",
+      "title": "下单用户",
+      "description": "关联 uni-id-users._id",
+      "label": "下单用户",
+      "foreignKey": "uni-id-users._id"
+    },
+    "status": {
+      "bsonType": "string",
+      "title": "订单状态",
+      "label": "订单状态",
+      "defaultValue": "unpaid",
+      "enum": [
+        { "value": "unpaid", "text": "待付款" },
+        { "value": "unshipped", "text": "待发货" },
+        { "value": "shipped", "text": "已发货" },
+        { "value": "done", "text": "已完成" },
+        { "value": "refund", "text": "退款" }
+      ]
+    },
+    "goods": {
+      "bsonType": "array",
+      "title": "商品清单",
+      "description": "下单商品快照(OrderGoods[]:productId/skuId/title/cover/specName/price/qty)",
+      "label": "商品清单"
+    },
+    "goodsAmount": {
+      "bsonType": "double",
+      "title": "商品金额",
+      "label": "商品金额(元)",
+      "minimum": 0
+    },
+    "freight": {
+      "bsonType": "double",
+      "title": "运费",
+      "label": "运费(元)",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "discount": {
+      "bsonType": "double",
+      "title": "优惠金额",
+      "label": "优惠金额(元)",
+      "minimum": 0,
+      "defaultValue": 0
+    },
+    "payAmount": {
+      "bsonType": "double",
+      "title": "实付金额",
+      "label": "实付金额(元)",
+      "minimum": 0
+    },
+    "address": {
+      "bsonType": "object",
+      "title": "收货地址",
+      "description": "下单时的收货地址快照",
+      "label": "收货地址"
+    },
+    "expressCompany": {
+      "bsonType": "string",
+      "title": "快递公司",
+      "label": "快递公司"
+    },
+    "expressNo": {
+      "bsonType": "string",
+      "title": "快递单号",
+      "label": "快递单号"
+    },
+    "remark": {
+      "bsonType": "string",
+      "title": "备注",
+      "label": "备注"
+    },
+    "createdAt": {
+      "bsonType": "timestamp",
+      "title": "下单时间",
+      "label": "下单时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

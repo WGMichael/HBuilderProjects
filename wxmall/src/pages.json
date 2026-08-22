@@ -1,0 +1,221 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "特产小店",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/detail/detail",
+      "style": {
+        "navigationBarTitleText": "商品详情",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/category/category",
+      "style": {
+        "navigationBarTitleText": "分类",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/cart/cart",
+      "style": {
+        "navigationBarTitleText": "购物车",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/order/order",
+      "style": {
+        "navigationBarTitleText": "我的订单",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/address/address",
+      "style": {
+        "navigationBarTitleText": "收货地址",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/address/edit/edit",
+      "style": {
+        "navigationBarTitleText": "编辑地址",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/order/confirm/confirm",
+      "style": {
+        "navigationBarTitleText": "确认订单",
+        "navigationBarBackgroundColor": "#e64340",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ,{
+    "path": "uni_modules/uni-id-pages/pages/register/register",
+    "style": {
+        "navigationBarTitleText": "注册"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/login/login-withoutpwd",
+    "style": {
+        "navigationBarTitleText": "登录"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/login/login-withpwd",
+    "style": {
+        "navigationBarTitleText": "账号密码登录"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/login/login-smscode",
+    "style": {
+        "navigationBarTitleText": "手机验证码登录"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/userinfo/userinfo",
+    "style": {
+        "navigationBarTitleText": "个人资料"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/userinfo/bind-mobile/bind-mobile",
+    "style": {
+        "navigationBarTitleText": "绑定手机号码"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/userinfo/cropImage/cropImage",
+    "style": {
+        "navigationBarTitleText": ""
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/register/register-by-email",
+    "style": {
+        "navigationBarTitleText": "邮箱验证码注册"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/retrieve/retrieve",
+    "style": {
+        "navigationBarTitleText": "重置密码"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/retrieve/retrieve-by-email",
+    "style": {
+        "navigationBarTitleText": "通过邮箱重置密码"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/common/webview/webview",
+    "style": {
+        "enablePullDownRefresh": false,
+        "navigationBarTitleText": ""
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/userinfo/change_pwd/change_pwd",
+    "style": {
+        "enablePullDownRefresh": false,
+        "navigationBarTitleText": "修改密码"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/register/register-admin",
+    "style": {
+        "enablePullDownRefresh": false,
+        "navigationBarTitleText": "注册管理员账号"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/userinfo/set-pwd/set-pwd",
+    "style": {
+        "enablePullDownRefresh": false,
+        "navigationBarTitleText": "设置密码"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/userinfo/deactivate/deactivate",
+    "style": {
+        "navigationBarTitleText": "注销账号"
+    }
+}
+,{
+    "path": "uni_modules/uni-id-pages/pages/userinfo/realname-verify/realname-verify",
+    "style": {
+        "enablePullDownRefresh": false,
+        "navigationBarTitleText": "实名认证"
+    }
+}
+],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "特产小店",
+    "navigationBarBackgroundColor": "#e64340",
+    "backgroundColor": "#f4f5f7"
+  },
+  "tabBar": {
+    "color": "#8a8f99",
+    "selectedColor": "#e64340",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home_selected.png"
+      },
+      {
+        "pagePath": "pages/category/category",
+        "text": "分类",
+        "iconPath": "static/tabbar/category.png",
+        "selectedIconPath": "static/tabbar/category_selected.png"
+      },
+      {
+        "pagePath": "pages/cart/cart",
+        "text": "购物车",
+        "iconPath": "static/tabbar/cart.png",
+        "selectedIconPath": "static/tabbar/cart_selected.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine_selected.png"
+      }
+    ]
+  },
+  "uniIdRouter": {
+    "loginPage": "uni_modules/uni-id-pages/pages/login/login-withpwd",
+    "needLogin": [],
+    "resToLogin": true
+  }
+}
