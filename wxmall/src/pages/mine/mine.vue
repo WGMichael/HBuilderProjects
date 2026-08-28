@@ -9,13 +9,13 @@
       <view class="user-meta">
         <text class="user-name">{{ isLogin ? nickname : '点击登录 / 注册' }}</text>
         <text class="user-sub">
-          {{ isLogin ? `🏅 ${level} · 积分 ${stats.points}` : '登录后享更多会员权益' }}
+          {{ isLogin ? `🏅 ${level}` : '登录后享更多会员权益' }}
         </text>
       </view>
       <text class="arrow">›</text>
     </view>
 
-    <!-- 会员统计四宫格 -->
+    <!-- 会员统计四宫格：积分/优惠券/余额/收藏 暂无真实业务，先隐藏，待会员体系接入后恢复
     <view class="stats-card">
       <view class="stat" @tap="onStatTap('积分')">
         <text class="stat-num">{{ stats.points }}</text>
@@ -34,6 +34,7 @@
         <text class="stat-label">收藏</text>
       </view>
     </view>
+    -->
 
     <!-- 我的订单 -->
     <view class="block orders">
@@ -43,7 +44,12 @@
       </view>
       <view class="order-row">
         <view class="order-entry" v-for="e in orderEntries" :key="e.status" @tap="goOrders(e.status)">
-          <text class="entry-ic">{{ e.icon }}</text>
+          <view class="entry-ic-wrap">
+            <text class="entry-ic">{{ e.icon }}</text>
+            <text v-if="orderCounts[e.status] > 0" class="badge">
+              {{ orderCounts[e.status] > 99 ? '99+' : orderCounts[e.status] }}
+            </text>
+          </view>
           <text class="entry-label">{{ e.label }}</text>
         </view>
       </view>
@@ -120,15 +126,19 @@ const orderEntries: { status: OrderStatus; label: string; icon: string }[] = [
   { status: 'unpaid', label: '待付款', icon: '💰' },
   { status: 'unshipped', label: '待发货', icon: '📦' },
   { status: 'shipped', label: '待收货', icon: '🚚' },
-  { status: 'done', label: '待评价', icon: '⭐' },
+  // 待评价（done）暂不做，先隐藏
   { status: 'refund', label: '退款', icon: '↩️' }
 ]
+
+// 各订单状态数量（用于图标红点角标）
+const orderCounts = reactive<Record<OrderStatus, number>>({
+  unpaid: 0, unshipped: 0, shipped: 0, done: 0, refund: 0
+})
 
 // 功能菜单
 const menus = computed(() => [
   { key: 'address', label: '收货地址', icon: '📍', extra: '' },
-  { key: 'coupon', label: '我的优惠券', icon: '🎫', extra: stats.couponCount ? `${stats.couponCount} 张` : '' },
-  { key: 'invite', label: '邀请好友得优惠', icon: '🎁', extra: '' },
+  // 我的优惠券 / 邀请好友得优惠 暂不做，先隐藏
   { key: 'service', label: '联系客服', icon: '🎧', extra: '' },
   { key: 'about', label: '关于我们', icon: 'ℹ️', extra: '' }
 ])
@@ -136,10 +146,23 @@ const menus = computed(() => [
 onShow(() => {
   syncCartBadge()
   userStore.silentLogin()
-  loadStats()
+  // loadStats()  // 会员统计(积分/优惠券/余额/收藏)暂隐藏，不拉取
+  loadOrderCounts()
   // 换头像后返回本页：fileID 可能未变但临时链接会过期，重新换链
   resolveAvatar()
+  // 调试：打印登录后的用户信息（确认无误后可删）
+  printUserInfo()
 })
+
+/** 调试用：打印当前登录用户信息 */
+function printUserInfo() {
+  console.log('[mine] 是否登录:', userStore.isLogin.value)
+  if (!userStore.isLogin.value) return
+  // 映射后的 UserInfo（页面用）
+  console.log('[mine] UserInfo(映射):', JSON.parse(JSON.stringify(userStore.info.value)))
+  // uni-id 原始文档（_id/nickname/avatar_file/mobile 等）
+  console.log('[mine] uni-id 原始 userInfo:', JSON.parse(JSON.stringify(userStore.raw.userInfo)))
+}
 
 async function loadStats() {
   if (!isLogin.value) {
@@ -153,6 +176,28 @@ async function loadStats() {
     if (s) Object.assign(stats, s)
   } catch (e) {
     console.warn('[mine] 获取会员统计失败，保持默认值', e)
+  }
+}
+
+const EMPTY_COUNTS: Record<OrderStatus, number> = {
+  unpaid: 0, unshipped: 0, shipped: 0, done: 0, refund: 0
+}
+
+/** 拉取订单并按状态计数（用于各状态图标红点） */
+async function loadOrderCounts() {
+  if (!isLogin.value) {
+    Object.assign(orderCounts, EMPTY_COUNTS)
+    return
+  }
+  try {
+    const list = (await db.getOrders?.('all')) ?? []
+    const next = { ...EMPTY_COUNTS }
+    list.forEach((o) => {
+      if (next[o.status] != null) next[o.status]++
+    })
+    Object.assign(orderCounts, next)
+  } catch (e) {
+    console.warn('[mine] 获取订单数失败，保持默认值', e)
   }
 }
 
@@ -271,8 +316,26 @@ function onLogout() {
 .block-more { font-size: 24rpx; color: $text-sub; }
 .order-row { display: flex; justify-content: space-around; }
 .order-entry { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.entry-ic-wrap { position: relative; }
 .entry-ic { font-size: 46rpx; }
 .entry-label { font-size: 24rpx; color: $text-main; margin-top: 10rpx; }
+
+/* 订单数红点角标 */
+.badge {
+  position: absolute;
+  top: -8rpx;
+  right: -14rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  padding: 0 6rpx;
+  border-radius: 14rpx;
+  background: $brand;
+  color: #fff;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  text-align: center;
+  box-sizing: border-box;
+}
 
 /* 功能菜单 */
 .menu { padding: 0 24rpx; }
@@ -289,12 +352,18 @@ function onLogout() {
 .menu-arrow { color: #c8c7cc; font-size: 36rpx; margin-left: 12rpx; }
 
 /* 退出登录 */
-.actions { padding: 40rpx 32rpx; }
+/* 顶部留白加大一倍(40→80rpx)，让退出按钮与上方菜单拉开距离 */
+.actions { padding: 80rpx 32rpx 40rpx; }
 .logout-btn {
-  background: #fff;
-  color: $text-price;
-  border: 1rpx solid #eee;
+  background: $brand;
+  color: #fff;
+  border: none;
   border-radius: 44rpx;
   font-size: 30rpx;
+  font-weight: bold;
+  height: 98rpx;
+  line-height: 98rpx;
 }
+.logout-btn::after { border: none; }
+.logout-btn:active { background: $brand-dark; }
 </style>

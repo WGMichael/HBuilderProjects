@@ -24,7 +24,7 @@ export default {
     'univerify',
     // #endif
     // #ifndef MP-HARMONY
-    // 'weixin',
+    'weixin',
     // #endif
     'username',
     // #ifdef APP

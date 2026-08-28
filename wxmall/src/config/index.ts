@@ -26,7 +26,9 @@ export const config = {
     /** 首页点分类快捷入口时，跨页(switchTab)传递给分类页的待定位分类 id */
     pendingCategory: 'tc_pending_category',
     /** 结算清单：购物车结算 / 立即购买 传给确认订单页 */
-    checkout: 'tc_checkout'
+    checkout: 'tc_checkout',
+    /** 确认订单页 → 地址页「选择模式」选中的地址回传 */
+    selectedAddress: 'tc_selected_address'
   }
 }
 

@@ -23,14 +23,17 @@
 
         <!-- 商品行 -->
         <view class="goods" v-for="g in o.goods" :key="g.skuId">
-          <view class="thumb">{{ g.cover }}</view>
+          <view class="thumb">
+            <image v-if="isImg(g.cover)" class="thumb-el" :src="g.cover" mode="aspectFill" lazy-load />
+            <text v-else>{{ g.cover }}</text>
+          </view>
           <view class="goods-info">
             <view class="goods-title ellipsis-2">{{ g.title }}</view>
             <view class="goods-spec">{{ g.specName }}</view>
-          </view>
-          <view class="goods-price">
-            <view class="price"><text class="symbol">¥</text>{{ g.price }}</view>
-            <view class="qty">x{{ g.qty }}</view>
+            <view class="goods-foot">
+              <view class="price"><text class="symbol">¥</text>{{ g.price }}</view>
+              <text class="qty">x{{ g.qty }}</text>
+            </view>
           </view>
         </view>
 
@@ -73,6 +76,7 @@
 import { ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { db } from '@/data'
+import { isImg } from '@/utils/image'
 import type { Order, OrderStatus } from '@/types'
 
 type TabKey = OrderStatus | 'all'
@@ -214,24 +218,29 @@ function goShopping() {
 .status.refund { color: $text-sub; }
 
 /* 商品行 */
-.goods { display: flex; align-items: center; margin-top: 20rpx; }
+.goods { display: flex; padding-top: 20rpx; }
+/* 多商品时行间加分隔线，首行不加、末行不留多余线 */
+.goods + .goods { margin-top: 20rpx; border-top: 1rpx solid $border-line; }
 .thumb {
-  width: 120rpx;
-  height: 120rpx;
+  width: 140rpx;
+  height: 140rpx;
   background: #f0ddd0;
   border-radius: 12rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 60rpx;
+  font-size: 72rpx;
   flex-shrink: 0;
+  overflow: hidden;
 }
-.goods-info { flex: 1; min-width: 0; margin-left: 20rpx; }
+.thumb-el { width: 140rpx; height: 140rpx; display: block; }
+.goods-info { flex: 1; min-width: 0; margin-left: 20rpx; display: flex; flex-direction: column; }
 .goods-title { font-size: 28rpx; line-height: 1.4; color: $text-main; }
-.goods-spec { font-size: 24rpx; color: $text-sub; margin-top: 10rpx; }
-.goods-price { text-align: right; flex-shrink: 0; margin-left: 12rpx; }
-.price { color: $text-main; font-size: 28rpx; }
-.qty { color: $text-sub; font-size: 24rpx; margin-top: 8rpx; }
+.goods-spec { font-size: 24rpx; color: $text-sub; margin-top: 8rpx; }
+/* 价格与数量贴信息区底部两端对齐，标题占 1 行或 2 行都不影响横向对齐 */
+.goods-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+.price { color: $text-price; font-weight: bold; font-size: 30rpx; }
+.qty { font-size: 26rpx; color: $text-sub; }
 .symbol { font-size: 22rpx; }
 
 /* 合计 */
@@ -243,10 +252,10 @@ function goShopping() {
 .card-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 16rpx;
   margin-top: 20rpx;
 }
 .mini-btn {
+  margin-left: 16rpx;
   padding: 12rpx 30rpx;
   border: 1rpx solid $border-line;
   border-radius: 32rpx;

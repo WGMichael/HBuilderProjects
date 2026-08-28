@@ -14,16 +14,16 @@
   "mp-weixin": {
     "oauth": {
       "weixin": {
-        "appid": "",
-        "appsecret": ""
+        "appid": "wxdaae0138eddf9997",
+        "appsecret": "7ed1c20bb191770349c965001f066476"
       }
     }
   },
   "h5-weixin": {
     "oauth": {
       "weixin-h5": {
-        "appid": "",
-        "appsecret": ""
+        "appid": "wxdaae0138eddf9997",
+        "appsecret": "7ed1c20bb191770349c965001f066476"
       }
     }
   },

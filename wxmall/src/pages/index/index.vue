@@ -78,14 +78,20 @@ const products = ref<Product[]>([])
 
 // 页面只负责展示，数据统一向数据层要
 async function loadData() {
-  const [b, c, p] = await Promise.all([
-    db.getBanners(),
-    db.getCategories(),
-    db.getHotProducts()
-  ])
-  banners.value = b
-  categories.value = c
-  products.value = p
+  try {
+    const [b, c, p] = await Promise.all([
+      db.getBanners(),
+      db.getCategories(),
+      db.getHotProducts()
+    ])
+    banners.value = b
+    categories.value = c
+    products.value = p
+  } catch (e) {
+    // 云端任一接口失败时不抛出，避免中断下拉刷新流程；给用户可感知的提示
+    console.warn('[index] 加载首页数据失败', e)
+    uni.showToast({ title: '加载失败，请下拉重试', icon: 'none' })
+  }
 }
 
 onLoad(() => {
@@ -98,8 +104,12 @@ onShow(() => {
 })
 
 onPullDownRefresh(async () => {
-  await loadData()
-  uni.stopPullDownRefresh()
+  // 用 finally 保证无论成功失败都收起刷新圈，不会卡在一直转的状态
+  try {
+    await loadData()
+  } finally {
+    uni.stopPullDownRefresh()
+  }
 })
 
 function onSearch() {

@@ -88,12 +88,19 @@ onLoad(() => {
     from.value = payload.from
     goods.value = payload.goods
   }
-  loadAddress()
+  // 地址在 onShow 统一加载（含首次进入与从地址页选择返回），此处不重复请求
 })
 
-// 从地址页返回时刷新默认/选中地址
+// 首次进入取默认地址；从地址页「选择」返回则优先用选中的那个
 onShow(() => {
-  loadAddress()
+  const picked = uni.getStorageSync(config.storageKeys.selectedAddress)
+  if (picked && picked.id) {
+    address.value = picked
+    uni.removeStorageSync(config.storageKeys.selectedAddress) // 一次性，用完即清
+    return
+  }
+  // 无新选择时：仅在还没有地址（首次进入）时取默认；已选地址则保留，避免未选择返回被默认覆盖
+  if (!address.value) loadAddress()
 })
 
 async function loadAddress() {
@@ -108,7 +115,8 @@ async function loadAddress() {
 }
 
 function goAddress() {
-  uni.navigateTo({ url: '/pages/address/address' })
+  // 带 mode=select 进入选择模式，地址页每行出现「选择」按钮
+  uni.navigateTo({ url: '/pages/address/address?mode=select' })
 }
 
 const submitting = ref(false)

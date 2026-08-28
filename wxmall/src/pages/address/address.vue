@@ -1,10 +1,13 @@
 <template>
   <view class="page">
+    <!-- 选择模式提示（由确认订单页进入时显示） -->
+    <view v-if="selectMode" class="pick-tip">请选择要使用的收货地址</view>
+
     <!-- 地址列表 -->
     <view v-if="addresses.length" class="addr-list">
       <view class="addr-card" v-for="a in addresses" :key="a.id">
-        <!-- 主体：点击进入编辑 -->
-        <view class="addr-main" @tap="onEdit(a)">
+        <!-- 主体：选择模式下点击=选中并返回；普通模式下点击=进入编辑 -->
+        <view class="addr-main" @tap="onMain(a)">
           <view class="addr-row">
             <text class="name">{{ a.name }}</text>
             <text class="phone">{{ a.phone }}</text>
@@ -20,6 +23,7 @@
             <text class="set-txt">{{ a.isDefault ? '默认地址' : '设为默认' }}</text>
           </view>
           <view class="op-btns">
+            <text v-if="selectMode" class="op pick" @tap="onPick(a)">✓ 选择</text>
             <text class="op" @tap="onEdit(a)">✎ 编辑</text>
             <text class="op del" @tap="onDelete(a)">🗑 删除</text>
           </view>
@@ -43,11 +47,18 @@
 <script setup lang="ts">
 /** 收货地址管理：列表 + 设默认 + 删除；新增/编辑跳独立表单页 */
 import { ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { db } from '@/data'
+import { config } from '@/config'
 import type { Address } from '@/types'
 
 const addresses = ref<Address[]>([])
+// 选择模式：由确认订单页带 ?mode=select 进入，此时每行显示「选择」按钮
+const selectMode = ref(false)
+
+onLoad((query) => {
+  selectMode.value = query?.mode === 'select'
+})
 
 onShow(() => {
   // 从编辑页保存返回后也会触发，实现自动刷新
@@ -65,6 +76,18 @@ async function loadAddresses() {
 
 function onAdd() {
   uni.navigateTo({ url: '/pages/address/edit/edit' })
+}
+
+/** 选择模式下：选中该地址并回传给确认订单页 */
+function onPick(a: Address) {
+  uni.setStorageSync(config.storageKeys.selectedAddress, a)
+  uni.navigateBack()
+}
+
+/** 点击地址主体：选择模式下=选中返回，普通模式下=进入编辑 */
+function onMain(a: Address) {
+  if (selectMode.value) onPick(a)
+  else onEdit(a)
 }
 
 function onEdit(a: Address) {
@@ -146,6 +169,10 @@ function onDelete(a: Address) {
 .op-btns { display: flex; }
 .op { font-size: 26rpx; color: $text-main; margin-left: 36rpx; }
 .op.del { color: $text-price; }
+.op.pick { color: $brand; font-weight: bold; }
+
+/* 选择模式提示条 */
+.pick-tip { font-size: 24rpx; color: $text-sub; padding: 4rpx 12rpx 16rpx; }
 
 /* 空状态 */
 .empty {
