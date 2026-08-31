@@ -6,6 +6,7 @@
       <text class="col-num">价格(元)</text>
       <text class="col-num">原价(元)</text>
       <text class="col-num">库存</text>
+      <text class="col-num">销量</text>
       <text class="col-num">单次限购</text>
       <text class="col-op"></text>
     </view>
@@ -14,11 +15,12 @@
       <uni-easyinput class="col-num" type="number" v-model="row.price" placeholder="价格" />
       <uni-easyinput class="col-num" type="number" v-model="row.oldPrice" placeholder="原价" />
       <uni-easyinput class="col-num" type="number" v-model="row.stock" placeholder="库存" />
-      <uni-easyinput class="col-num" type="number" v-model="row.limitPerOrder" placeholder="默认1" />
+      <uni-easyinput class="col-num" type="number" v-model="row.sold" placeholder="销量" />
+      <uni-easyinput class="col-num" type="number" v-model="row.limitPerOrder" placeholder="0=不限" />
       <button class="col-op" type="warn" size="mini" @click="removeRow(i)">删除</button>
     </view>
     <button class="sku-add" size="mini" @click="addRow">+ 添加规格</button>
-    <text v-if="!rows.length" class="sku-tip">无规格时，商品按主价格/库存售卖</text>
+    <text v-if="!rows.length" class="sku-tip">请至少添加一个规格（写明重量/数量，如 500g / 10颗）</text>
   </view>
 </template>
 
@@ -52,6 +54,7 @@
               price: s.price,
               oldPrice: s.oldPrice,
               stock: s.stock,
+              sold: s.sold,
               limitPerOrder: this.normalizeLimit(s.limitPerOrder)
             }))
           }
@@ -67,14 +70,15 @@
     },
     methods: {
       addRow() {
-        this.rows.push({ id: '', name: '', price: null, oldPrice: null, stock: null, limitPerOrder: 1 })
+        this.rows.push({ id: '', name: '', price: null, oldPrice: null, stock: 999, sold: 0, limitPerOrder: 0 })
       },
       removeRow(i) {
         this.rows.splice(i, 1)
       },
       normalizeLimit(value) {
+        // 0 = 不限购；缺省/非法也按 0（不限）处理
         const n = Number(value)
-        return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0
       },
       // 规范化为存库结构：数字字段转 number，限购缺省按 1，id 缺省用行号
       toOutput() {
@@ -84,6 +88,7 @@
           price: r.price === '' || r.price == null ? 0 : Number(r.price),
           oldPrice: r.oldPrice === '' || r.oldPrice == null ? 0 : Number(r.oldPrice),
           stock: r.stock === '' || r.stock == null ? 0 : Number(r.stock),
+          sold: r.sold === '' || r.sold == null ? 0 : Number(r.sold),
           limitPerOrder: this.normalizeLimit(r.limitPerOrder)
         }))
       },

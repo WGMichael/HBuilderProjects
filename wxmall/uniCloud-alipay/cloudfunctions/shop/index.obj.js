@@ -175,7 +175,7 @@ module.exports = {
   async hotProducts() {
     const { data } = await db.collection('tc-products')
       .where({ onSale: true, isHot: true })
-      .orderBy('sold', 'desc')
+      .orderBy('heat', 'desc')
       .limit(6)
       .get();
     return await resolveImages(data.map(stripInternal));
@@ -212,7 +212,7 @@ module.exports = {
     const coll = db.collection('tc-products').where(where);
     const countRes = await coll.count();
     const { data } = await coll
-      .orderBy('sold', 'desc')
+      .orderBy('heat', 'desc')
       .skip((page - 1) * pageSize)
       .limit(pageSize)
       .get();

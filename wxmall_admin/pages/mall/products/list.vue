@@ -18,6 +18,7 @@
             <uni-th width="60" align="center">封面</uni-th>
             <uni-th align="left">标题</uni-th>
             <uni-th width="90" align="center">分类</uni-th>
+            <uni-th width="90" align="center">发货地</uni-th>
             <uni-th width="80" align="center">售价</uni-th>
             <uni-th width="60" align="center">库存</uni-th>
             <uni-th width="60" align="center">销量</uni-th>
@@ -32,9 +33,10 @@
             </uni-td>
             <uni-td>{{ item.title }}<text v-if="item.isNew"> 🆕</text><text v-if="item.isHot"> 🔥</text></uni-td>
             <uni-td align="center">{{ catNames(item) }}</uni-td>
-            <uni-td align="center">¥{{ item.price }}</uni-td>
-            <uni-td align="center">{{ item.stock }}</uni-td>
-            <uni-td align="center">{{ item.sold }}</uni-td>
+            <uni-td align="center">{{ item.shipFrom || '-' }}</uni-td>
+            <uni-td align="center">¥{{ skuPrice(item) }}</uni-td>
+            <uni-td align="center">{{ skuStock(item) }}</uni-td>
+            <uni-td align="center">{{ skuSold(item) }}</uni-td>
             <uni-td align="center">
               <switch :checked="item.onSale" style="transform: scale(0.7)" @change="toggleSale(item, $event)"></switch>
             </uni-td>
@@ -66,7 +68,7 @@
       return {
         // 联表 tc-categories 以显示分类名
         collectionList: [
-          db.collection('tc-products').field('_id,id,title,subtitle,categoryId,categoryIds,cover,images,detailImages,price,oldPrice,sold,stock,isNew,isHot,onSale').getTemp(),
+          db.collection('tc-products').field('_id,id,title,subtitle,shipFrom,categoryId,categoryIds,cover,images,detailImages,skus,isNew,isHot,onSale').getTemp(),
           db.collection('tc-categories').field('id, name as text').getTemp()
         ],
         keyword: '',
@@ -124,6 +126,16 @@
         }
         const names = ids.map((id) => this.catMap[id]).filter(Boolean)
         return names.length ? names.join(' / ') : '-'
+      },
+      // 售价取第一个规格（商品级 price 已废弃）
+      skuPrice(item) {
+        return item.skus && item.skus[0] ? item.skus[0].price : '-'
+      },
+      skuStock(item) {
+        return item.skus && item.skus[0] ? item.skus[0].stock : '-'
+      },
+      skuSold(item) {
+        return item.skus && item.skus[0] ? item.skus[0].sold : '-'
       },
       isImageUrl(v) {
         return typeof v === 'string' && (v.indexOf('http') === 0 || v.indexOf('cloud://') === 0)

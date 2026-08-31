@@ -3,7 +3,7 @@
   // 字段与 src/types/index.ts 的 Product 对齐;额外增加 onSale(上下架)/createTime,
   // 这两个字段仅供后台管理与云端过滤,不返回给前端(云对象里会剔除)。
   "bsonType": "object",
-  "required": ["id", "title", "categoryId", "price"],
+  "required": ["id", "title", "categoryId"],
   "permission": {
     "read": true,
     "create": "'admin' in auth.role",
@@ -30,6 +30,13 @@
       "bsonType": "string",
       "title": "副标题",
       "label": "副标题"
+    },
+    "shipFrom": {
+      "bsonType": "string",
+      "title": "发货地",
+      "description": "发货省份，如 广东省",
+      "label": "发货地",
+      "defaultValue": "广东省"
     },
     "categoryId": {
       "bsonType": "int",
@@ -59,30 +66,6 @@
       "title": "轮播图",
       "description": "商品头图组",
       "label": "轮播图"
-    },
-    "price": {
-      "bsonType": "double",
-      "title": "售价",
-      "label": "售价(元)",
-      "minimum": 0
-    },
-    "oldPrice": {
-      "bsonType": "double",
-      "title": "原价",
-      "label": "原价(元)",
-      "minimum": 0
-    },
-    "sold": {
-      "bsonType": "int",
-      "title": "销量",
-      "label": "销量",
-      "defaultValue": 0
-    },
-    "stock": {
-      "bsonType": "int",
-      "title": "库存",
-      "label": "库存",
-      "defaultValue": 0
     },
     "rating": {
       "bsonType": "int",
@@ -117,13 +100,6 @@
       "title": "规格(SKU)",
       "description": "规格数组,元素含 id/name/price/oldPrice/stock/limitPerOrder(各 sku 的单次限购)",
       "label": "规格"
-    },
-    "limitPerOrder": {
-      "bsonType": "int",
-      "title": "单次限购",
-      "description": "无规格(skus为空)商品:一次下单最多可购数量;缺省按默认1处理。有规格时限购配在各 sku 上",
-      "label": "单次限购(件)",
-      "minimum": 1
     },
     "heat": {
       "bsonType": "int",

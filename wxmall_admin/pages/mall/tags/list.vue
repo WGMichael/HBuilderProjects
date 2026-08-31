@@ -8,7 +8,7 @@
       <button type="primary" size="mini" @click="goAdd">+ 新增标签</button>
     </view>
 
-    <unicloud-db ref="udb" v-slot:default="{data, loading, hasMore, error}" collection="tc-tags" field="_id,id,name,sort" :where="where" :orderby="orderby" :page-size="100" :getcount="true" loadtime="manual">
+    <unicloud-db ref="udb" v-slot:default="{data, loading, hasMore, error}" collection="tc-tags" field="_id,id,name,sort,bgColor,textColor" :where="where" :orderby="orderby" :page-size="100" :getcount="true" loadtime="manual">
       <view v-if="error" class="error">{{ error.message }}</view>
       <view v-else>
         <uni-table border stripe emptyText="暂无标签数据">
@@ -20,7 +20,9 @@
           </uni-tr>
           <uni-tr v-for="item in data" :key="item._id">
             <uni-td align="center">{{ item.id }}</uni-td>
-            <uni-td>{{ item.name }}</uni-td>
+            <uni-td>
+              <text class="tag-badge" :style="{ backgroundColor: item.bgColor || '#f0f0f0', color: item.textColor || '#333333' }">{{ item.name }}</text>
+            </uni-td>
             <uni-td align="center">{{ item.sort }}</uni-td>
             <uni-td align="center">
               <view class="row-ops">
@@ -90,4 +92,12 @@
   }
   .row-ops button { margin: 0 2px; }
   .error { padding: 20px; color: #dd524d; }
+  .tag-badge {
+    /* #ifndef APP-NVUE */
+    display: inline-block;
+    /* #endif */
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
 </style>

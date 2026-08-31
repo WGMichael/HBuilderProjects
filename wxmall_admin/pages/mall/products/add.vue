@@ -10,6 +10,9 @@
       <uni-forms-item name="subtitle" label="副标题">
         <uni-easyinput v-model="formData.subtitle" placeholder="可选"></uni-easyinput>
       </uni-forms-item>
+      <uni-forms-item name="shipFrom" label="发货地">
+        <uni-data-select v-model="formData.shipFrom" :localdata="provinceOptions" :clear="false"></uni-data-select>
+      </uni-forms-item>
       <uni-forms-item name="categoryIds" label="所属分类" required>
         <uni-data-checkbox multiple v-model="categoryIds" :localdata="catOptions" @change="onCategoryChange"></uni-data-checkbox>
       </uni-forms-item>
@@ -33,21 +36,6 @@
           <view class="img-add" @click="chooseImages">＋</view>
         </view>
       </uni-forms-item>
-      <uni-forms-item name="price" label="售价(元)" required>
-        <uni-easyinput type="number" v-model="formData.price" placeholder="0.00"></uni-easyinput>
-      </uni-forms-item>
-      <uni-forms-item name="oldPrice" label="原价(元)">
-        <uni-easyinput type="number" v-model="formData.oldPrice" placeholder="划线价，可选"></uni-easyinput>
-      </uni-forms-item>
-      <uni-forms-item name="sold" label="销量">
-        <uni-easyinput type="number" v-model="formData.sold"></uni-easyinput>
-      </uni-forms-item>
-      <uni-forms-item name="stock" label="库存">
-        <uni-easyinput type="number" v-model="formData.stock"></uni-easyinput>
-      </uni-forms-item>
-      <uni-forms-item name="limitPerOrder" label="单次限购">
-        <uni-easyinput type="number" v-model="formData.limitPerOrder" placeholder="默认1"></uni-easyinput>
-      </uni-forms-item>
       <uni-forms-item name="rating" label="评分(1-5)">
         <uni-easyinput type="number" v-model="formData.rating" placeholder="1-5"></uni-easyinput>
       </uni-forms-item>
@@ -65,7 +53,7 @@
         </view>
         <view class="tag-lib" v-if="tagOptions.length">
           <text class="lib-label">从标签库选：</text>
-          <uni-tag v-for="opt in tagOptions" :key="opt.id" :text="opt.name" type="default" class="lib-tag" @click="pickTag(opt.name)"></uni-tag>
+          <text v-for="opt in tagOptions" :key="opt.id" class="lib-tag" :style="{ backgroundColor: opt.bgColor || '#f0f0f0', color: opt.textColor || '#333333' }" @click="pickTag(opt.name)">{{ opt.name }}</text>
         </view>
       </uni-forms-item>
       <uni-forms-item name="features" label="商品特色">
@@ -114,6 +102,7 @@
 <script>
   import { validator } from '../../../js_sdk/validator/tc-products.js';
   import mallSkuEditor from '../../../components/mall-sku-editor/mall-sku-editor.vue';
+  import { PROVINCE_OPTIONS } from '../../../common/provinces.js';
 
   const db = uniCloud.database();
   const dbCollectionName = 'tc-products';
@@ -136,11 +125,7 @@
       let formData = {
         title: '',
         subtitle: '',
-        price: null,
-        oldPrice: null,
-        sold: 0,
-        stock: 0,
-        limitPerOrder: 1,
+        shipFrom: '广东省',
         rating: null,
         heat: 0,
         tags: [],
@@ -160,6 +145,7 @@
         tagInput: '',
         featureInput: '',
         tagOptions: [], // 预设标签库
+        provinceOptions: PROVINCE_OPTIONS, // 发货地省份选项
         // 图片项模型：{ fileID(已存云端), localPath(新选待传), preview(展示) }
         cover: { fileID: '', localPath: '', preview: '' },
         imageList: [],
@@ -194,8 +180,8 @@
         this.categoryName = o ? o.text : ''
       },
       loadTags() {
-        db.collection('tc-tags').orderBy('sort', 'asc').field('id,name').get().then((r) => {
-          this.tagOptions = (r.result.data || []).map((t) => ({ id: t.id, name: t.name }))
+        db.collection('tc-tags').orderBy('sort', 'asc').field('id,name,bgColor,textColor').get().then((r) => {
+          this.tagOptions = (r.result.data || []).map((t) => ({ id: t.id, name: t.name, bgColor: t.bgColor, textColor: t.textColor }))
         }).catch(() => {})
       },
       // 从标签库选：把标签名加入 tags 文本数组（不重复）
@@ -252,12 +238,10 @@
         this.formData.features.splice(i, 1)
       },
       normalizeNumbers(v) {
-        ['price', 'oldPrice', 'sold', 'stock', 'rating', 'heat'].forEach((k) => {
+        ['rating', 'heat'].forEach((k) => {
           if (v[k] === '' || v[k] === null || v[k] === undefined) delete v[k]
           else v[k] = Number(v[k])
         })
-        const limit = Number(v.limitPerOrder)
-        v.limitPerOrder = Number.isFinite(limit) && limit >= 1 ? Math.floor(limit) : 1
       },
       // 上传单张：拼 fileID + getTempFileURL 验证，失败抛错
       async uploadOne(localPath, name) {
@@ -277,6 +261,10 @@
       submit() {
         if (!this.categoryIds.length) {
           uni.showToast({ icon: 'none', title: '请选择所属分类' })
+          return
+        }
+        if (!(this.formData.skus || []).filter((s) => s.name && String(s.name).trim()).length) {
+          uni.showToast({ icon: 'none', title: '请至少添加一个规格（并填写规格名）' })
           return
         }
         this.$refs.form.validate().then(async (value) => {
@@ -450,6 +438,9 @@
 
   .lib-tag {
     margin: 0 6px 6px 0;
+    padding: 3px 12px;
+    border-radius: 4px;
+    font-size: 13px;
   }
 
   .tip {

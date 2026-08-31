@@ -10,6 +10,21 @@
       <uni-forms-item name="sort" label="排序">
         <uni-easyinput type="number" v-model="formData.sort" placeholder="数字越小越靠前"></uni-easyinput>
       </uni-forms-item>
+      <uni-forms-item name="bgColor" label="背景色">
+        <view class="color-row">
+          <uni-easyinput v-model="formData.bgColor" placeholder="#FFF0E0（留空用默认）"></uni-easyinput>
+          <view class="color-dot" :style="{ backgroundColor: formData.bgColor || '#eeeeee' }"></view>
+        </view>
+      </uni-forms-item>
+      <uni-forms-item name="textColor" label="文字色">
+        <view class="color-row">
+          <uni-easyinput v-model="formData.textColor" placeholder="#E64340（留空用默认）"></uni-easyinput>
+          <view class="color-dot" :style="{ backgroundColor: formData.textColor || '#333333' }"></view>
+        </view>
+      </uni-forms-item>
+      <uni-forms-item label="效果预览">
+        <text class="tag-preview" :style="{ backgroundColor: formData.bgColor || '#f0f0f0', color: formData.textColor || '#333333' }">{{ formData.name || '标签' }}</text>
+      </uni-forms-item>
       <view class="uni-button-group">
         <button type="primary" class="uni-button" @click="submit">提交</button>
       </view>
@@ -24,10 +39,12 @@
   export default {
     data() {
       return {
-        formData: { name: '', sort: 0 },
+        formData: { name: '', sort: 0, bgColor: '', textColor: '' },
         rules: {
           name: { rules: [{ required: true }, { format: 'string' }] },
-          sort: { rules: [{ format: 'int' }] }
+          sort: { rules: [{ format: 'int' }] },
+          bgColor: { rules: [{ format: 'string' }] },
+          textColor: { rules: [{ format: 'string' }] }
         }
       }
     },
@@ -57,6 +74,28 @@
 <style>
   .uni-container { padding: 15px; }
   .readonly-tip { font-size: 13px; color: #999; }
+  .color-row {
+    /* #ifndef APP-NVUE */
+    display: flex;
+    /* #endif */
+    flex-direction: row;
+    align-items: center;
+  }
+  .color-dot {
+    width: 28px;
+    height: 28px;
+    margin-left: 10px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+  .tag-preview {
+    /* #ifndef APP-NVUE */
+    display: inline-block;
+    /* #endif */
+    padding: 3px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
   .uni-button-group {
     margin-top: 50px;
     /* #ifndef APP-NVUE */

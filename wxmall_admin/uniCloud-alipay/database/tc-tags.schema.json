@@ -32,6 +32,18 @@
       "description": "数字越小越靠前",
       "label": "排序",
       "defaultValue": 0
+    },
+    "bgColor": {
+      "bsonType": "string",
+      "title": "背景色",
+      "description": "标签背景色,如 #FFF0E0",
+      "label": "背景色"
+    },
+    "textColor": {
+      "bsonType": "string",
+      "title": "文字色",
+      "description": "标签文字色,如 #E64340",
+      "label": "文字色"
     }
   }
 }

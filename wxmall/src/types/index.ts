@@ -56,12 +56,10 @@ export interface Product {
   categoryId: number
   /** 所属分类（多选），元素为分类 id */
   categoryIds?: number[]
+  /** 发货地（省份），缺省广东省 */
+  shipFrom?: string
   cover: string
   images: string[]
-  price: number
-  oldPrice?: number
-  sold: number
-  stock: number
   rating?: number
   tags: string[]
   /** 商品特色（简短描述数组） */
@@ -69,8 +67,6 @@ export interface Product {
   desc: string
   detailImages: string[]
   skus: Sku[]
-  /** 商品级单次限购：当 skus 为空（无规格）时用它；缺省按默认 1 处理 */
-  limitPerOrder?: number
   /** 是否新品 */
   isNew?: boolean
   /** 是否热卖 */
