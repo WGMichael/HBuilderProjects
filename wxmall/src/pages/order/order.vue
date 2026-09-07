@@ -278,7 +278,7 @@ function goShopping() {
 .go-btn {
   margin-top: 40rpx;
   background: $brand;
-  color: #fff;
+  color: #ffe;
   font-size: 28rpx;
   padding: 18rpx 60rpx;
   border-radius: 40rpx;
