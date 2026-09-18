@@ -1,0 +1,758 @@
+[
+  {
+    "menu_id": "index",
+    "name": "工作台",
+    "icon": "admin-icons-dashboard",
+    "url": "/",
+    "sort": 100,
+    "parent_id": "",
+    "permission": [
+      "ops-workbench"
+    ],
+    "enable": true,
+    "create_date": 1602662469396,
+    "_id": "index"
+  },
+  {
+    "menu_id": "go_governance",
+    "name": "内容治理",
+    "icon": "admin-icons-safety",
+    "url": "",
+    "sort": 200,
+    "parent_id": "",
+    "permission": [],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_governance"
+  },
+  {
+    "menu_id": "go_review",
+    "name": "活动发布审核",
+    "icon": "admin-icons-overview",
+    "url": "/pages/grouporder/review/list",
+    "sort": 210,
+    "parent_id": "go_governance",
+    "permission": [
+      "ops-content-review"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_review"
+  },
+  {
+    "menu_id": "go_report",
+    "name": "举报与内容审核",
+    "icon": "admin-icons-error-js",
+    "url": "/pages/grouporder/report/list",
+    "sort": 220,
+    "parent_id": "go_governance",
+    "permission": [
+      "ops-content-report"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_report"
+  },
+  {
+    "menu_id": "go_activity",
+    "name": "活动与商品",
+    "icon": "admin-icons-table",
+    "url": "/pages/grouporder/activity/list",
+    "sort": 230,
+    "parent_id": "go_governance",
+    "permission": [
+      "ops-content-activity"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_activity"
+  },
+  {
+    "menu_id": "go_search",
+    "name": "全局检索",
+    "icon": "admin-icons-icon",
+    "url": "/pages/grouporder/search/index",
+    "sort": 300,
+    "parent_id": "",
+    "permission": [
+      "ops-search"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_search"
+  },
+  {
+    "menu_id": "go_stat",
+    "name": "运营统计",
+    "icon": "admin-icons-tongji",
+    "url": "",
+    "sort": 400,
+    "parent_id": "",
+    "permission": [],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_stat"
+  },
+  {
+    "menu_id": "go_stat_overview",
+    "name": "统计总览",
+    "icon": "admin-icons-tongjishouye",
+    "url": "/pages/grouporder/stat/overview",
+    "sort": 410,
+    "parent_id": "go_stat",
+    "permission": [
+      "ops-stat-view"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_stat_overview"
+  },
+  {
+    "menu_id": "go_stat_leader",
+    "name": "团长与活动",
+    "icon": "admin-icons-user",
+    "url": "/pages/grouporder/stat/leader",
+    "sort": 420,
+    "parent_id": "go_stat",
+    "permission": [
+      "ops-stat-view"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_stat_leader"
+  },
+  {
+    "menu_id": "go_privacy",
+    "name": "账号与隐私",
+    "icon": "admin-icons-manager-user",
+    "url": "",
+    "sort": 500,
+    "parent_id": "",
+    "permission": [],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_privacy"
+  },
+  {
+    "menu_id": "go_appeal",
+    "name": "账号绑定申诉",
+    "icon": "admin-icons-manager-role",
+    "url": "/pages/grouporder/appeal/list",
+    "sort": 510,
+    "parent_id": "go_privacy",
+    "permission": [
+      "ops-privacy-appeal"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_appeal"
+  },
+  {
+    "menu_id": "go_sensitive",
+    "name": "敏感资料查看",
+    "icon": "admin-icons-help",
+    "url": "/pages/grouporder/sensitive/index",
+    "sort": 520,
+    "parent_id": "go_privacy",
+    "permission": [
+      "ops-privacy-sensitive"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_sensitive"
+  },
+  {
+    "menu_id": "go_privacy_case",
+    "name": "隐私与注销事项",
+    "icon": "admin-icons-doc",
+    "url": "/pages/grouporder/privacy-case/list",
+    "sort": 530,
+    "parent_id": "go_privacy",
+    "permission": [
+      "ops-privacy-case"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_privacy_case"
+  },
+  {
+    "menu_id": "go_audit",
+    "name": "审计",
+    "icon": "admin-icons-stat",
+    "url": "",
+    "sort": 600,
+    "parent_id": "",
+    "permission": [],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_audit"
+  },
+  {
+    "menu_id": "go_export_log",
+    "name": "Excel 事件",
+    "icon": "admin-icons-page-ent",
+    "url": "/pages/grouporder/export-log/list",
+    "sort": 610,
+    "parent_id": "go_audit",
+    "permission": [
+      "ops-audit-export"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_export_log"
+  },
+  {
+    "menu_id": "go_oplog",
+    "name": "操作日志",
+    "icon": "admin-icons-shijianfenxi1",
+    "url": "/pages/grouporder/oplog/list",
+    "sort": 620,
+    "parent_id": "go_audit",
+    "permission": [
+      "ops-audit-oplog"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_oplog"
+  },
+  {
+    "permission": [
+      "ops-audit-login"
+    ],
+    "enable": true,
+    "menu_id": "safety_statistics_user_log",
+    "name": "登录日志",
+    "icon": "admin-icons-safety",
+    "url": "/pages/system/safety/list",
+    "sort": 630,
+    "parent_id": "go_audit",
+    "create_date": 1638356430871,
+    "_id": "safety_statistics_user_log"
+  },
+  {
+    "menu_id": "system_management",
+    "name": "系统管理",
+    "icon": "admin-icons-fl-xitong",
+    "url": "",
+    "sort": 1000,
+    "parent_id": "",
+    "permission": [],
+    "enable": true,
+    "create_date": 1602662469396,
+    "_id": "system_management"
+  },
+  {
+    "menu_id": "system_user",
+    "name": "运营账号",
+    "icon": "admin-icons-manager-user",
+    "url": "/pages/system/user/list",
+    "sort": 1010,
+    "parent_id": "system_management",
+    "permission": [
+      "ops-sys-account"
+    ],
+    "enable": true,
+    "create_date": 1602662469398,
+    "_id": "system_user"
+  },
+  {
+    "menu_id": "system_role",
+    "name": "角色管理",
+    "icon": "admin-icons-manager-role",
+    "url": "/pages/system/role/list",
+    "sort": 1020,
+    "parent_id": "system_management",
+    "permission": [
+      "ops-sys-role"
+    ],
+    "enable": true,
+    "create_date": 1602662469397,
+    "_id": "system_role"
+  },
+  {
+    "menu_id": "system_permission",
+    "name": "权限管理",
+    "icon": "admin-icons-manager-permission",
+    "url": "/pages/system/permission/list",
+    "sort": 1030,
+    "parent_id": "system_management",
+    "permission": [
+      "ops-sys-permission"
+    ],
+    "enable": true,
+    "create_date": 1602662469396,
+    "_id": "system_permission"
+  },
+  {
+    "menu_id": "system_app",
+    "name": "应用管理",
+    "icon": "admin-icons-manager-app",
+    "url": "/pages/system/app/list",
+    "sort": 1035,
+    "parent_id": "system_management",
+    "permission": [],
+    "enable": false,
+    "create_date": 1602662469399,
+    "_id": "system_app"
+  },
+  {
+    "menu_id": "system_update",
+    "name": "App升级中心",
+    "icon": "uni-icons-cloud-upload",
+    "url": "/uni_modules/uni-upgrade-center/pages/version/list",
+    "sort": 1036,
+    "parent_id": "system_management",
+    "permission": [],
+    "enable": false,
+    "create_date": 1656491532434,
+    "_id": "system_update"
+  },
+  {
+    "menu_id": "system_tag",
+    "name": "标签管理",
+    "icon": "admin-icons-manager-tag",
+    "url": "/pages/system/tag/list",
+    "sort": 1037,
+    "parent_id": "system_management",
+    "permission": [],
+    "enable": false,
+    "create_date": 1602662479389,
+    "_id": "system_tag"
+  },
+  {
+    "menu_id": "system_menu",
+    "name": "菜单管理",
+    "icon": "admin-icons-manager-menu",
+    "url": "/pages/system/menu/list",
+    "sort": 1040,
+    "parent_id": "system_management",
+    "permission": [
+      "ops-sys-menu"
+    ],
+    "enable": true,
+    "create_date": 1602662469396,
+    "_id": "system_menu"
+  },
+  {
+    "menu_id": "go_config",
+    "name": "平台配置",
+    "icon": "admin-icons-xitongguanli",
+    "url": "/pages/grouporder/config/index",
+    "sort": 1050,
+    "parent_id": "system_management",
+    "permission": [
+      "ops-sys-config"
+    ],
+    "enable": true,
+    "create_date": 1758067200000,
+    "_id": "go_config"
+  },
+  {
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat",
+    "name": "uni 统计",
+    "icon": "admin-icons-tongji",
+    "url": "",
+    "sort": 2100,
+    "parent_id": "",
+    "create_date": 1638356430871,
+    "_id": "uni-stat"
+  },
+  {
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-device",
+    "name": "设备统计",
+    "icon": "admin-icons-shebeitongji",
+    "url": "",
+    "sort": 2120,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-device"
+  },
+  {
+    "parent_id": "uni-stat-device",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-device-overview",
+    "name": "概况",
+    "icon": "",
+    "url": "/pages/uni-stat/device/overview/overview",
+    "sort": 2121,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-device-overview"
+  },
+  {
+    "parent_id": "uni-stat-user",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-user-overview",
+    "name": "概况",
+    "icon": "",
+    "url": "/pages/uni-stat/user/overview/overview",
+    "sort": 2121,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-user-overview"
+  },
+  {
+    "parent_id": "uni-stat-device",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-device-activity",
+    "name": "活跃度",
+    "icon": "",
+    "url": "/pages/uni-stat/device/activity/activity",
+    "sort": 2122,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-device-activity"
+  },
+  {
+    "menu_id": "uni-stat-pay",
+    "name": "支付统计",
+    "icon": "uni-icons-circle",
+    "url": "",
+    "sort": 2122,
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "create_date": 1667386977981,
+    "_id": "uni-stat-pay"
+  },
+  {
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-user",
+    "name": "注册用户统计",
+    "icon": "admin-icons-yonghutongji",
+    "url": "",
+    "sort": 2122,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-user"
+  },
+  {
+    "parent_id": "uni-stat-user",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-user-activity",
+    "name": "活跃度",
+    "icon": "",
+    "url": "/pages/uni-stat/user/activity/activity",
+    "sort": 2122,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-user-activity"
+  },
+  {
+    "parent_id": "uni-stat-device",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-device-trend",
+    "name": "趋势分析",
+    "icon": "",
+    "url": "/pages/uni-stat/device/trend/trend",
+    "sort": 2123,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-device-trend"
+  },
+  {
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-page-analysis",
+    "name": "页面统计",
+    "icon": "admin-icons-page-ent",
+    "url": "",
+    "sort": 2123,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-page-analysis"
+  },
+  {
+    "parent_id": "uni-stat-user",
+    "permission": [],
+    "enable": false,
+    "icon": "",
+    "menu_id": "uni-stat-user-trend",
+    "name": "趋势分析",
+    "url": "/pages/uni-stat/user/trend/trend",
+    "sort": 2123,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-user-trend"
+  },
+  {
+    "parent_id": "uni-stat-device",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-device-retention",
+    "name": "留存",
+    "icon": "",
+    "url": "/pages/uni-stat/device/retention/retention",
+    "sort": 2124,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-device-retention"
+  },
+  {
+    "parent_id": "uni-stat-user",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-user-retention",
+    "name": "留存",
+    "icon": "",
+    "url": "/pages/uni-stat/user/retention/retention",
+    "sort": 2124,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-user-retention"
+  },
+  {
+    "parent_id": "uni-stat-device",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-device-comparison",
+    "name": "平台对比",
+    "icon": "",
+    "url": "/pages/uni-stat/device/comparison/comparison",
+    "sort": 2125,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-device-comparison"
+  },
+  {
+    "parent_id": "uni-stat-user",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-user-comparison",
+    "name": "平台对比",
+    "icon": "",
+    "url": "/pages/uni-stat/user/comparison/comparison",
+    "sort": 2125,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-user-comparison"
+  },
+  {
+    "parent_id": "uni-stat-device",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-device-stickiness",
+    "name": "粘性",
+    "icon": "",
+    "url": "/pages/uni-stat/device/stickiness/stickiness",
+    "sort": 2126,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-device-stickiness"
+  },
+  {
+    "parent_id": "uni-stat-user",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-user-stickiness",
+    "name": "粘性",
+    "icon": "",
+    "url": "/pages/uni-stat/user/stickiness/stickiness",
+    "sort": 2126,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-user-stickiness"
+  },
+  {
+    "parent_id": "uni-stat-page-analysis",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-page-res",
+    "name": "受访页",
+    "icon": "",
+    "url": "/pages/uni-stat/page-res/page-res",
+    "sort": 2131,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-page-res"
+  },
+  {
+    "parent_id": "uni-stat-page-analysis",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-page-ent",
+    "name": "入口页",
+    "icon": "",
+    "url": "/pages/uni-stat/page-ent/page-ent",
+    "sort": 2132,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-page-ent"
+  },
+  {
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-page-content-analysis",
+    "name": "内容统计",
+    "icon": "admin-icons-doc",
+    "url": "",
+    "sort": 2140,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-page-content-analysis"
+  },
+  {
+    "parent_id": "uni-stat-page-content-analysis",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-page-content",
+    "name": "内容统计",
+    "icon": "",
+    "url": "/pages/uni-stat/page-content/page-content",
+    "sort": 2141,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-page-content"
+  },
+  {
+    "parent_id": "uni-stat-page-content-analysis",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-page-rule",
+    "name": "页面规则",
+    "icon": "",
+    "url": "/pages/uni-stat/page-rule/page-rule",
+    "sort": 2142,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-page-rule"
+  },
+  {
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-senceChannel",
+    "name": "渠道/场景值分析",
+    "icon": "admin-icons-qudaofenxi",
+    "url": "",
+    "sort": 2150,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-senceChannel"
+  },
+  {
+    "parent_id": "uni-stat-senceChannel",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-senceChannel-scene",
+    "name": "场景值（小程序）",
+    "icon": "",
+    "url": "/pages/uni-stat/scene/scene",
+    "sort": 2151,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-senceChannel-scene"
+  },
+  {
+    "parent_id": "uni-stat-senceChannel",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-senceChannel-channel",
+    "name": "渠道（app）",
+    "icon": "",
+    "url": "/pages/uni-stat/channel/channel",
+    "sort": 2152,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-senceChannel-channel"
+  },
+  {
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-event-event",
+    "name": "自定义事件",
+    "icon": "admin-icons-shijianfenxi",
+    "url": "/pages/uni-stat/event/event",
+    "sort": 2160,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-event-event"
+  },
+  {
+    "parent_id": "uni-stat",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-error",
+    "name": "错误统计",
+    "icon": "admin-icons-cuowutongji",
+    "url": "",
+    "sort": 2170,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-error"
+  },
+  {
+    "parent_id": "uni-stat-error",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-error-js",
+    "name": "代码错误",
+    "icon": "",
+    "url": "/pages/uni-stat/error/js/js",
+    "sort": 2171,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-error-js"
+  },
+  {
+    "parent_id": "uni-stat-error",
+    "permission": [],
+    "enable": false,
+    "menu_id": "uni-stat-error-app",
+    "name": "app崩溃",
+    "icon": "",
+    "url": "/pages/uni-stat/error/app/app",
+    "sort": 2172,
+    "create_date": 1638356902516,
+    "_id": "uni-stat-error-app"
+  },
+  {
+    "permission": [],
+    "enable": false,
+    "menu_id": "safety_statistics",
+    "name": "安全审计",
+    "icon": "admin-icons-safety",
+    "url": "",
+    "sort": 3100,
+    "parent_id": "",
+    "create_date": 1638356430871,
+    "_id": "safety_statistics"
+  },
+  {
+    "menu_id": "uni-stat-pay-overview",
+    "name": "概况",
+    "icon": "",
+    "url": "/pages/uni-stat/pay-order/overview/overview",
+    "sort": 21221,
+    "parent_id": "uni-stat-pay",
+    "permission": [],
+    "enable": false,
+    "create_date": 1667387038602,
+    "_id": "uni-stat-pay-overview"
+  },
+  {
+    "menu_id": "uni-stat-pay-funnel",
+    "name": "转换漏斗分析",
+    "icon": "",
+    "url": "/pages/uni-stat/pay-order/funnel/funnel",
+    "sort": 21222,
+    "parent_id": "uni-stat-pay",
+    "permission": [],
+    "enable": false,
+    "create_date": 1668430092890,
+    "_id": "uni-stat-pay-funnel"
+  },
+  {
+    "menu_id": "uni-stat-pay-ranking",
+    "name": "价值用户排行",
+    "icon": "",
+    "url": "/pages/uni-stat/pay-order/ranking/ranking",
+    "sort": 21223,
+    "parent_id": "uni-stat-pay",
+    "permission": [],
+    "enable": false,
+    "create_date": 1668430128302,
+    "_id": "uni-stat-pay-ranking"
+  },
+  {
+    "menu_id": "uni-stat-pay-order-list",
+    "name": "订单明细",
+    "icon": "",
+    "url": "/pages/uni-stat/pay-order/list/list",
+    "sort": 21224,
+    "parent_id": "uni-stat-pay",
+    "permission": [],
+    "enable": false,
+    "create_date": 1667387078947,
+    "_id": "uni-stat-pay-order-list"
+  }
+]

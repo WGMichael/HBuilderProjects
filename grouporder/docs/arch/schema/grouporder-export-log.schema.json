@@ -1,0 +1,105 @@
+{
+  "bsonType": "object",
+  "required": [
+    "activity_id",
+    "leader_uid",
+    "request_uid",
+    "file_version",
+    "event_type"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "Excel 清单生成与下载事件表。不保存下载地址，不提供文件内容",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID，系统自动生成"
+    },
+    "activity_id": {
+      "bsonType": "string",
+      "title": "关联活动",
+      "foreignKey": "grouporder-activity._id",
+      "description": "清单对应的活动"
+    },
+    "leader_uid": {
+      "bsonType": "string",
+      "title": "团长",
+      "foreignKey": "uni-id-users._id",
+      "description": "活动团长"
+    },
+    "request_uid": {
+      "bsonType": "string",
+      "title": "请求人",
+      "foreignKey": "uni-id-users._id",
+      "description": "发起生成或下载的用户"
+    },
+    "file_version": {
+      "bsonType": "string",
+      "title": "文件版本标识",
+      "description": "生成标识，不是下载地址。禁止保存公开固定下载地址（OPS §10）",
+      "maxLength": 128
+    },
+    "event_type": {
+      "bsonType": "int",
+      "title": "事件类型",
+      "description": "1生成成功 2生成失败 3下载成功 4下载失败 5权限拒绝",
+      "enum": [
+        {
+          "value": 1,
+          "text": "生成成功"
+        },
+        {
+          "value": 2,
+          "text": "生成失败"
+        },
+        {
+          "value": 3,
+          "text": "下载成功"
+        },
+        {
+          "value": 4,
+          "text": "下载失败"
+        },
+        {
+          "value": 5,
+          "text": "权限拒绝"
+        }
+      ]
+    },
+    "permission_check_result": {
+      "bsonType": "string",
+      "title": "权限校验结果",
+      "description": "权限校验的结论",
+      "maxLength": 200
+    },
+    "link_valid_result": {
+      "bsonType": "string",
+      "title": "链接有效性结果",
+      "description": "链接过期、被转发等结果",
+      "maxLength": 200
+    },
+    "fail_reason": {
+      "bsonType": "string",
+      "title": "失败原因摘要",
+      "description": "失败原因",
+      "maxLength": 500
+    },
+    "request_id": {
+      "bsonType": "string",
+      "title": "请求唯一标识",
+      "description": "用于识别重复请求",
+      "maxLength": 64
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "事件时间",
+      "description": "事件时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

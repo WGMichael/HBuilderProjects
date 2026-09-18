@@ -1,0 +1,132 @@
+{
+  "bsonType": "object",
+  "required": [
+    "case_no",
+    "case_type",
+    "target_uid",
+    "status"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "注销、删除与匿名化事项登记表。运营不得延长、缩短或绕过既定期限",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（事项 ID），系统自动生成"
+    },
+    "case_no": {
+      "bsonType": "string",
+      "title": "事项编号",
+      "description": "全局唯一",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "case_type": {
+      "bsonType": "int",
+      "title": "事项类型",
+      "description": "1账号注销 2删除请求 3到期匿名化",
+      "enum": [
+        {
+          "value": 1,
+          "text": "账号注销"
+        },
+        {
+          "value": 2,
+          "text": "删除请求"
+        },
+        {
+          "value": 3,
+          "text": "到期匿名化"
+        }
+      ]
+    },
+    "target_uid": {
+      "bsonType": "string",
+      "title": "对象用户",
+      "foreignKey": "uni-id-users._id",
+      "description": "事项针对的用户"
+    },
+    "retention_start": {
+      "bsonType": "timestamp",
+      "title": "保存期起点",
+      "description": "保存期起点"
+    },
+    "retention_expire": {
+      "bsonType": "timestamp",
+      "title": "三年到期日",
+      "description": "三年到期日"
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "事项状态",
+      "description": "1已登记 2限制处理中 3已到期待处理 4已完成 5执行失败",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "已登记"
+        },
+        {
+          "value": 2,
+          "text": "限制处理中"
+        },
+        {
+          "value": 3,
+          "text": "已到期待处理"
+        },
+        {
+          "value": 4,
+          "text": "已完成"
+        },
+        {
+          "value": 5,
+          "text": "执行失败"
+        }
+      ]
+    },
+    "restricted": {
+      "bsonType": "int",
+      "title": "是否转入限制处理",
+      "description": "注销后仍在三年期内的订单资料仅用于争议、审计与必要合规（D-035）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "execute_result": {
+      "bsonType": "string",
+      "title": "执行结果",
+      "description": "删除或匿名化的执行结果",
+      "maxLength": 500
+    },
+    "execute_time": {
+      "bsonType": "timestamp",
+      "title": "执行时间",
+      "description": "执行时间"
+    },
+    "operator_uid": {
+      "bsonType": "string",
+      "title": "登记人",
+      "foreignKey": "uni-id-users._id",
+      "description": "登记该事项的运营账号"
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "登记时间",
+      "description": "登记时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

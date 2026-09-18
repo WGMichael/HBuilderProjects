@@ -1,0 +1,162 @@
+{
+  "bsonType": "object",
+  "required": [
+    "object_type",
+    "object_id",
+    "content_type",
+    "content_version",
+    "content_snapshot",
+    "check_time",
+    "check_result",
+    "status"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "内容安全检测与人工复核记录表",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（检测记录 ID），系统自动生成"
+    },
+    "object_type": {
+      "bsonType": "string",
+      "title": "送检对象类型",
+      "description": "activity 或 goods",
+      "enum": [
+        {
+          "value": "activity",
+          "text": "活动"
+        },
+        {
+          "value": "goods",
+          "text": "商品"
+        }
+      ]
+    },
+    "object_id": {
+      "bsonType": "string",
+      "title": "送检对象",
+      "description": "活动或商品的 ID",
+      "maxLength": 64
+    },
+    "content_type": {
+      "bsonType": "string",
+      "title": "内容类型",
+      "description": "text 或 image",
+      "enum": [
+        {
+          "value": "text",
+          "text": "文本"
+        },
+        {
+          "value": "image",
+          "text": "图片"
+        }
+      ]
+    },
+    "content_version": {
+      "bsonType": "int",
+      "title": "内容版本",
+      "description": "关联送检时的内容版本，保证复核看到被检测时的版本（OPS §5.2）"
+    },
+    "content_snapshot": {
+      "bsonType": "object",
+      "title": "送检内容快照",
+      "description": "送检时的文字或图片标识"
+    },
+    "trace_id": {
+      "bsonType": "string",
+      "title": "检测追踪标识",
+      "description": "检测接口返回的标识。图片异步回调凭此匹配回本记录（D-058）",
+      "maxLength": 128
+    },
+    "check_time": {
+      "bsonType": "timestamp",
+      "title": "检测时间",
+      "description": "检测时间"
+    },
+    "check_result": {
+      "bsonType": "int",
+      "title": "检测结果",
+      "description": "1通过 2命中需人工 3明确违规拦截",
+      "enum": [
+        {
+          "value": 1,
+          "text": "通过"
+        },
+        {
+          "value": 2,
+          "text": "命中需人工"
+        },
+        {
+          "value": 3,
+          "text": "明确违规拦截"
+        }
+      ]
+    },
+    "hit_reason": {
+      "bsonType": "string",
+      "title": "命中原因",
+      "description": "命中的规则或标签",
+      "maxLength": 200
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "复核状态",
+      "description": "1待复核 2已放行 3维持拦截 4已处置",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "待复核"
+        },
+        {
+          "value": 2,
+          "text": "已放行"
+        },
+        {
+          "value": 3,
+          "text": "维持拦截"
+        },
+        {
+          "value": 4,
+          "text": "已处置"
+        }
+      ]
+    },
+    "reviewer_uid": {
+      "bsonType": "string",
+      "title": "复核人",
+      "foreignKey": "uni-id-users._id",
+      "description": "执行人工复核的运营账号"
+    },
+    "review_conclusion": {
+      "bsonType": "string",
+      "title": "复核结论",
+      "description": "放行、维持拦截或下架",
+      "maxLength": 100
+    },
+    "review_reason": {
+      "bsonType": "string",
+      "title": "复核理由",
+      "description": "复核结论的理由",
+      "maxLength": 500
+    },
+    "review_time": {
+      "bsonType": "timestamp",
+      "title": "复核时间",
+      "description": "复核时间"
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

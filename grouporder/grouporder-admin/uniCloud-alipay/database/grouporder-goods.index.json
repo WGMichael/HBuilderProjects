@@ -1,0 +1,34 @@
+[
+  {
+    "IndexName": "activity_gov_sort",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "activity_id",
+          "Direction": "1"
+        },
+        {
+          "Name": "governance_status",
+          "Direction": "1"
+        },
+        {
+          "Name": "sort",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "activity_id",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "activity_id",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  }
+]

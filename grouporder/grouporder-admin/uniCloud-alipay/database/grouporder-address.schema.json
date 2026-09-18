@@ -1,0 +1,96 @@
+{
+  "bsonType": "object",
+  "required": [
+    "user_id",
+    "name",
+    "mobile",
+    "address"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "用户收货信息簿，全表敏感",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（收货信息 ID），系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "归属用户",
+      "foreignKey": "uni-id-users._id",
+      "description": "归属用户 ID"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "收货人姓名",
+      "description": "敏感字段",
+      "minLength": 1,
+      "maxLength": 50,
+      "trim": "both"
+    },
+    "mobile": {
+      "bsonType": "string",
+      "title": "收货电话",
+      "description": "敏感字段。仅作履约联系方式，不用于账号验证或身份识别（D-029、P1-02）",
+      "minLength": 1,
+      "maxLength": 20,
+      "trim": "both"
+    },
+    "address": {
+      "bsonType": "string",
+      "title": "完整收货地址",
+      "description": "敏感字段",
+      "minLength": 1,
+      "maxLength": 200,
+      "trim": "both"
+    },
+    "is_default": {
+      "bsonType": "int",
+      "title": "是否默认",
+      "description": "同一用户至多一条为 1。删除默认项后自动将剩余最早创建的一条设为默认（D-013、D-046）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "deleted": {
+      "bsonType": "int",
+      "title": "是否已删除",
+      "description": "软删除标记，保住订单 address_id 的追溯链",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "update_date": {
+      "bsonType": "timestamp",
+      "title": "更新时间",
+      "description": "更新时间"
+    }
+  }
+}

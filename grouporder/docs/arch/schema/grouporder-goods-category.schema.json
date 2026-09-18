@@ -1,0 +1,47 @@
+{
+  "bsonType": "object",
+  "required": [
+    "user_id",
+    "name"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "用户商品库分类。用户私有，仅用于商品库筛选，不进入活动展示与清单（D-066）",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（分类 ID），系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "归属用户",
+      "foreignKey": "uni-id-users._id",
+      "description": "归属用户 ID。分类为用户私有，任何读写必须校验归属"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "分类名称",
+      "description": "分类名称，1-10 字。仅用户本人可见，不对外展示，无需内容安全检测",
+      "minLength": 1,
+      "maxLength": 10,
+      "trim": "both"
+    },
+    "sort": {
+      "bsonType": "int",
+      "title": "排序",
+      "description": "用户自定义顺序，正序",
+      "defaultValue": 0
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

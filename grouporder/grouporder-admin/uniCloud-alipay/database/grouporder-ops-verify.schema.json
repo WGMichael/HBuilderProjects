@@ -1,0 +1,87 @@
+{
+  "bsonType": "object",
+  "required": [
+    "operator_uid",
+    "verify_time",
+    "expire_time",
+    "result"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "敏感权限二次验证记录表",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID，系统自动生成"
+    },
+    "operator_uid": {
+      "bsonType": "string",
+      "title": "运营账号",
+      "foreignKey": "uni-id-users._id",
+      "description": "执行二次验证的账号"
+    },
+    "verify_time": {
+      "bsonType": "timestamp",
+      "title": "验证时间",
+      "description": "验证时间"
+    },
+    "expire_time": {
+      "bsonType": "timestamp",
+      "title": "有效期截止",
+      "description": "有效期截止"
+    },
+    "result": {
+      "bsonType": "int",
+      "title": "验证结果",
+      "description": "1成功 0失败",
+      "enum": [
+        {
+          "value": 0,
+          "text": "失败"
+        },
+        {
+          "value": 1,
+          "text": "成功"
+        }
+      ]
+    },
+    "scope_case_no": {
+      "bsonType": "string",
+      "title": "授权事项编号",
+      "description": "授权只覆盖当前事项，不能据此浏览其他用户或活动（OPS §8.2）",
+      "maxLength": 32
+    },
+    "scope_object_ids": {
+      "bsonType": "array",
+      "title": "授权对象范围",
+      "description": "授权覆盖的对象标识列表"
+    },
+    "invalidated": {
+      "bsonType": "int",
+      "title": "是否已提前失效",
+      "description": "账号停用或权限撤销后置 1，必须重新校验",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

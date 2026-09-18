@@ -1,0 +1,356 @@
+{
+  "bsonType": "object",
+  "required": [
+    "title",
+    "cover_image",
+    "short_code",
+    "leader_uid",
+    "status",
+    "end_time",
+    "governance_status",
+    "content_version",
+    "delivery_type"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "群接龙活动表",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（活动 ID），系统自动生成"
+    },
+    "title": {
+      "bsonType": "string",
+      "title": "活动标题",
+      "description": "活动标题，1-50 字",
+      "minLength": 1,
+      "maxLength": 50,
+      "trim": "both"
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "活动说明",
+      "description": "活动说明，最多 500 字",
+      "maxLength": 500,
+      "trim": "both"
+    },
+    "cover_image": {
+      "bsonType": "file",
+      "title": "封面图",
+      "description": "活动封面图，必填。用于首页列表与微信分享卡片（D-041）"
+    },
+    "images": {
+      "bsonType": "array",
+      "arrayType": "file",
+      "title": "轮播图",
+      "description": "活动详情页顶部轮播图，最多 9 张（D-041）",
+      "maxLength": 9
+    },
+    "short_code": {
+      "bsonType": "string",
+      "title": "活动短码",
+      "description": "4 位大写字母数字，全局唯一，用于订单号拼装与口头引用",
+      "minLength": 4,
+      "maxLength": 4
+    },
+    "delivery_type": {
+      "bsonType": "int",
+      "title": "交付方式",
+      "description": "1送货上门（订单需完整收货地址）2自提（仅需收货人姓名与电话）。创建活动时必选，默认送货上门，**发布后不可修改**，以保证已有订单的收货快照口径稳定（D-060）",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "送货上门"
+        },
+        {
+          "value": 2,
+          "text": "自提"
+        }
+      ]
+    },
+    "leader_uid": {
+      "bsonType": "string",
+      "title": "团长",
+      "description": "活动发起人，参考 uni-id-users 表",
+      "foreignKey": "uni-id-users._id"
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "业务状态",
+      "description": "0草稿 1审核中 2进行中 3已截止 4已取消（D-043）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "草稿"
+        },
+        {
+          "value": 1,
+          "text": "审核中"
+        },
+        {
+          "value": 2,
+          "text": "进行中"
+        },
+        {
+          "value": 3,
+          "text": "已截止"
+        },
+        {
+          "value": 4,
+          "text": "已取消"
+        }
+      ]
+    },
+    "publish_date": {
+      "bsonType": "timestamp",
+      "title": "首次成功发布时间",
+      "description": "首次成功发布时间"
+    },
+    "review_mode": {
+      "bsonType": "int",
+      "title": "审核模式快照",
+      "description": "本次审核生效模式，提交时从平台配置固化 1自动 2人工（D-057）",
+      "enum": [
+        {
+          "value": 1,
+          "text": "自动审核"
+        },
+        {
+          "value": 2,
+          "text": "人工审核"
+        }
+      ]
+    },
+    "review_submit_date": {
+      "bsonType": "timestamp",
+      "title": "最近一次提交发布审核时间",
+      "description": "最近一次提交发布审核时间"
+    },
+    "review_uid": {
+      "bsonType": "string",
+      "title": "审核操作人",
+      "description": "最近一次审核操作人，自动模式下为空",
+      "foreignKey": "uni-id-users._id"
+    },
+    "review_time": {
+      "bsonType": "timestamp",
+      "title": "最近一次审核完成时间",
+      "description": "最近一次审核完成时间"
+    },
+    "review_result": {
+      "bsonType": "int",
+      "title": "审核结果",
+      "description": "0无结果 1通过 2不通过 3已撤回",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "无结果"
+        },
+        {
+          "value": 1,
+          "text": "通过"
+        },
+        {
+          "value": 2,
+          "text": "不通过"
+        },
+        {
+          "value": 3,
+          "text": "已撤回"
+        }
+      ]
+    },
+    "review_reason": {
+      "bsonType": "string",
+      "title": "审核原因",
+      "description": "审核不通过原因或备注，向团长展示，不含内部敏感信息",
+      "maxLength": 500
+    },
+    "content_version": {
+      "bsonType": "int",
+      "title": "内容版本",
+      "description": "待审内容版本，内容编辑后递增，审核与快照均关联此版本（D-048）",
+      "defaultValue": 1
+    },
+    "end_time": {
+      "bsonType": "timestamp",
+      "title": "定时截止时间",
+      "description": "定时截止时间"
+    },
+    "actual_end_time": {
+      "bsonType": "timestamp",
+      "title": "实际截止时间",
+      "description": "实际截止时间"
+    },
+    "end_type": {
+      "bsonType": "int",
+      "title": "截止方式",
+      "description": "1定时自动 2团长手动提前（D-020）",
+      "enum": [
+        {
+          "value": 1,
+          "text": "定时自动"
+        },
+        {
+          "value": 2,
+          "text": "团长手动提前"
+        }
+      ]
+    },
+    "cancel_uid": {
+      "bsonType": "string",
+      "title": "取消操作人",
+      "foreignKey": "uni-id-users._id",
+      "description": "取消活动的操作人"
+    },
+    "cancel_time": {
+      "bsonType": "timestamp",
+      "title": "取消时间",
+      "description": "取消时间"
+    },
+    "cancel_reason": {
+      "bsonType": "string",
+      "title": "取消原因",
+      "description": "进行中活动取消时必填（D-027）",
+      "maxLength": 500
+    },
+    "governance_status": {
+      "bsonType": "int",
+      "title": "治理状态",
+      "description": "0正常 1已下架。与业务状态独立，运营下架不改写业务状态（OPS §6）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "正常"
+        },
+        {
+          "value": 1,
+          "text": "已下架"
+        }
+      ]
+    },
+    "governance_uid": {
+      "bsonType": "string",
+      "title": "下架操作人",
+      "foreignKey": "uni-id-users._id",
+      "description": "执行治理下架的运营账号"
+    },
+    "governance_time": {
+      "bsonType": "timestamp",
+      "title": "治理操作时间",
+      "description": "治理操作时间"
+    },
+    "governance_type": {
+      "bsonType": "string",
+      "title": "违规类型",
+      "description": "治理下架的违规分类",
+      "maxLength": 100
+    },
+    "governance_reason": {
+      "bsonType": "string",
+      "title": "下架原因",
+      "description": "治理下架原因",
+      "maxLength": 500
+    },
+    "ever_governed": {
+      "bsonType": "int",
+      "title": "是否曾被下架",
+      "description": "历史标记，置 1 后不回退（OPS §11.2）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "text_check_status": {
+      "bsonType": "int",
+      "title": "文本检测状态",
+      "description": "0待检 1通过 2待人工复核 3已拦截",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "待检测"
+        },
+        {
+          "value": 1,
+          "text": "通过"
+        },
+        {
+          "value": 2,
+          "text": "待人工复核"
+        },
+        {
+          "value": 3,
+          "text": "已拦截"
+        }
+      ]
+    },
+    "img_check_status": {
+      "bsonType": "int",
+      "title": "图片检测状态",
+      "description": "封面图与轮播图检测。异步回调，不阻塞审核放行；命中时置为 3 并转治理下架（D-058）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "待检测"
+        },
+        {
+          "value": 1,
+          "text": "通过"
+        },
+        {
+          "value": 2,
+          "text": "待人工复核"
+        },
+        {
+          "value": 3,
+          "text": "已拦截"
+        }
+      ]
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "retention_expire_date": {
+      "bsonType": "timestamp",
+      "title": "数据保留到期日",
+      "description": "数据保留到期日"
+    },
+    "anonymized": {
+      "bsonType": "int",
+      "title": "是否已匿名化",
+      "description": "0否 1是（D-035）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    }
+  }
+}

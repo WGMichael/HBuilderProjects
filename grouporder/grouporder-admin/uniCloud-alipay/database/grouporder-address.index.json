@@ -1,0 +1,22 @@
+[
+  {
+    "IndexName": "user_deleted",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "user_id",
+          "Direction": "1"
+        },
+        {
+          "Name": "deleted",
+          "Direction": "1"
+        },
+        {
+          "Name": "create_date",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  }
+]

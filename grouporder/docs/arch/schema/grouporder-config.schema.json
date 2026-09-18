@@ -1,0 +1,48 @@
+{
+  "bsonType": "object",
+  "required": [
+    "config_key",
+    "config_value"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "平台配置表，仅超级管理员可修改",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID，系统自动生成"
+    },
+    "config_key": {
+      "bsonType": "string",
+      "title": "配置键",
+      "description": "全局唯一。首版仅 review_mode（D-057）",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "config_value": {
+      "bsonType": "object",
+      "title": "配置值",
+      "description": "如 review_mode 的值为 { \"mode\": 1 }，1自动审核 2人工审核"
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "配置说明",
+      "description": "供后台展示的说明文字",
+      "maxLength": 200
+    },
+    "update_uid": {
+      "bsonType": "string",
+      "title": "最近修改人",
+      "foreignKey": "uni-id-users._id",
+      "description": "仅超级管理员可修改"
+    },
+    "update_date": {
+      "bsonType": "timestamp",
+      "title": "最近修改时间",
+      "description": "最近修改时间"
+    }
+  }
+}

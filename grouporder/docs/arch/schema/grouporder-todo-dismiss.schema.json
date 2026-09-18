@@ -1,0 +1,40 @@
+{
+  "bsonType": "object",
+  "required": [
+    "user_id",
+    "todo_key"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "待办事项的「用户已关闭」状态。待办本身是派生视图不建业务表，仅此关闭状态需要落库（D-062）",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "归属用户",
+      "foreignKey": "uni-id-users._id",
+      "description": "关闭该待办的用户。命名对齐 grouporder-address.user_id"
+    },
+    "todo_key": {
+      "bsonType": "string",
+      "title": "待办标识",
+      "description": "形如 activity_offline:<activity_id>、review_rejected:<activity_id>、report_closed:<report_no>。由待办类型与对象标识拼装，同一用户同一标识只需一条",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "dismiss_time": {
+      "bsonType": "timestamp",
+      "title": "关闭时间",
+      "description": "用户关闭该待办的时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

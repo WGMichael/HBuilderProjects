@@ -1,0 +1,68 @@
+{
+  "bsonType": "object",
+  "required": [
+    "user_id"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "平台用户业务扩展表。与 uni-id-users 一对一，存放本项目自有的用户级业务状态，避免修改 uni-id 第三方模块",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "平台用户",
+      "description": "对应 uni-id-users._id，一对一，唯一索引",
+      "foreignKey": "uni-id-users._id"
+    },
+    "publish_restriction": {
+      "bsonType": "int",
+      "title": "发布限制状态",
+      "description": "当前发布权限 0正常 1临时限制发布 2永久限制发布。由 grouporder-restriction 流水表的处置结果同步维护（OPS §7）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "正常"
+        },
+        {
+          "value": 1,
+          "text": "临时限制发布"
+        },
+        {
+          "value": 2,
+          "text": "永久限制发布"
+        }
+      ]
+    },
+    "restriction_expire": {
+      "bsonType": "timestamp",
+      "title": "临时限制到期时间",
+      "description": "仅临时限制有效。读取时若当前时间已超过该值，视为正常，不依赖定时任务准点执行"
+    },
+    "restriction_case_no": {
+      "bsonType": "string",
+      "title": "当前限制来源",
+      "description": "产生当前限制状态的处置编号，便于回溯到 grouporder-restriction 的具体记录",
+      "maxLength": 32
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "update_date": {
+      "bsonType": "timestamp",
+      "title": "更新时间",
+      "description": "更新时间"
+    }
+  }
+}

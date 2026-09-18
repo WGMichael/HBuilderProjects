@@ -1,0 +1,155 @@
+{
+  "bsonType": "object",
+  "required": [
+    "review_no",
+    "report_id",
+    "original_conclusion",
+    "status"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "举报复核记录表。独立成表以保证原举报与原结论不被覆盖",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（复核 ID），系统自动生成"
+    },
+    "review_no": {
+      "bsonType": "string",
+      "title": "复核编号",
+      "description": "全局唯一",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "report_id": {
+      "bsonType": "string",
+      "title": "原举报",
+      "foreignKey": "grouporder-report._id",
+      "description": "被复核的原举报"
+    },
+    "original_conclusion": {
+      "bsonType": "int",
+      "title": "原结论快照",
+      "description": "复核创建时固化，不随原表变化（OPS §5.1）",
+      "enum": [
+        {
+          "value": 1,
+          "text": "无违规"
+        },
+        {
+          "value": 2,
+          "text": "警告发布者"
+        },
+        {
+          "value": 3,
+          "text": "下架商品"
+        },
+        {
+          "value": 4,
+          "text": "下架活动"
+        },
+        {
+          "value": 5,
+          "text": "临时限制发布"
+        },
+        {
+          "value": 6,
+          "text": "永久限制发布"
+        }
+      ]
+    },
+    "original_reason": {
+      "bsonType": "string",
+      "title": "原结论理由快照",
+      "description": "原结论理由，复核时固化",
+      "maxLength": 500
+    },
+    "apply_uid": {
+      "bsonType": "string",
+      "title": "复核发起人",
+      "foreignKey": "uni-id-users._id",
+      "description": "发起复核的用户或运营"
+    },
+    "apply_reason": {
+      "bsonType": "string",
+      "title": "复核申请理由",
+      "description": "申请复核的理由",
+      "maxLength": 500
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "复核状态",
+      "description": "1复核中 2复核完成",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "复核中"
+        },
+        {
+          "value": 2,
+          "text": "复核完成"
+        }
+      ]
+    },
+    "reviewer_uid": {
+      "bsonType": "string",
+      "title": "复核人",
+      "foreignKey": "uni-id-users._id",
+      "description": "执行复核的运营账号"
+    },
+    "review_conclusion": {
+      "bsonType": "int",
+      "title": "复核结论",
+      "description": "复核后的结论",
+      "enum": [
+        {
+          "value": 1,
+          "text": "无违规"
+        },
+        {
+          "value": 2,
+          "text": "警告发布者"
+        },
+        {
+          "value": 3,
+          "text": "下架商品"
+        },
+        {
+          "value": 4,
+          "text": "下架活动"
+        },
+        {
+          "value": 5,
+          "text": "临时限制发布"
+        },
+        {
+          "value": 6,
+          "text": "永久限制发布"
+        }
+      ]
+    },
+    "review_reason": {
+      "bsonType": "string",
+      "title": "复核理由",
+      "description": "复核结论的理由",
+      "maxLength": 500
+    },
+    "review_time": {
+      "bsonType": "timestamp",
+      "title": "复核完成时间",
+      "description": "复核完成时间"
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

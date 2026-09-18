@@ -1,0 +1,194 @@
+[
+  {
+    "permission_id": "ops-workbench",
+    "permission_name": "工作台",
+    "comment": "全部运营角色的默认入口，缺少它登录后看不到任何菜单",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-content-review",
+    "permission_name": "活动发布审核",
+    "comment": "发布前拦截：待审队列、按内容版本审核（A-17）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-content-report",
+    "permission_name": "举报与内容审核",
+    "comment": "上线后事后治理：举报 5 状态流转与复核（A-08）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-content-activity",
+    "permission_name": "活动与商品治理",
+    "comment": "查看活动商品详情、执行下架与恢复（A-07、A-09、A-10）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-search",
+    "permission_name": "全局检索",
+    "comment": "按稳定标识检索活动商品用户订单，结果默认脱敏（A-04）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-stat-view",
+    "permission_name": "运营统计查看",
+    "comment": "独立权限点，默认关闭，不随任何角色自动获得（OPS §11.4）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-privacy-appeal",
+    "permission_name": "账号绑定申诉",
+    "comment": "解绑与重新绑定处理，不合并业务数据（A-12）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-privacy-sensitive",
+    "permission_name": "敏感资料受控查看",
+    "comment": "二次验证后按事项最小范围解敏（A-11、D-068）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-privacy-case",
+    "permission_name": "隐私与注销事项",
+    "comment": "注销、删除、匿名化登记与三年期跟踪（A-16）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-audit-export",
+    "permission_name": "Excel 事件审计",
+    "comment": "只查事件记录，不提供文件与下载地址（A-13）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-audit-oplog",
+    "permission_name": "操作日志查询",
+    "comment": "业务操作审计日志，只读不可改删（A-14）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-audit-login",
+    "permission_name": "登录日志查询",
+    "comment": "uni-id-log 登录类日志，复用 system/safety/list",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-sys-account",
+    "permission_name": "运营账号管理",
+    "comment": "创建、停用运营账号（A-15）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-sys-role",
+    "permission_name": "角色管理",
+    "comment": "分配与撤销角色",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-sys-permission",
+    "permission_name": "权限管理",
+    "comment": "维护权限点",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-sys-menu",
+    "permission_name": "菜单管理",
+    "comment": "维护后台菜单",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-sys-config",
+    "permission_name": "平台配置",
+    "comment": "发布审核模式等平台级参数（A-18、D-057）",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "ops-sys-error",
+    "permission_name": "错误统计",
+    "comment": "技术排障用，归属待产品确认；启用需 client 集成 uni-stat",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "READ_UNI_ID_USERS",
+    "permission_name": "读取用户表",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。A-15 运营账号列表必需。缺少它，除本人外其他账号的 username/role/status 字段会被 schema 字段级权限过滤",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "CREATE_UNI_ID_USERS",
+    "permission_name": "创建用户",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。A-15 创建运营账号",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "UPDATE_UNI_ID_USERS",
+    "permission_name": "更新用户",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。A-15 停用账号、分配角色",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "READ_UNI_ID_ROLES",
+    "permission_name": "读取角色表",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。角色管理页；A-15 的角色列联表查询也需要",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "CREATE_UNI_ID_ROLES",
+    "permission_name": "创建角色",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。角色管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "UPDATE_UNI_ID_ROLES",
+    "permission_name": "更新角色",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。角色管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "DELETE_UNI_ID_ROLES",
+    "permission_name": "删除角色",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。角色管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "READ_UNI_ID_PERMISSIONS",
+    "permission_name": "读取权限表",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。权限管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "CREATE_UNI_ID_PERMISSIONS",
+    "permission_name": "创建权限点",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。权限管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "UPDATE_UNI_ID_PERMISSIONS",
+    "permission_name": "更新权限点",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。权限管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "DELETE_UNI_ID_PERMISSIONS",
+    "permission_name": "删除权限点",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。权限管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "CREATE_OPENDB_ADMIN_MENUS",
+    "permission_name": "创建菜单",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。菜单管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "UPDATE_OPENDB_ADMIN_MENUS",
+    "permission_name": "更新菜单",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。菜单管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "DELETE_OPENDB_ADMIN_MENUS",
+    "permission_name": "删除菜单",
+    "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。菜单管理页",
+    "create_date": 1758067200000
+  }
+]

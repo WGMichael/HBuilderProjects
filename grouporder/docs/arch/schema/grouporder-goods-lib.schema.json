@@ -1,0 +1,189 @@
+{
+  "bsonType": "object",
+  "required": [
+    "user_id",
+    "name",
+    "cover_image",
+    "unit",
+    "last_price",
+    "last_total_stock",
+    "last_per_user_limit",
+    "last_used_time"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "用户商品库。商品保存时自动沉淀，创建活动时可复用；仅作复制源，与活动商品无引用关系（D-063）",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（商品库记录 ID），系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "归属用户",
+      "foreignKey": "uni-id-users._id",
+      "description": "归属用户 ID。商品库为用户私有，任何读写必须校验归属"
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "商品名称",
+      "description": "商品名称，1-50 字。与 user_id 共同作为同名判定依据",
+      "minLength": 1,
+      "maxLength": 50,
+      "trim": "both"
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "商品说明",
+      "description": "商品说明，最多 500 字",
+      "maxLength": 500,
+      "trim": "both"
+    },
+    "cover_image": {
+      "bsonType": "file",
+      "title": "商品封面图",
+      "description": "商品封面图，必填（D-041）。与活动商品共用同一云存储文件，删除记录时不得删除文件"
+    },
+    "detail_images": {
+      "bsonType": "array",
+      "arrayType": "file",
+      "title": "详情图",
+      "description": "商品详情图，最多 9 张（D-041）",
+      "maxLength": 9
+    },
+    "unit": {
+      "bsonType": "string",
+      "title": "商品单位",
+      "description": "商品单位，默认份，可填盒、箱、袋、瓶等（D-045）",
+      "defaultValue": "份",
+      "minLength": 1,
+      "maxLength": 10,
+      "trim": "both"
+    },
+    "last_price": {
+      "bsonType": "int",
+      "title": "上次使用单价",
+      "description": "上次使用的单价，单位为分，非负整数。复用时作为预填值，团长必须逐项确认（§5.3）",
+      "minimum": 0
+    },
+    "last_total_stock": {
+      "bsonType": "int",
+      "title": "上次使用总库存",
+      "description": "语义与 grouporder-goods.total_stock 完全一致：0 表示不设上限，正整数为有限总库存（D-044）。记录团长当次设定的总量，不是剩余量。复用时作为预填值，必须逐项确认",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "last_per_user_limit": {
+      "bsonType": "int",
+      "title": "上次使用每人限购",
+      "description": "语义与 grouporder-goods.per_user_limit 完全一致：0 表示不限购（D-044）。复用时作为预填值，必须逐项确认",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "category_id": {
+      "bsonType": "string",
+      "title": "所属分类",
+      "description": "关联 grouporder-goods-category._id，空表示未分组（D-066）。分类为用户私有，不随复制进入活动商品"
+    },
+    "last_used_time": {
+      "bsonType": "timestamp",
+      "title": "最近使用时间",
+      "description": "最近一次沉淀或复用的时间，用于商品库列表倒序。编辑库记录不更新该字段"
+    },
+    "use_count": {
+      "bsonType": "int",
+      "title": "复用次数",
+      "description": "被复用到活动的次数，仅在执行复制时递增",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "is_recommend": {
+      "bsonType": "int",
+      "title": "推荐标识默认值",
+      "description": "团长自荐标识的默认值，复用时带入活动商品（D-065）。平台不参与任何商品推荐",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "普通"
+        },
+        {
+          "value": 1,
+          "text": "推荐"
+        }
+      ]
+    },
+    "img_check_status": {
+      "bsonType": "int",
+      "title": "图片检测状态",
+      "description": "枚举与 grouporder-goods.img_check_status 一致。仅状态 1 可在复用时免于重新送检（D-058）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "待检测"
+        },
+        {
+          "value": 1,
+          "text": "通过"
+        },
+        {
+          "value": 2,
+          "text": "待人工复核"
+        },
+        {
+          "value": 3,
+          "text": "已拦截"
+        }
+      ]
+    },
+    "governance_blocked": {
+      "bsonType": "int",
+      "title": "是否禁止复用",
+      "description": "运营下架该用户对应商品后置 1，禁止继续复用到新活动（D-064）。软删记录同样封禁，不可由用户自行解除",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "正常"
+        },
+        {
+          "value": 1,
+          "text": "禁止复用"
+        }
+      ]
+    },
+    "deleted": {
+      "bsonType": "int",
+      "title": "是否已删除",
+      "description": "软删除标记。已复制出的活动商品不受影响",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "update_date": {
+      "bsonType": "timestamp",
+      "title": "更新时间",
+      "description": "更新时间"
+    }
+  }
+}

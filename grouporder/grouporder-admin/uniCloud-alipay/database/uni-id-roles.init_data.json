@@ -1,0 +1,78 @@
+[
+  {
+    "role_id": "admin",
+    "role_name": "系统初始化账号（内置全权）",
+    "permission": [],
+    "comment": "uni-admin 内置角色，不受 permission 控制、自动拥有全部菜单与接口权限。仅用于首次部署时创建业务账号，创建完成后应停用该账号。业务运营一律使用 ops-* 角色，否则违反 OPS §3.1「超管不自动继承业务权限」。",
+    "create_date": 0
+  },
+  {
+    "role_id": "ops-super",
+    "role_name": "超级管理员",
+    "create_date": 1758067200000,
+    "comment": "OPS §3.2。创建停用运营账号、分配撤销角色、修改平台配置。不自动继承内容处置、敏感资料与审计权限。｜另持有 14 个 uni-admin 内置权限点：自定义 ops-sys-* 只控制菜单可见性，uni-id-users / roles / permissions / admin-menus 四张表的**数据访问**由其 schema 的 permission 表达式校验，两者缺一不可。不含 DELETE_UNI_ID_USERS，运营账号只允许停用。",
+    "permission": [
+      "ops-workbench",
+      "ops-sys-account",
+      "ops-sys-role",
+      "ops-sys-permission",
+      "ops-sys-menu",
+      "ops-sys-config",
+      "ops-sys-error",
+      "READ_UNI_ID_USERS",
+      "CREATE_UNI_ID_USERS",
+      "UPDATE_UNI_ID_USERS",
+      "READ_UNI_ID_ROLES",
+      "CREATE_UNI_ID_ROLES",
+      "UPDATE_UNI_ID_ROLES",
+      "DELETE_UNI_ID_ROLES",
+      "READ_UNI_ID_PERMISSIONS",
+      "CREATE_UNI_ID_PERMISSIONS",
+      "UPDATE_UNI_ID_PERMISSIONS",
+      "DELETE_UNI_ID_PERMISSIONS",
+      "CREATE_OPENDB_ADMIN_MENUS",
+      "UPDATE_OPENDB_ADMIN_MENUS",
+      "DELETE_OPENDB_ADMIN_MENUS"
+    ]
+  },
+  {
+    "role_id": "ops-content",
+    "role_name": "内容运营",
+    "create_date": 1758067200000,
+    "comment": "OPS §3.2。发布审核、举报处置、下架恢复、发布者处置。不可查看完整姓名电话地址。",
+    "permission": [
+      "ops-workbench",
+      "ops-content-review",
+      "ops-content-report",
+      "ops-content-activity",
+      "ops-search",
+      "ops-audit-export"
+    ]
+  },
+  {
+    "role_id": "ops-privacy",
+    "role_name": "账号与隐私专员",
+    "create_date": 1758067200000,
+    "comment": "OPS §3.2。绑定申诉、隐私注销事项、经二次验证后按事项受控解敏。",
+    "permission": [
+      "ops-workbench",
+      "ops-search",
+      "ops-privacy-appeal",
+      "ops-privacy-sensitive",
+      "ops-privacy-case",
+      "ops-audit-export"
+    ]
+  },
+  {
+    "role_id": "ops-auditor",
+    "role_name": "审计查看者",
+    "create_date": 1758067200000,
+    "comment": "OPS §3.2。只读查询审计轨迹，不具备任何业务处置能力。",
+    "permission": [
+      "ops-workbench",
+      "ops-audit-export",
+      "ops-audit-oplog",
+      "ops-audit-login"
+    ]
+  }
+]

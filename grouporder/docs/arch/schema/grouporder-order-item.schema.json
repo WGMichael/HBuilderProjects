@@ -1,0 +1,111 @@
+{
+  "bsonType": "object",
+  "required": [
+    "order_id",
+    "activity_id",
+    "user_id",
+    "goods_id",
+    "goods_name",
+    "unit_snapshot",
+    "price_snapshot",
+    "qty",
+    "amount",
+    "status"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "订单明细表，一个商品一行，保存价格与单位快照",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（明细 ID），系统自动生成"
+    },
+    "order_id": {
+      "bsonType": "string",
+      "title": "所属订单",
+      "foreignKey": "grouporder-order._id",
+      "description": "所属订单 ID"
+    },
+    "activity_id": {
+      "bsonType": "string",
+      "title": "所属活动",
+      "foreignKey": "grouporder-activity._id",
+      "description": "冗余字段，用于按活动聚合统计"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "下单用户",
+      "foreignKey": "uni-id-users._id",
+      "description": "冗余字段，每人限购的聚合键"
+    },
+    "goods_id": {
+      "bsonType": "string",
+      "title": "商品",
+      "foreignKey": "grouporder-goods._id",
+      "description": "对应商品 ID"
+    },
+    "goods_name": {
+      "bsonType": "string",
+      "title": "商品名称快照",
+      "description": "提交时的商品名称，不随商品改名变化",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "unit_snapshot": {
+      "bsonType": "string",
+      "title": "商品单位快照",
+      "description": "提交时的商品单位，避免单位修改影响历史清单（D-045）",
+      "minLength": 1,
+      "maxLength": 10
+    },
+    "price_snapshot": {
+      "bsonType": "int",
+      "title": "单价快照",
+      "description": "提交时单价，单位为分。使改价不影响历史订单（PRD §5.5、D-018）",
+      "minimum": 0
+    },
+    "qty": {
+      "bsonType": "int",
+      "title": "数量",
+      "description": "购买数量，正整数",
+      "minimum": 1
+    },
+    "amount": {
+      "bsonType": "int",
+      "title": "小计",
+      "description": "单价快照乘数量，单位为分",
+      "minimum": 0
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "状态",
+      "description": "冗余订单状态，用于单表聚合过滤 1有效 2已取消 3已作废",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "有效"
+        },
+        {
+          "value": 2,
+          "text": "已取消"
+        },
+        {
+          "value": 3,
+          "text": "已作废"
+        }
+      ]
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

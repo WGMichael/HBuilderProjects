@@ -1,0 +1,178 @@
+{
+  "bsonType": "object",
+  "required": [
+    "order_no",
+    "idempotent_key",
+    "activity_id",
+    "user_id",
+    "status",
+    "consignee_name",
+    "consignee_mobile",
+    "total_qty",
+    "total_amount"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "接龙订单主表，含收货信息快照",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（订单 ID），系统自动生成"
+    },
+    "order_no": {
+      "bsonType": "string",
+      "title": "订单号",
+      "description": "格式 YYMMDD-短码-4位随机，全局唯一，重复提交的兜底约束",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "idempotent_key": {
+      "bsonType": "string",
+      "title": "幂等键",
+      "description": "每次明确的新下单意图一个独立键，同一请求重试复用；唯一索引拦截重复写入",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "activity_id": {
+      "bsonType": "string",
+      "title": "所属活动",
+      "foreignKey": "grouporder-activity._id",
+      "description": "所属活动 ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "下单用户",
+      "foreignKey": "uni-id-users._id",
+      "description": "下单用户 ID"
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "订单状态",
+      "description": "1有效 2已取消（参与者截止前） 3已作废（团长截止后，D-051）",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "有效"
+        },
+        {
+          "value": 2,
+          "text": "已取消"
+        },
+        {
+          "value": 3,
+          "text": "已作废"
+        }
+      ]
+    },
+    "consignee_name": {
+      "bsonType": "string",
+      "title": "收货人姓名",
+      "description": "敏感字段。下单时的收货人姓名快照，不随地址簿变化（PRD §5.6）",
+      "minLength": 1,
+      "maxLength": 50,
+      "trim": "both"
+    },
+    "consignee_mobile": {
+      "bsonType": "string",
+      "title": "收货电话",
+      "description": "敏感字段。下单时的收货电话快照。仅作履约联系方式，不用于账号验证（D-029）",
+      "minLength": 1,
+      "maxLength": 20,
+      "trim": "both"
+    },
+    "consignee_address": {
+      "bsonType": "string",
+      "title": "收货地址",
+      "description": "敏感字段。下单时的完整收货地址快照。**条件必填**：`delivery_type=1`（送货上门）时必填，`delivery_type=2`（自提）时不采集、留空。由服务端按活动交付方式校验，schema 层不设 required（D-060）",
+      "minLength": 1,
+      "maxLength": 200,
+      "trim": "both"
+    },
+    "address_id": {
+      "bsonType": "string",
+      "title": "来源地址簿",
+      "foreignKey": "grouporder-address._id",
+      "description": "仅供追溯，不作为展示依据"
+    },
+    "buyer_remark": {
+      "bsonType": "string",
+      "title": "买家备注",
+      "description": "最多 200 字，仅团长与运营可见。导出 Excel 时按纯文本安全写入，不得成为可执行公式（D-039）",
+      "maxLength": 200,
+      "trim": "both"
+    },
+    "total_qty": {
+      "bsonType": "int",
+      "title": "本单总份数",
+      "description": "本单全部有效明细数量之和",
+      "minimum": 1
+    },
+    "total_amount": {
+      "bsonType": "int",
+      "title": "本单预计金额",
+      "description": "单位为分，按明细价格快照乘数量累加",
+      "minimum": 0
+    },
+    "cancel_time": {
+      "bsonType": "timestamp",
+      "title": "参与者取消时间",
+      "description": "参与者取消时间"
+    },
+    "cancel_reason": {
+      "bsonType": "string",
+      "title": "取消原因",
+      "description": "参与者取消原因",
+      "maxLength": 500
+    },
+    "void_uid": {
+      "bsonType": "string",
+      "title": "作废操作人",
+      "foreignKey": "uni-id-users._id",
+      "description": "截止后作废该订单的团长"
+    },
+    "void_time": {
+      "bsonType": "timestamp",
+      "title": "作废时间",
+      "description": "作废时间"
+    },
+    "void_reason": {
+      "bsonType": "string",
+      "title": "作废原因",
+      "description": "截止后团长作废时必填且不可恢复（D-051）",
+      "maxLength": 500
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "下单时间",
+      "description": "下单时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "retention_expire_date": {
+      "bsonType": "timestamp",
+      "title": "数据保留到期日",
+      "description": "数据保留到期日"
+    },
+    "anonymized": {
+      "bsonType": "int",
+      "title": "是否已匿名化",
+      "description": "0否 1是（D-035）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    }
+  }
+}

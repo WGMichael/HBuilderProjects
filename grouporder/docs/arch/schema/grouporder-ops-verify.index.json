@@ -1,0 +1,18 @@
+[
+  {
+    "IndexName": "operator_expire",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "operator_uid",
+          "Direction": "1"
+        },
+        {
+          "Name": "expire_time",
+          "Direction": "-1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  }
+]

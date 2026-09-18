@@ -1,0 +1,30 @@
+[
+  {
+    "IndexName": "expire_status",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "retention_expire",
+          "Direction": "1"
+        },
+        {
+          "Name": "status",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "case_no",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "case_no",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": true
+    }
+  }
+]

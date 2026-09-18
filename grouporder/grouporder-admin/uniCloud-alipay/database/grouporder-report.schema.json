@@ -1,0 +1,172 @@
+{
+  "bsonType": "object",
+  "required": [
+    "report_no",
+    "activity_id",
+    "publisher_uid",
+    "reporter_uid",
+    "reason_type",
+    "content_snapshot",
+    "status"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "用户举报记录表",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（举报 ID），系统自动生成"
+    },
+    "report_no": {
+      "bsonType": "string",
+      "title": "举报编号",
+      "description": "全局唯一，供页面检索与口头引用",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "activity_id": {
+      "bsonType": "string",
+      "title": "被举报活动",
+      "foreignKey": "grouporder-activity._id",
+      "description": "被举报的活动"
+    },
+    "goods_id": {
+      "bsonType": "string",
+      "title": "被举报商品",
+      "foreignKey": "grouporder-goods._id",
+      "description": "可为空，举报可只指向整个活动"
+    },
+    "publisher_uid": {
+      "bsonType": "string",
+      "title": "发布者",
+      "foreignKey": "uni-id-users._id",
+      "description": "被举报内容的发布者"
+    },
+    "reporter_uid": {
+      "bsonType": "string",
+      "title": "举报人",
+      "foreignKey": "uni-id-users._id",
+      "description": "提交举报的用户"
+    },
+    "reason_type": {
+      "bsonType": "string",
+      "title": "举报类型",
+      "description": "对应负面清单分类（DECISIONS §4）",
+      "maxLength": 100
+    },
+    "reason_desc": {
+      "bsonType": "string",
+      "title": "举报描述",
+      "description": "举报人填写的补充说明",
+      "maxLength": 500
+    },
+    "content_snapshot": {
+      "bsonType": "object",
+      "title": "被举报内容快照",
+      "description": "举报时的标题、说明、商品与图片标识。不得用当前内容替换历史证据（OPS §5.1）"
+    },
+    "content_check_id": {
+      "bsonType": "string",
+      "title": "关联内容检测",
+      "foreignKey": "grouporder-content-check._id",
+      "description": "关联的内容检测记录"
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "举报状态",
+      "description": "1待处理 2处理中 3已结案 4复核中 5复核完成",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "待处理"
+        },
+        {
+          "value": 2,
+          "text": "处理中"
+        },
+        {
+          "value": 3,
+          "text": "已结案"
+        },
+        {
+          "value": 4,
+          "text": "复核中"
+        },
+        {
+          "value": 5,
+          "text": "复核完成"
+        }
+      ]
+    },
+    "handler_uid": {
+      "bsonType": "string",
+      "title": "处理人",
+      "foreignKey": "uni-id-users._id",
+      "description": "领取并处理该举报的内容运营"
+    },
+    "claim_time": {
+      "bsonType": "timestamp",
+      "title": "领取时间",
+      "description": "领取时间"
+    },
+    "conclusion": {
+      "bsonType": "int",
+      "title": "处理结论",
+      "description": "举报成立后才执行处置；举报提交本身不触发下架（D-054）",
+      "enum": [
+        {
+          "value": 1,
+          "text": "无违规"
+        },
+        {
+          "value": 2,
+          "text": "警告发布者"
+        },
+        {
+          "value": 3,
+          "text": "下架商品"
+        },
+        {
+          "value": 4,
+          "text": "下架活动"
+        },
+        {
+          "value": 5,
+          "text": "临时限制发布"
+        },
+        {
+          "value": 6,
+          "text": "永久限制发布"
+        }
+      ]
+    },
+    "conclusion_reason": {
+      "bsonType": "string",
+      "title": "结论理由",
+      "description": "处理结论的理由",
+      "maxLength": 500
+    },
+    "close_time": {
+      "bsonType": "timestamp",
+      "title": "结案时间",
+      "description": "结案时间"
+    },
+    "related_report_ids": {
+      "bsonType": "array",
+      "title": "关联举报",
+      "description": "指向同一活动的其他举报。可关联查看，但不得删除、覆盖或静默合并原始记录（OPS §5.1）"
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "举报时间",
+      "description": "举报时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

@@ -1,0 +1,220 @@
+{
+  "bsonType": "object",
+  "required": [
+    "activity_id",
+    "name",
+    "cover_image",
+    "price",
+    "unit",
+    "total_stock",
+    "sold_qty",
+    "on_sale",
+    "ever_ordered",
+    "governance_status"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "活动商品表",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（商品 ID），系统自动生成"
+    },
+    "activity_id": {
+      "bsonType": "string",
+      "title": "所属活动",
+      "foreignKey": "grouporder-activity._id",
+      "description": "所属活动 ID"
+    },
+    "lib_id": {
+      "bsonType": "string",
+      "title": "来源商品库记录",
+      "description": "复用历史商品时记录来源库记录 ID，手工新增为空。仅用于治理反写定位（D-064），禁止联表读取或任何字段同步；库记录被软删后本字段保持原值不清空"
+    },
+    "is_recommend": {
+      "bsonType": "int",
+      "title": "推荐标识",
+      "description": "团长在本活动内的自荐标识 0普通 1推荐（D-065）。复用或复制时按来源预填，可在活动内单独修改且**不回写商品库**。仅作视觉强调：**不进入任何排序表达式**，排序恒为 sort ASC, create_date ASC。每活动上限 5 个，由服务端校验",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "普通"
+        },
+        {
+          "value": 1,
+          "text": "推荐"
+        }
+      ]
+    },
+    "name": {
+      "bsonType": "string",
+      "title": "商品名称",
+      "description": "商品名称，1-50 字",
+      "minLength": 1,
+      "maxLength": 50,
+      "trim": "both"
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "商品说明",
+      "description": "商品说明，最多 500 字",
+      "maxLength": 500,
+      "trim": "both"
+    },
+    "cover_image": {
+      "bsonType": "file",
+      "title": "商品封面图",
+      "description": "商品封面图，必填（D-041）"
+    },
+    "detail_images": {
+      "bsonType": "array",
+      "arrayType": "file",
+      "title": "详情图",
+      "description": "商品详情图，最多 9 张（D-041）",
+      "maxLength": 9
+    },
+    "price": {
+      "bsonType": "int",
+      "title": "单价",
+      "description": "单价，单位为分，非负整数",
+      "minimum": 0
+    },
+    "unit": {
+      "bsonType": "string",
+      "title": "商品单位",
+      "description": "商品单位，默认份，可填盒、箱、袋、瓶等（D-045）",
+      "defaultValue": "份",
+      "minLength": 1,
+      "maxLength": 10,
+      "trim": "both"
+    },
+    "total_stock": {
+      "bsonType": "int",
+      "title": "总库存",
+      "description": "0 表示不限库存；正整数为有限总库存，不得低于已购买份数（D-044）",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "sold_qty": {
+      "bsonType": "int",
+      "title": "已购买份数",
+      "description": "该商品全部有效明细数量之和，由服务端维护（D-036）",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "per_user_limit": {
+      "bsonType": "int",
+      "title": "每人限购",
+      "description": "0 表示不限购；正整数表示同一平台用户对该商品的累计限购份数（D-012、D-044）",
+      "defaultValue": 0,
+      "minimum": 0
+    },
+    "on_sale": {
+      "bsonType": "int",
+      "title": "售卖状态",
+      "description": "团长控制 1在售 0停售（D-019、D-050）",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 0,
+          "text": "停售"
+        },
+        {
+          "value": 1,
+          "text": "在售"
+        }
+      ]
+    },
+    "ever_ordered": {
+      "bsonType": "int",
+      "title": "是否产生过有效明细",
+      "description": "置 1 后永不回退，用于禁止删除（D-026）。不可用 sold_qty>0 代替",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "governance_status": {
+      "bsonType": "int",
+      "title": "商品治理状态",
+      "description": "0正常 1已下架。与团长停售分开记录，举报成立后方可下架（D-054）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "正常"
+        },
+        {
+          "value": 1,
+          "text": "已下架"
+        }
+      ]
+    },
+    "governance_uid": {
+      "bsonType": "string",
+      "title": "商品下架操作人",
+      "foreignKey": "uni-id-users._id",
+      "description": "执行商品治理下架的运营账号"
+    },
+    "governance_time": {
+      "bsonType": "timestamp",
+      "title": "商品治理操作时间",
+      "description": "商品治理操作时间"
+    },
+    "governance_reason": {
+      "bsonType": "string",
+      "title": "商品治理原因",
+      "description": "举报成立后下架时必填",
+      "maxLength": 500
+    },
+    "sort": {
+      "bsonType": "int",
+      "title": "排序",
+      "description": "活动内商品排序",
+      "defaultValue": 0
+    },
+    "img_check_status": {
+      "bsonType": "int",
+      "title": "图片检测状态",
+      "description": "异步回调命中时该商品转治理下架（D-058）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "待检测"
+        },
+        {
+          "value": 1,
+          "text": "通过"
+        },
+        {
+          "value": 2,
+          "text": "待人工复核"
+        },
+        {
+          "value": 3,
+          "text": "已拦截"
+        }
+      ]
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

@@ -1,0 +1,70 @@
+[
+  {
+    "IndexName": "operator_time",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "operator_uid",
+          "Direction": "1"
+        },
+        {
+          "Name": "operate_time",
+          "Direction": "-1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "object",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "object_type",
+          "Direction": "1"
+        },
+        {
+          "Name": "object_id",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "case_no",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "case_no",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "request_id",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "request_id",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "log_no",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "log_no",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": true
+    }
+  }
+]

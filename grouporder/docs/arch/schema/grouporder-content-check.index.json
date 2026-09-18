@@ -1,0 +1,46 @@
+[
+  {
+    "IndexName": "object_version",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "object_type",
+          "Direction": "1"
+        },
+        {
+          "Name": "object_id",
+          "Direction": "1"
+        },
+        {
+          "Name": "content_version",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "trace_id",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "trace_id",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "status",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "status",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  }
+]

@@ -1,0 +1,116 @@
+{
+  "bsonType": "object",
+  "required": [
+    "log_no",
+    "operate_time",
+    "operator_uid",
+    "operator_roles",
+    "action_type",
+    "result",
+    "object_type",
+    "object_id",
+    "request_id"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "统一操作日志表。9 个必含字段覆盖 OPS §13 的 11 类事件，运营人员不可修改或删除",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（日志 ID），系统自动生成"
+    },
+    "log_no": {
+      "bsonType": "string",
+      "title": "日志编号",
+      "description": "唯一日志编号",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "operate_time": {
+      "bsonType": "timestamp",
+      "title": "操作时间",
+      "description": "操作时间"
+    },
+    "operator_uid": {
+      "bsonType": "string",
+      "title": "操作账号",
+      "foreignKey": "uni-id-users._id",
+      "description": "执行操作的账号"
+    },
+    "operator_roles": {
+      "bsonType": "array",
+      "title": "当时生效的角色",
+      "description": "操作发生时账号持有的角色，事后角色变更不影响本记录"
+    },
+    "operator_permissions": {
+      "bsonType": "string",
+      "title": "权限摘要",
+      "description": "操作时的权限摘要",
+      "maxLength": 500
+    },
+    "action_type": {
+      "bsonType": "string",
+      "title": "动作类型",
+      "description": "覆盖 OPS §13 列举的 11 类必记事件",
+      "maxLength": 64
+    },
+    "result": {
+      "bsonType": "int",
+      "title": "操作结果",
+      "description": "1成功 0失败",
+      "enum": [
+        {
+          "value": 0,
+          "text": "失败"
+        },
+        {
+          "value": 1,
+          "text": "成功"
+        }
+      ]
+    },
+    "object_type": {
+      "bsonType": "string",
+      "title": "对象类型",
+      "description": "被操作对象的类型",
+      "maxLength": 64
+    },
+    "object_id": {
+      "bsonType": "string",
+      "title": "对象标识",
+      "description": "被操作对象的稳定内部标识",
+      "maxLength": 64
+    },
+    "case_no": {
+      "bsonType": "string",
+      "title": "关联事项编号",
+      "description": "关联的举报、申诉或处理事项编号",
+      "maxLength": 32
+    },
+    "reason": {
+      "bsonType": "string",
+      "title": "操作原因",
+      "description": "操作原因或失败原因摘要。不得记录密码、二次验证凭证或可继续使用的下载链接",
+      "maxLength": 500
+    },
+    "prev_state": {
+      "bsonType": "object",
+      "title": "操作前状态",
+      "description": "操作前的对象状态"
+    },
+    "next_state": {
+      "bsonType": "object",
+      "title": "操作后状态",
+      "description": "操作后的对象状态。无状态变化时明确记录"
+    },
+    "request_id": {
+      "bsonType": "string",
+      "title": "请求唯一标识",
+      "description": "用于识别重复请求",
+      "maxLength": 64
+    }
+  }
+}

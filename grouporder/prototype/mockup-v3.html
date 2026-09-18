@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>群接龙 · 效果图 v3</title>
+<style>
+/* ===================== 基础样式：内联自 prototype/styles.css ===================== */
+:root {
+  --ink: #17231d;
+  --muted: #6f7974;
+  --line: #e3e9e5;
+  --paper: #ffffff;
+  --canvas: #eef2ef;
+  --soft: #f5f7f5;
+  --green: #168a55;
+  --green-dark: #0f6b41;
+  --green-soft: #e8f5ed;
+  --orange: #d96a28;
+  --orange-soft: #fff1e7;
+  --red: #c7463f;
+  --red-soft: #fff0ef;
+  --shadow: 0 24px 70px rgba(22, 45, 33, 0.14);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255,255,255,.95), transparent 28%),
+    linear-gradient(135deg, #eef3ef 0%, #e5ebe7 100%);
+}
+
+button, input, textarea { font: inherit; }
+button { cursor: pointer; }
+
+.prototype-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.prototype-panel {
+  min-height: 100vh;
+  padding: 34px 24px;
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(23,35,29,.08);
+}
+
+.brand-block { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; }
+.brand-block strong { display: block; font-size: 20px; letter-spacing: .04em; }
+.brand-block small { color: var(--muted); display: block; margin-top: 4px; }
+.brand-mark {
+  width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center;
+  color: white; background: var(--green); font-size: 20px; font-weight: 700;
+  box-shadow: 0 10px 24px rgba(22,138,85,.25);
+}
+
+.panel-label { margin: 24px 10px 10px; color: #9aa39e; font-size: 12px; letter-spacing: .12em; }
+.screen-nav { display: grid; gap: 5px; }
+.screen-nav button {
+  border: 0; background: transparent; color: #52605a; text-align: left; border-radius: 12px;
+  padding: 11px 12px; display: flex; align-items: center; gap: 12px; transition: .18s ease;
+}
+.screen-nav button span { color: #a0aaa4; font-size: 11px; font-variant-numeric: tabular-nums; }
+.screen-nav button:hover { background: #f0f5f1; color: var(--ink); }
+.screen-nav button.active { background: var(--green-soft); color: var(--green-dark); font-weight: 650; }
+.screen-nav button.active span { color: var(--green); }
+.panel-note { margin-top: 30px; padding: 16px; border: 1px dashed #cdd8d1; border-radius: 14px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.panel-note strong { color: var(--ink); }
+.panel-note p { margin: 6px 0 0; }
+
+.device-stage {
+  min-height: 100vh; padding: 44px 7vw 36px; position: relative;
+  display: grid; grid-template-columns: minmax(220px, 360px) 390px; gap: clamp(40px, 8vw, 120px);
+  align-items: center; justify-content: center;
+}
+.stage-copy { align-self: center; }
+.stage-copy .eyebrow { color: var(--green); font-size: 11px; letter-spacing: .18em; font-weight: 700; }
+.stage-copy h1 { margin: 14px 0 12px; font-size: clamp(34px, 4vw, 56px); letter-spacing: -.04em; }
+.stage-copy p { margin: 0; max-width: 330px; line-height: 1.8; color: var(--muted); }
+.stage-actions { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 14px; color: var(--muted); font-size: 12px; }
+.secondary-button { border: 1px solid #cad4ce; border-radius: 999px; background: rgba(255,255,255,.65); color: var(--ink); padding: 8px 14px; }
+
+.phone-frame {
+  width: 390px; height: min(844px, calc(100vh - 76px)); min-height: 670px; overflow: hidden;
+  background: var(--soft); border: 9px solid #15201a; border-radius: 45px; position: relative;
+  box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,.2);
+}
+.phone-frame::before {
+  content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 116px; height: 28px; border-radius: 18px; background: #15201a; z-index: 20;
+}
+.phone-status { height: 43px; padding: 13px 23px 0; display: flex; justify-content: space-between; align-items: center; background: white; font-size: 12px; }
+.status-icons { display: flex; gap: 4px; align-items: center; }
+.status-icons i { width: 13px; height: 7px; border: 1.5px solid var(--ink); border-radius: 3px; display: block; }
+.status-icons i:nth-child(1) { width: 12px; border-width: 0 0 5px; border-radius: 1px; }
+.status-icons i:nth-child(2) { width: 9px; height: 9px; border-radius: 50%; }
+.mini-header { height: 50px; padding: 0 12px; display: grid; grid-template-columns: 42px 1fr 70px; align-items: center; background: white; border-bottom: 1px solid #edf0ee; text-align: center; }
+.mini-header strong { font-size: 16px; }
+.icon-button { border: 0; background: transparent; color: var(--ink); font-size: 30px; line-height: 1; }
+.back-button.hidden { visibility: hidden; }
+.capsule { width: 65px; height: 29px; border: 1px solid #dfe4e1; border-radius: 16px; display: flex; align-items: center; justify-content: space-evenly; justify-self: end; }
+.capsule b { font-size: 10px; letter-spacing: 1px; }
+.capsule i { width: 10px; height: 10px; background: var(--ink); border-radius: 50%; box-shadow: inset 0 0 0 3px white; outline: 1px solid var(--ink); }
+.mini-screen { height: calc(100% - 93px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 82px; scrollbar-width: none; }
+.mini-screen::-webkit-scrollbar { display: none; }
+.toast { position: absolute; top: 104px; left: 50%; z-index: 30; transform: translate(-50%, -10px); background: rgba(19,31,24,.9); color: white; padding: 10px 16px; border-radius: 9px; font-size: 12px; opacity: 0; pointer-events: none; transition: .25s; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.page { min-height: 100%; }
+.page-pad { padding: 16px; }
+.hero { background: linear-gradient(145deg, #eaf8ef, #dff1e6); padding: 24px 18px 20px; }
+.hero-kicker { margin: 0 0 7px; color: var(--green-dark); font-size: 12px; font-weight: 650; }
+.hero h2 { margin: 0; font-size: 26px; line-height: 1.35; letter-spacing: -.03em; }
+.hero p { margin: 10px 0 18px; color: #607068; font-size: 13px; line-height: 1.65; }
+.hero-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.section-head { display: flex; justify-content: space-between; align-items: center; margin: 22px 2px 10px; }
+.section-head h3 { margin: 0; font-size: 16px; }
+.section-head button, .text-link { border: 0; background: none; color: var(--green); font-size: 12px; padding: 0; }
+.card { background: white; border: 1px solid var(--line); border-radius: 16px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 14px rgba(37,55,45,.03); }
+.event-card { display: grid; grid-template-columns: 62px 1fr auto; gap: 12px; align-items: center; }
+.event-thumb, .product-thumb { display: grid; place-items: center; background: #edf4ef; border-radius: 13px; color: #68766f; font-size: 11px; text-align: center; }
+.event-thumb { width: 62px; height: 62px; }
+.event-card h4, .product-card h4 { margin: 0 0 7px; font-size: 15px; }
+.meta { color: var(--muted); font-size: 11px; line-height: 1.55; }
+.chevron { color: #abb4af; font-size: 22px; }
+.tag { display: inline-flex; align-items: center; border-radius: 999px; background: var(--green-soft); color: var(--green-dark); padding: 4px 8px; font-size: 10px; font-weight: 650; }
+.tag.orange { background: var(--orange-soft); color: var(--orange); }
+.tag.gray { background: #eef1ef; color: #758079; }
+.tag.red { background: var(--red-soft); color: var(--red); }
+
+.primary-button, .ghost-button, .danger-button {
+  min-height: 44px; border-radius: 12px; padding: 10px 16px; font-weight: 650; border: 1px solid transparent;
+}
+.primary-button { background: var(--green); color: white; }
+.primary-button:active { background: var(--green-dark); }
+.ghost-button { background: white; color: var(--green-dark); border-color: #bed5c7; }
+.danger-button { background: white; color: var(--red); border-color: #efcac7; }
+.wide { width: 100%; }
+.button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sticky-actions { position: sticky; bottom: 0; z-index: 8; padding: 12px 16px 14px; background: rgba(255,255,255,.96); border-top: 1px solid var(--line); box-shadow: 0 -8px 25px rgba(30,48,38,.06); }
+.sticky-actions .total-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; font-size: 12px; }
+.total-line strong { font-size: 20px; color: var(--orange); }
+
+.login-hero { padding: 42px 24px 24px; text-align: center; }
+.login-logo { width: 70px; height: 70px; margin: 0 auto 18px; display: grid; place-items: center; border-radius: 24px; background: var(--green); color: white; font-size: 28px; font-weight: 750; }
+.login-hero h2 { margin: 0 0 8px; }
+.login-hero p { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.login-actions { padding: 12px 24px; display: grid; gap: 12px; }
+.login-divider { display: flex; align-items: center; gap: 10px; color: #a0a9a4; font-size: 11px; }
+.login-divider::before, .login-divider::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.form-card { background: white; padding: 4px 16px; }
+.field { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.field:last-child { border-bottom: 0; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; }
+.field input, .field textarea { width: 100%; border: 0; padding: 0; outline: 0; color: var(--ink); background: transparent; }
+.field textarea { resize: none; min-height: 54px; line-height: 1.5; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.switch-line { display: flex; align-items: center; justify-content: space-between; }
+.switch { width: 42px; height: 24px; border-radius: 15px; background: #d6ddd8; padding: 3px; }
+.switch::after { content: ""; display: block; width: 18px; height: 18px; border-radius: 50%; background: white; transition: .2s; }
+.switch.on { background: var(--green); }
+.switch.on::after { transform: translateX(18px); }
+.form-tip { padding: 12px 16px; font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+.activity-cover { padding: 18px; background: linear-gradient(140deg, #eff8f2, #dfeee4); }
+.activity-cover .tag { margin-bottom: 10px; }
+.activity-cover h2 { font-size: 23px; line-height: 1.4; margin: 0 0 8px; }
+.activity-cover p { color: var(--muted); font-size: 12px; line-height: 1.65; margin: 0; }
+.activity-stats { display: grid; grid-template-columns: repeat(3, 1fr); background: white; border-bottom: 1px solid var(--line); }
+.activity-stats div { text-align: center; padding: 13px 4px; border-right: 1px solid var(--line); }
+.activity-stats div:last-child { border: 0; }
+.activity-stats strong { display: block; font-size: 16px; }
+.activity-stats span { color: var(--muted); font-size: 10px; }
+.notice { margin: 12px 16px; border-radius: 12px; padding: 11px 12px; font-size: 11px; line-height: 1.55; color: #8b552b; background: var(--orange-soft); }
+.notice.green { color: var(--green-dark); background: var(--green-soft); }
+.product-card { display: grid; grid-template-columns: 76px 1fr; gap: 12px; }
+.product-thumb { width: 76px; height: 76px; font-size: 22px; }
+.product-info { min-width: 0; }
+.product-title-line { display: flex; justify-content: space-between; gap: 8px; }
+.price { color: var(--orange); font-weight: 750; }
+.price small { font-size: 10px; }
+.product-bottom { margin-top: 13px; display: flex; justify-content: space-between; align-items: center; }
+.stepper { display: flex; align-items: center; gap: 12px; }
+.stepper button { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #cad5ce; background: white; color: var(--green-dark); font-size: 19px; line-height: 1; }
+.stepper button.plus { background: var(--green); border-color: var(--green); color: white; }
+.stepper button:disabled { opacity: .35; cursor: not-allowed; }
+
+.address-card { position: relative; padding-left: 46px; }
+.radio { position: absolute; left: 16px; top: 19px; width: 18px; height: 18px; border: 2px solid #b9c4bd; border-radius: 50%; }
+.address-card.selected { border-color: #78b895; background: #fbfffc; }
+.address-card.selected .radio { border-color: var(--green); box-shadow: inset 0 0 0 4px white; background: var(--green); }
+.address-card h4 { margin: 0 0 7px; font-size: 14px; }
+.address-card h4 span { margin-left: 9px; color: var(--muted); font-weight: 400; }
+.address-card p { margin: 0; color: #59645e; font-size: 12px; line-height: 1.6; }
+.address-card .default { margin-left: 7px; color: var(--green); font-size: 10px; }
+.address-card .edit-link { position: absolute; right: 14px; top: 15px; color: var(--muted); font-size: 11px; }
+
+.summary-line { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; font-size: 12px; border-bottom: 1px solid #edf0ee; }
+.summary-line:last-child { border: 0; }
+.summary-line span:first-child { color: var(--muted); }
+.summary-line span:last-child { text-align: right; }
+.summary-product { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 9px 0; font-size: 12px; }
+.summary-product small { color: var(--muted); display: block; margin-top: 3px; }
+.total-card { background: #f8faf8; }
+.total-card .summary-line:last-child span:last-child { color: var(--orange); font-size: 18px; font-weight: 750; }
+.check-line { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); font-size: 10px; line-height: 1.5; margin: 12px 2px; }
+.check-line input { accent-color: var(--green); margin-top: 2px; }
+
+.order-card .order-head, .leader-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.order-card h4 { margin: 0 0 5px; font-size: 14px; }
+.order-card .order-items { margin: 12px 0; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.8; }
+.order-card .order-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+.order-card .order-foot strong { color: var(--ink); font-size: 14px; }
+.mini-button { border: 1px solid #ccd5d0; color: var(--ink); background: white; border-radius: 9px; padding: 6px 10px; font-size: 11px; }
+
+.leader-hero { padding: 18px; color: white; background: linear-gradient(145deg, #126e45, #19925a); }
+.leader-hero .tag { background: rgba(255,255,255,.18); color: white; }
+.leader-hero h2 { margin: 12px 0 4px; font-size: 21px; }
+.leader-hero p { margin: 0; opacity: .75; font-size: 11px; }
+.leader-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: -1px 16px 14px; padding-top: 14px; }
+.stat-card { background: white; border-radius: 14px; padding: 13px; border: 1px solid var(--line); }
+.stat-card span { display: block; color: var(--muted); font-size: 10px; }
+.stat-card strong { display: block; margin-top: 5px; font-size: 20px; }
+.manage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.manage-button { border: 1px solid var(--line); background: white; border-radius: 13px; padding: 14px 4px; color: var(--ink); font-size: 11px; }
+.manage-button i { width: 30px; height: 30px; margin: 0 auto 7px; display: grid; place-items: center; border-radius: 10px; background: var(--green-soft); color: var(--green); font-style: normal; font-size: 15px; }
+.table-list { background: white; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+.table-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px 13px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.table-row:last-child { border: 0; }
+.table-row small { color: var(--muted); display: block; margin-top: 4px; }
+
+.bottom-nav { position: sticky; bottom: 0; z-index: 9; display: grid; grid-template-columns: repeat(3, 1fr); height: 64px; background: rgba(255,255,255,.97); border-top: 1px solid var(--line); }
+.bottom-nav button { border: 0; background: transparent; color: #89938d; font-size: 10px; display: grid; place-content: center; gap: 3px; }
+.bottom-nav button i { font-style: normal; font-size: 18px; }
+.bottom-nav button.active { color: var(--green); }
+.empty { padding: 46px 24px; text-align: center; color: var(--muted); }
+.empty-mark { margin: 0 auto 15px; width: 70px; height: 70px; display: grid; place-items: center; border-radius: 24px; background: #e8eee9; font-size: 26px; }
+
+.modal-backdrop { position: absolute; inset: 93px 0 0; z-index: 14; background: rgba(16,28,21,.42); display: flex; align-items: flex-end; }
+.sheet { width: 100%; background: white; border-radius: 22px 22px 0 0; padding: 20px 18px 24px; }
+.sheet-handle { width: 34px; height: 4px; background: #d8dfda; border-radius: 4px; margin: -8px auto 16px; }
+.sheet h3 { margin: 0 0 9px; font-size: 18px; }
+.sheet p { color: var(--muted); font-size: 12px; line-height: 1.65; }
+.sheet .button-row { margin-top: 18px; }
+
+@media (max-width: 900px) {
+  .prototype-shell { display: block; }
+  .prototype-panel { min-height: auto; padding: 14px; border: 0; position: sticky; top: 0; z-index: 40; }
+  .brand-block, .panel-label, .panel-note { display: none; }
+  .screen-nav { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; scrollbar-width: none; }
+  .screen-nav + .panel-label, .panel-label + .screen-nav { margin-top: 0; }
+  .screen-nav button { white-space: nowrap; padding: 8px 10px; }
+  .prototype-panel nav:last-of-type { margin-top: 6px; }
+  .device-stage { min-height: auto; display: flex; flex-direction: column; padding: 28px 12px; gap: 24px; }
+  .stage-copy { text-align: center; }
+  .stage-copy p { margin: 0 auto; }
+  .phone-frame { width: min(390px, calc(100vw - 24px)); height: 780px; max-height: none; }
+  .stage-actions { flex-wrap: wrap; }
+}
+
+@media (max-width: 430px) {
+  .prototype-panel { display: none; }
+  .device-stage { padding: 0; }
+  .stage-copy, .stage-actions { display: none; }
+  .phone-frame { width: 100vw; height: 100vh; min-height: 600px; border: 0; border-radius: 0; }
+  .phone-frame::before { display: none; }
+}
+
+
+/* ===================== 画廊与手机框：沿用 mockup-v2.html ===================== */
+:root {
+  --ink: #17231d;
+  --muted: #6f7974;
+  --line: #e3e9e5;
+  --paper: #ffffff;
+  --canvas: #eef2ef;
+  --soft: #f5f7f5;
+  --green: #168a55;
+  --green-dark: #0f6b41;
+  --green-soft: #e8f5ed;
+  --orange: #d96a28;
+  --orange-soft: #fff1e7;
+  --red: #c7463f;
+  --red-soft: #fff0ef;
+  --shadow: 0 24px 70px rgba(22, 45, 33, 0.14);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(255,255,255,.95), transparent 28%),
+    linear-gradient(135deg, #eef3ef 0%, #e5ebe7 100%);
+}
+
+button, input, textarea { font: inherit; }
+button { cursor: pointer; }
+
+.prototype-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.prototype-panel {
+  min-height: 100vh;
+  padding: 34px 24px;
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(23,35,29,.08);
+}
+
+.brand-block { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; }
+.brand-block strong { display: block; font-size: 20px; letter-spacing: .04em; }
+.brand-block small { color: var(--muted); display: block; margin-top: 4px; }
+.brand-mark {
+  width: 44px; height: 44px; border-radius: 15px; display: grid; place-items: center;
+  color: white; background: var(--green); font-size: 20px; font-weight: 700;
+  box-shadow: 0 10px 24px rgba(22,138,85,.25);
+}
+
+.panel-label { margin: 24px 10px 10px; color: #9aa39e; font-size: 12px; letter-spacing: .12em; }
+.screen-nav { display: grid; gap: 5px; }
+.screen-nav button {
+  border: 0; background: transparent; color: #52605a; text-align: left; border-radius: 12px;
+  padding: 11px 12px; display: flex; align-items: center; gap: 12px; transition: .18s ease;
+}
+.screen-nav button span { color: #a0aaa4; font-size: 11px; font-variant-numeric: tabular-nums; }
+.screen-nav button:hover { background: #f0f5f1; color: var(--ink); }
+.screen-nav button.active { background: var(--green-soft); color: var(--green-dark); font-weight: 650; }
+.screen-nav button.active span { color: var(--green); }
+.panel-note { margin-top: 30px; padding: 16px; border: 1px dashed #cdd8d1; border-radius: 14px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.panel-note strong { color: var(--ink); }
+.panel-note p { margin: 6px 0 0; }
+
+.device-stage {
+  min-height: 100vh; padding: 44px 7vw 36px; position: relative;
+  display: grid; grid-template-columns: minmax(220px, 360px) 390px; gap: clamp(40px, 8vw, 120px);
+  align-items: center; justify-content: center;
+}
+.stage-copy { align-self: center; }
+.stage-copy .eyebrow { color: var(--green); font-size: 11px; letter-spacing: .18em; font-weight: 700; }
+.stage-copy h1 { margin: 14px 0 12px; font-size: clamp(34px, 4vw, 56px); letter-spacing: -.04em; }
+.stage-copy p { margin: 0; max-width: 330px; line-height: 1.8; color: var(--muted); }
+.stage-actions { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 14px; color: var(--muted); font-size: 12px; }
+.secondary-button { border: 1px solid #cad4ce; border-radius: 999px; background: rgba(255,255,255,.65); color: var(--ink); padding: 8px 14px; }
+
+.phone-frame {
+  width: 390px; height: min(844px, calc(100vh - 76px)); min-height: 670px; overflow: hidden;
+  background: var(--soft); border: 9px solid #15201a; border-radius: 45px; position: relative;
+  box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,.2);
+}
+.phone-frame::before {
+  content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 116px; height: 28px; border-radius: 18px; background: #15201a; z-index: 20;
+}
+.phone-status { height: 43px; padding: 13px 23px 0; display: flex; justify-content: space-between; align-items: center; background: white; font-size: 12px; }
+.status-icons { display: flex; gap: 4px; align-items: center; }
+.status-icons i { width: 13px; height: 7px; border: 1.5px solid var(--ink); border-radius: 3px; display: block; }
+.status-icons i:nth-child(1) { width: 12px; border-width: 0 0 5px; border-radius: 1px; }
+.status-icons i:nth-child(2) { width: 9px; height: 9px; border-radius: 50%; }
+.mini-header { height: 50px; padding: 0 12px; display: grid; grid-template-columns: 42px 1fr 70px; align-items: center; background: white; border-bottom: 1px solid #edf0ee; text-align: center; }
+.mini-header strong { font-size: 16px; }
+.icon-button { border: 0; background: transparent; color: var(--ink); font-size: 30px; line-height: 1; }
+.back-button.hidden { visibility: hidden; }
+.capsule { width: 65px; height: 29px; border: 1px solid #dfe4e1; border-radius: 16px; display: flex; align-items: center; justify-content: space-evenly; justify-self: end; }
+.capsule b { font-size: 10px; letter-spacing: 1px; }
+.capsule i { width: 10px; height: 10px; background: var(--ink); border-radius: 50%; box-shadow: inset 0 0 0 3px white; outline: 1px solid var(--ink); }
+.mini-screen { height: calc(100% - 93px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: 82px; scrollbar-width: none; }
+.mini-screen::-webkit-scrollbar { display: none; }
+.toast { position: absolute; top: 104px; left: 50%; z-index: 30; transform: translate(-50%, -10px); background: rgba(19,31,24,.9); color: white; padding: 10px 16px; border-radius: 9px; font-size: 12px; opacity: 0; pointer-events: none; transition: .25s; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.page { min-height: 100%; }
+.page-pad { padding: 16px; }
+.hero { background: linear-gradient(145deg, #eaf8ef, #dff1e6); padding: 24px 18px 20px; }
+.hero-kicker { margin: 0 0 7px; color: var(--green-dark); font-size: 12px; font-weight: 650; }
+.hero h2 { margin: 0; font-size: 26px; line-height: 1.35; letter-spacing: -.03em; }
+.hero p { margin: 10px 0 18px; color: #607068; font-size: 13px; line-height: 1.65; }
+.hero-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.section-head { display: flex; justify-content: space-between; align-items: center; margin: 22px 2px 10px; }
+.section-head h3 { margin: 0; font-size: 16px; }
+.section-head button, .text-link { border: 0; background: none; color: var(--green); font-size: 12px; padding: 0; }
+.card { background: white; border: 1px solid var(--line); border-radius: 16px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 14px rgba(37,55,45,.03); }
+.event-card { display: grid; grid-template-columns: 62px 1fr auto; gap: 12px; align-items: center; }
+.event-thumb, .product-thumb { display: grid; place-items: center; background: #edf4ef; border-radius: 13px; color: #68766f; font-size: 11px; text-align: center; }
+.event-thumb { width: 62px; height: 62px; }
+.event-card h4, .product-card h4 { margin: 0 0 7px; font-size: 15px; }
+.meta { color: var(--muted); font-size: 11px; line-height: 1.55; }
+.chevron { color: #abb4af; font-size: 22px; }
+.tag { display: inline-flex; align-items: center; border-radius: 999px; background: var(--green-soft); color: var(--green-dark); padding: 4px 8px; font-size: 10px; font-weight: 650; }
+.tag.orange { background: var(--orange-soft); color: var(--orange); }
+.tag.gray { background: #eef1ef; color: #758079; }
+.tag.red { background: var(--red-soft); color: var(--red); }
+
+.primary-button, .ghost-button, .danger-button {
+  min-height: 44px; border-radius: 12px; padding: 10px 16px; font-weight: 650; border: 1px solid transparent;
+}
+.primary-button { background: var(--green); color: white; }
+.primary-button:active { background: var(--green-dark); }
+.ghost-button { background: white; color: var(--green-dark); border-color: #bed5c7; }
+.danger-button { background: white; color: var(--red); border-color: #efcac7; }
+.wide { width: 100%; }
+.button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sticky-actions { position: sticky; bottom: 0; z-index: 8; padding: 12px 16px 14px; background: rgba(255,255,255,.96); border-top: 1px solid var(--line); box-shadow: 0 -8px 25px rgba(30,48,38,.06); }
+.sticky-actions .total-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; font-size: 12px; }
+.total-line strong { font-size: 20px; color: var(--orange); }
+
+.login-hero { padding: 42px 24px 24px; text-align: center; }
+.login-logo { width: 70px; height: 70px; margin: 0 auto 18px; display: grid; place-items: center; border-radius: 24px; background: var(--green); color: white; font-size: 28px; font-weight: 750; }
+.login-hero h2 { margin: 0 0 8px; }
+.login-hero p { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.login-actions { padding: 12px 24px; display: grid; gap: 12px; }
+.login-divider { display: flex; align-items: center; gap: 10px; color: #a0a9a4; font-size: 11px; }
+.login-divider::before, .login-divider::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.form-card { background: white; padding: 4px 16px; }
+.field { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.field:last-child { border-bottom: 0; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; }
+.field input, .field textarea { width: 100%; border: 0; padding: 0; outline: 0; color: var(--ink); background: transparent; }
+.field textarea { resize: none; min-height: 54px; line-height: 1.5; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.switch-line { display: flex; align-items: center; justify-content: space-between; }
+.switch { width: 42px; height: 24px; border-radius: 15px; background: #d6ddd8; padding: 3px; }
+.switch::after { content: ""; display: block; width: 18px; height: 18px; border-radius: 50%; background: white; transition: .2s; }
+.switch.on { background: var(--green); }
+.switch.on::after { transform: translateX(18px); }
+.form-tip { padding: 12px 16px; font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+.activity-cover { padding: 18px; background: linear-gradient(140deg, #eff8f2, #dfeee4); }
+.activity-cover .tag { margin-bottom: 10px; }
+.activity-cover h2 { font-size: 23px; line-height: 1.4; margin: 0 0 8px; }
+.activity-cover p { color: var(--muted); font-size: 12px; line-height: 1.65; margin: 0; }
+.activity-stats { display: grid; grid-template-columns: repeat(3, 1fr); background: white; border-bottom: 1px solid var(--line); }
+.activity-stats div { text-align: center; padding: 13px 4px; border-right: 1px solid var(--line); }
+.activity-stats div:last-child { border: 0; }
+.activity-stats strong { display: block; font-size: 16px; }
+.activity-stats span { color: var(--muted); font-size: 10px; }
+.notice { margin: 12px 16px; border-radius: 12px; padding: 11px 12px; font-size: 11px; line-height: 1.55; color: #8b552b; background: var(--orange-soft); }
+.notice.green { color: var(--green-dark); background: var(--green-soft); }
+.product-card { display: grid; grid-template-columns: 76px 1fr; gap: 12px; }
+.product-thumb { width: 76px; height: 76px; font-size: 22px; }
+.product-info { min-width: 0; }
+.product-title-line { display: flex; justify-content: space-between; gap: 8px; }
+.price { color: var(--orange); font-weight: 750; }
+.price small { font-size: 10px; }
+.product-bottom { margin-top: 13px; display: flex; justify-content: space-between; align-items: center; }
+.stepper { display: flex; align-items: center; gap: 12px; }
+.stepper button { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #cad5ce; background: white; color: var(--green-dark); font-size: 19px; line-height: 1; }
+.stepper button.plus { background: var(--green); border-color: var(--green); color: white; }
+.stepper button:disabled { opacity: .35; cursor: not-allowed; }
+
+.address-card { position: relative; padding-left: 46px; }
+.radio { position: absolute; left: 16px; top: 19px; width: 18px; height: 18px; border: 2px solid #b9c4bd; border-radius: 50%; }
+.address-card.selected { border-color: #78b895; background: #fbfffc; }
+.address-card.selected .radio { border-color: var(--green); box-shadow: inset 0 0 0 4px white; background: var(--green); }
+.address-card h4 { margin: 0 0 7px; font-size: 14px; }
+.address-card h4 span { margin-left: 9px; color: var(--muted); font-weight: 400; }
+.address-card p { margin: 0; color: #59645e; font-size: 12px; line-height: 1.6; }
+.address-card .default { margin-left: 7px; color: var(--green); font-size: 10px; }
+.address-card .edit-link { position: absolute; right: 14px; top: 15px; color: var(--muted); font-size: 11px; }
+
+.summary-line { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; font-size: 12px; border-bottom: 1px solid #edf0ee; }
+.summary-line:last-child { border: 0; }
+.summary-line span:first-child { color: var(--muted); }
+.summary-line span:last-child { text-align: right; }
+.summary-product { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 9px 0; font-size: 12px; }
+.summary-product small { color: var(--muted); display: block; margin-top: 3px; }
+.total-card { background: #f8faf8; }
+.total-card .summary-line:last-child span:last-child { color: var(--orange); font-size: 18px; font-weight: 750; }
+.check-line { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); font-size: 10px; line-height: 1.5; margin: 12px 2px; }
+.check-line input { accent-color: var(--green); margin-top: 2px; }
+
+.order-card .order-head, .leader-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.order-card h4 { margin: 0 0 5px; font-size: 14px; }
+.order-card .order-items { margin: 12px 0; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.8; }
+.order-card .order-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+.order-card .order-foot strong { color: var(--ink); font-size: 14px; }
+.mini-button { border: 1px solid #ccd5d0; color: var(--ink); background: white; border-radius: 9px; padding: 6px 10px; font-size: 11px; }
+
+.leader-hero { padding: 18px; color: white; background: linear-gradient(145deg, #126e45, #19925a); }
+.leader-hero .tag { background: rgba(255,255,255,.18); color: white; }
+.leader-hero h2 { margin: 12px 0 4px; font-size: 21px; }
+.leader-hero p { margin: 0; opacity: .75; font-size: 11px; }
+.leader-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: -1px 16px 14px; padding-top: 14px; }
+.stat-card { background: white; border-radius: 14px; padding: 13px; border: 1px solid var(--line); }
+.stat-card span { display: block; color: var(--muted); font-size: 10px; }
+.stat-card strong { display: block; margin-top: 5px; font-size: 20px; }
+.manage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.manage-button { border: 1px solid var(--line); background: white; border-radius: 13px; padding: 14px 4px; color: var(--ink); font-size: 11px; }
+.manage-button i { width: 30px; height: 30px; margin: 0 auto 7px; display: grid; place-items: center; border-radius: 10px; background: var(--green-soft); color: var(--green); font-style: normal; font-size: 15px; }
+.table-list { background: white; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+.table-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px 13px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.table-row:last-child { border: 0; }
+.table-row small { color: var(--muted); display: block; margin-top: 4px; }
+
+.bottom-nav { position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; display: grid; grid-template-columns: repeat(3, 1fr); height: 64px; background: rgba(255,255,255,.97); border-top: 1px solid var(--line); }
+.bottom-nav button { border: 0; background: transparent; color: #89938d; font-size: 10px; display: grid; place-content: center; gap: 3px; }
+.bottom-nav button i { font-style: normal; font-size: 18px; }
+.bottom-nav button.active { color: var(--green); }
+.empty { padding: 46px 24px; text-align: center; color: var(--muted); }
+.empty-mark { margin: 0 auto 15px; width: 70px; height: 70px; display: grid; place-items: center; border-radius: 24px; background: #e8eee9; font-size: 26px; }
+
+.modal-backdrop { position: absolute; inset: 93px 0 0; z-index: 14; background: rgba(16,28,21,.42); display: flex; align-items: flex-end; }
+.sheet { width: 100%; background: white; border-radius: 22px 22px 0 0; padding: 20px 18px 24px; }
+.sheet-handle { width: 34px; height: 4px; background: #d8dfda; border-radius: 4px; margin: -8px auto 16px; }
+.sheet h3 { margin: 0 0 9px; font-size: 18px; }
+.sheet p { color: var(--muted); font-size: 12px; line-height: 1.65; }
+.sheet .button-row { margin-top: 18px; }
+
+@media (max-width: 900px) {
+  .prototype-shell { display: block; }
+  .prototype-panel { min-height: auto; padding: 14px; border: 0; position: sticky; top: 0; z-index: 40; }
+  .brand-block, .panel-label, .panel-note { display: none; }
+  .screen-nav { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; scrollbar-width: none; }
+  .screen-nav + .panel-label, .panel-label + .screen-nav { margin-top: 0; }
+  .screen-nav button { white-space: nowrap; padding: 8px 10px; }
+  .prototype-panel nav:last-of-type { margin-top: 6px; }
+  .device-stage { min-height: auto; display: flex; flex-direction: column; padding: 28px 12px; gap: 24px; }
+  .stage-copy { text-align: center; }
+  .stage-copy p { margin: 0 auto; }
+  .phone-frame { width: min(390px, calc(100vw - 24px)); height: 780px; max-height: none; }
+  .stage-actions { flex-wrap: wrap; }
+}
+
+@media (max-width: 430px) {
+  .prototype-panel { display: none; }
+  .device-stage { padding: 0; }
+  .stage-copy, .stage-actions { display: none; }
+  .phone-frame { width: 100vw; height: 100vh; min-height: 600px; border: 0; border-radius: 0; }
+  .phone-frame::before { display: none; }
+}
+
+  body { background: var(--canvas); margin: 0; }
+  .gallery { max-width: 1680px; margin: 0 auto; padding: 40px 28px 80px; }
+  .gallery-head { max-width: 860px; margin-bottom: 34px; }
+  .gallery-head .eyebrow { font-size: 11px; letter-spacing: .16em; color: var(--muted); font-weight: 700; }
+  .gallery-head h1 { margin: 10px 0 12px; font-size: 32px; letter-spacing: -.5px; }
+  .gallery-head p { margin: 0 0 8px; color: #4d5a53; line-height: 1.65; font-size: 14px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .legend span { font-size: 11px; font-weight: 650; border-radius: 999px; padding: 5px 11px; }
+  .lg-new { background: var(--green-soft); color: var(--green-dark); }
+  .lg-nav { background: #e7eefb; color: #2b5199; }
+  .lg-core { background: var(--orange-soft); color: var(--orange); }
+  .group { margin-top: 44px; }
+  .group > h2 { font-size: 19px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  .group > p { margin: 0 0 22px; color: var(--muted); font-size: 13px; max-width: 760px; line-height: 1.6; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(392px, 1fr)); gap: 34px 26px; }
+  .shot { margin: 0; }
+  .shot .phone-frame { width: 390px; height: 792px; min-height: 0; max-height: none; }
+  .shot figcaption { width: 390px; margin-top: 14px; }
+  .shot figcaption b { display: block; font-size: 14px; margin-bottom: 5px; }
+  .shot figcaption small { display: block; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  .pill { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 6px; padding: 2px 7px; margin-right: 6px; vertical-align: 2px; }
+
+  /* 顶部子 tab */
+  .sub-tabs { position: sticky; top: 0; z-index: 10; display: grid; grid-template-columns: repeat(3, 1fr); background: white; border-bottom: 1px solid var(--line); }
+  .sub-tabs > * { text-align: center; padding: 13px 0 11px; font-size: 14px; color: #8b948f; position: relative; }
+  .sub-tabs b { color: var(--green-dark); font-weight: 700; }
+  .sub-tabs b::after { content: ""; position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 26px; height: 3px; border-radius: 3px; background: var(--green); }
+
+  /* 底部导航中间凸起按钮 */
+  .bottom-nav.raised { overflow: visible; }
+  .bottom-nav .fab { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); width: 54px; height: 54px; border-radius: 50%; background: var(--green); color: white; font-size: 27px; display: grid; place-items: center; border: 4px solid white; box-shadow: 0 8px 20px rgba(22,138,85,.35); }
+  .bottom-nav .fab-label { position: absolute; left: 50%; bottom: 9px; transform: translateX(-50%); font-size: 10px; color: var(--green); font-weight: 650; }
+  .nav-badge { position: absolute; top: 6px; left: calc(50% + 10px); min-width: 16px; height: 16px; border-radius: 9px; background: var(--red); color: white; font-size: 10px; line-height: 16px; text-align: center; padding: 0 4px; font-weight: 700; }
+
+  /* 选择行 */
+  .pick-row { display: grid; grid-template-columns: 22px 54px 1fr; gap: 11px; align-items: center; padding: 12px 13px; border-bottom: 1px solid var(--line); }
+  .pick-row:last-child { border-bottom: 0; }
+  .pick-row .box { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #c3cec8; }
+  .pick-row .box.on { background: var(--green); border-color: var(--green); position: relative; }
+  .pick-row .box.on::after { content: "✓"; position: absolute; inset: 0; color: white; font-size: 12px; display: grid; place-items: center; }
+  .pick-row .thumb { width: 54px; height: 54px; border-radius: 11px; background: #e8eee9; display: grid; place-items: center; font-size: 10px; color: #7e8a84; text-align: center; line-height: 1.3; }
+  .pick-row strong { font-size: 14px; display: block; }
+  .pick-row small { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .pick-row.off { opacity: .55; }
+  .pick-row.off .box { border-style: dashed; background: #f0f2f1; }
+
+  .confirm-card { border: 1.5px solid var(--orange); background: var(--orange-soft); }
+  .kv { display: grid; grid-template-columns: 1fr auto; padding: 9px 0; font-size: 13px; border-bottom: 1px dashed rgba(217,106,40,.28); }
+  .kv:last-of-type { border-bottom: 0; }
+  .kv span { color: #8b552b; }
+  .kv b { font-weight: 700; }
+  .primary-button[disabled] { opacity: .4; }
+  .meta-line { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  @media (max-width: 460px) {
+    .gallery { padding: 24px 12px 50px; }
+    .shots { grid-template-columns: 1fr; }
+    .shot .phone-frame, .shot figcaption { width: 100%; max-width: 390px; }
+  }
+
+  /* ===================== v3 新增 ===================== */
+  /* 图注标签：本轮更新 */
+  .pill.lg-upd { background: #fdf0e3; color: #a2600f; }
+
+  /* 分类筛选 chips（D-066，仅筛选，不做批量加入） */
+  .chips { display: flex; gap: 7px; overflow-x: auto; padding: 0 0 11px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; padding: 6px 13px; border-radius: 15px; background: white; border: 1px solid var(--line); font-size: 12.5px; color: #6b746f; white-space: nowrap; }
+  .chip.on { background: var(--green-soft); border-color: var(--green); color: var(--green-dark); font-weight: 650; }
+
+  /* 推荐角标（D-065，仅视觉强调，不参与排序） */
+  .rec-badge { display: inline-block; background: #fff3e0; color: #b25e09; border: 1px solid #f0c48a; border-radius: 5px; font-size: 10px; font-weight: 700; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; }
+  /* 用 :not(.confirm-card) 保证「待确认」的橙框优先级更高，两者叠加时不互相覆盖 */
+  .card.rec:not(.confirm-card), .product-card.rec:not(.confirm-card) { border-color: #f0c48a; box-shadow: 0 0 0 1px #f8dfba inset; }
+
+  /* 复制活动结果页的剔除告知条（ACTIVITY_COPY_SPEC §4 ①） */
+  .warn-bar { background: #fff4e5; border-left: 3px solid var(--orange); padding: 11px 13px; border-radius: 9px; font-size: 12.5px; line-height: 1.65; color: #7a4a00; margin: 0 0 12px; }
+
+  /* 拖拽手柄：强调顺序由 sort 决定 */
+  .drag { color: #c3ccc7; font-size: 15px; }
+
+  /* M-29 的轻量文字入口：刻意低于「＋ 添加商品」等主按钮的视觉层级 */
+  .text-link { color: var(--green-dark); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+
+  /* 分类管理行 */
+  .cat-row { display: grid; grid-template-columns: 20px 1fr auto; gap: 11px; align-items: center; padding: 13px; border-bottom: 1px solid var(--line); }
+  .cat-row:last-child { border-bottom: 0; }
+
+</style>
+</head>
+<body>
+<div class="gallery">
+
+  <header class="gallery-head">
+    <span class="eyebrow">WECHAT MINI PROGRAM · 效果图 v3</span>
+    <h1>群接龙 · 改版效果图</h1>
+    <p>在 v2 基础上落实三项新决策：<b>D-065 团长自荐推荐标识</b>（仅视觉强调，不影响排序）、<b>D-066 商品库自建分类</b>（仅用于筛选）、<b>D-067 复用历史接龙</b>（整场复制，截止时间按时长推算）。沿用 v2 的视觉系统与结构，未改动 index.html、app.js、styles.css 与 mockup-v2.html。</p>
+    <div class="legend">
+      <span class="lg-new">新增页面</span>
+      <span class="lg-upd">本轮更新</span>
+      <span class="lg-core">核心能力</span>
+      <span class="lg-nav">导航结构</span>
+    </div>
+  </header>
+
+  <!-- ============ A 组 ============ -->
+  <section class="group">
+    <h2>A · 大厅三 tab 结构</h2>
+    <p>沿用 v2 未作改动。底部固定三项：接龙 / 发起接龙 / 我的；「接龙」下再分待办事项、我发起的、我参与的三个子页。<b>没有公开活动列表</b>（D-059），活动只能通过团长主动分享进入。</p>
+    <div class="shots">
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><span></span><strong>群接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <div class="sub-tabs"><b>待办</b><span>我发起的</span><span>我参与的</span></div>
+              <section class="page-pad">
+                <div class="section-head"><h3>今日待办</h3><span class="meta">按优先级排列</span></div>
+
+                <article class="card">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                    <div><span class="tag red">已下架</span><h4 style="margin:8px 0 5px;font-size:15px">九月办公用品补充</h4>
+                    <div class="meta">商品「A4 复印纸」被平台下架，其余商品可继续接龙</div></div>
+                    <span class="chevron">›</span>
+                  </div>
+                </article>
+
+                <article class="card">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                    <div><span class="tag orange">审核未通过</span><h4 style="margin:8px 0 5px;font-size:15px">周末产地水果接龙</h4>
+                    <div class="meta">商品说明含风险词，修改后可重新提交</div></div>
+                    <span class="chevron">›</span>
+                  </div>
+                </article>
+
+                <article class="card">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                    <div><span class="tag orange">待生成清单</span><h4 style="margin:8px 0 5px;font-size:15px">八月坚果团</h4>
+                    <div class="meta">已截止 3 小时 · 共 42 张订单</div></div>
+                    <span class="chevron">›</span>
+                  </div>
+                </article>
+
+                <article class="card">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                    <div><span class="tag gray">即将截止</span><h4 style="margin:8px 0 5px;font-size:15px">社区蔬菜周三团</h4>
+                    <div class="meta">明天 20:00 截止 · 你有 1 张订单可修改</div></div>
+                    <span class="chevron">›</span>
+                  </div>
+                </article>
+              </section>
+              <div class="notice green">待办由活动、订单、举报的当前状态实时生成，不单独建表；「关闭」只记录已读状态。</div>
+              <nav class="bottom-nav raised">
+                <button class="active"><i>▤</i>接龙<span class="nav-badge">4</span></button>
+                <button><span class="fab">＋</span><span class="fab-label">发起接龙</span></button>
+                <button><i>☻</i>我的</button>
+              </nav>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-new">新增</span>待办事项</b><small>M-27。首版不做订阅消息，待办 tab 加 tabBar 角标是唯一的站内触达手段。</small></figcaption>
+      </figure>
+
+      <!-- 2 我发起的 -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><span></span><strong>群接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <div class="sub-tabs"><span>待办</span><b>我发起的</b><span>我参与的</span></div>
+              <section class="page-pad">
+                <article class="card event-card">
+                  <div class="event-thumb">水果<br/>拼箱</div>
+                  <div><h4>周末产地水果接龙</h4><div class="meta">明天 20:00 截止 · 18 张订单 · 预计 ¥1,264</div>
+                  <div style="margin-top:7px"><span class="tag">进行中</span></div></div>
+                  <span class="chevron">›</span>
+                </article>
+                <article class="card event-card">
+                  <div class="event-thumb">办公<br/>用品</div>
+                  <div><h4>九月办公用品补充</h4><div class="meta">3 天后截止 · 7 张订单</div>
+                  <div style="margin-top:7px"><span class="tag">进行中</span><span class="tag red" style="margin-left:6px">含已下架商品</span></div></div>
+                  <span class="chevron">›</span>
+                </article>
+                <article class="card event-card">
+                  <div class="event-thumb">坚果<br/>团</div>
+                  <div><h4>八月坚果团</h4><div class="meta">09-30 已截止 · 42 张订单</div>
+                  <div style="margin-top:7px"><span class="tag gray">已截止</span></div></div>
+                  <span class="chevron">›</span>
+                </article>
+                <article class="card event-card">
+                  <div class="event-thumb">草稿</div>
+                  <div><h4>十月大闸蟹预订</h4><div class="meta">草稿 · 2 件商品 · 昨天编辑</div>
+                  <div style="margin-top:7px"><span class="tag gray">草稿</span></div></div>
+                  <span class="chevron">›</span>
+                </article>
+              </section>
+              <nav class="bottom-nav raised">
+                <button class="active"><i>▤</i>接龙<span class="nav-badge">4</span></button>
+                <button><span class="fab">＋</span><span class="fab-label">发起接龙</span></button>
+                <button><i>☻</i>我的</button>
+              </nav>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改结构</span>我发起的</b><small>由独立页面降为「接龙」tab 的子页，入口从 tab 切换而非 navigateTo。</small></figcaption>
+      </figure>
+
+      <!-- 3 我参与的 -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><span></span><strong>群接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <div class="sub-tabs"><span>待办</span><span>我发起的</span><b>我参与的</b></div>
+              <section class="page-pad">
+                <article class="card">
+                  <h4 style="margin:0 0 6px;font-size:15px">社区蔬菜周三团</h4>
+                  <div class="meta">团长 王姐 · 明天 20:00 截止</div>
+                  <div class="card table-list" style="padding:0;margin:11px 0 0">
+                    <div class="table-row"><div><strong>订单 #A7F2</strong><small>有机白菜 ×2 · 土鸡蛋 ×1 · 预计 ¥46</small></div><button class="mini-button">修改</button></div>
+                    <div class="table-row"><div><strong>订单 #A7F9</strong><small>收货人 李阿姨 · 有机白菜 ×3 · 预计 ¥15</small></div><button class="mini-button">修改</button></div>
+                  </div>
+                </article>
+                <article class="card">
+                  <h4 style="margin:0 0 6px;font-size:15px">八月坚果团</h4>
+                  <div class="meta">团长 陈师傅 · 09-30 已截止</div>
+                  <div class="card table-list" style="padding:0;margin:11px 0 0">
+                    <div class="table-row"><div><strong>订单 #93C1</strong><small>碧根果 ×2 · 预计 ¥98</small></div><span class="tag gray">已截止</span></div>
+                  </div>
+                </article>
+              </section>
+              <div class="notice">同一活动可有多张订单，各自对应一条收货信息，截止前分别修改或取消。</div>
+              <nav class="bottom-nav raised">
+                <button class="active"><i>▤</i>接龙<span class="nav-badge">4</span></button>
+                <button><span class="fab">＋</span><span class="fab-label">发起接龙</span></button>
+                <button><i>☻</i>我的</button>
+              </nav>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改结构</span>我参与的</b><small>同为子页。一个活动下并列展示本人多张订单。</small></figcaption>
+      </figure>
+
+      <!-- 4 我的 -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><span></span><strong>我的</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad">
+                <article class="card" style="display:grid;grid-template-columns:52px 1fr auto;gap:13px;align-items:center">
+                  <div class="empty-mark" style="margin:0;width:52px;height:52px;font-size:20px;border-radius:16px">☻</div>
+                  <div><strong style="font-size:16px">梁哥</strong><div class="meta" style="margin-top:3px">微信账号 · 点击查看个人资料</div></div>
+                  <span class="chevron">›</span>
+                </article>
+
+                <div class="section-head"><h3>接龙工具</h3><span class="meta">账号级</span></div>
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div><strong>我的商品库</strong><small>24 件商品 · 发起活动时可直接复用</small></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div><strong>我的接龙清单</strong><small>已截止活动的配货清单与 Excel 导出</small></div><span class="chevron">›</span></div>
+                </div>
+
+                <div class="section-head"><h3>资料与设置</h3></div>
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div><strong>收货信息</strong><small>3 条 · 默认「家 · 李阿姨」</small></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div><strong>账号与微信绑定</strong></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div><strong>用户协议与隐私指引</strong></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div><strong>举报与反馈</strong></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div><strong>使用说明</strong></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div><strong>注销账号</strong></div><span class="chevron">›</span></div>
+                </div>
+              </section>
+              <nav class="bottom-nav raised">
+                <button><i>▤</i>接龙<span class="nav-badge">4</span></button>
+                <button><span class="fab">＋</span><span class="fab-label">发起接龙</span></button>
+                <button class="active"><i>☻</i>我的</button>
+              </nav>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改结构</span><span class="pill lg-new">新入口</span>我的</b><small>「我的接龙清单」只是跳转已有清单页的快捷入口，不新增跨活动指标；「我的商品库」为本轮新增。</small></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ B 组 ============ -->
+  <section class="group">
+    <h2>B · 用户商品库</h2>
+    <p>本轮新增<b>分类</b>与<b>推荐标识</b>。分类是团长私有的收纳方式，只在商品库内用于筛选，参与者不可见、不进清单；推荐是活动内的展示强调，<b>不改变商品顺序</b>。</p>
+    <div class="shots">
+      <!-- B1 发起接龙：三个按钮 -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>发起接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="form-card">
+                <div class="field"><label>接龙标题 <b style="color:var(--red)">*</b></label><input value="社区蔬菜周三团" /></div>
+                <div class="field"><label>接龙备注（选填）</label><input value="5 号楼周三团" /><small class="meta">仅团长可见，用于区分不同接龙</small></div>
+              </section>
+
+              <section class="page-pad" style="padding-bottom:0">
+                <div class="section-head"><h3>商品列表（0）</h3><span class="meta">0/50 件 · <a class="text-link">管理商品库 ›</a></span></div>
+                <div class="button-row" style="flex-wrap:wrap">
+                  <button class="ghost-button" style="border-style:dashed;border-color:var(--green);color:var(--green-dark)">＋ 添加商品</button>
+                  <button class="ghost-button" style="border-style:dashed">↺ 复用历史商品</button>
+                </div>
+                <button class="ghost-button wide" style="border-style:dashed;margin-top:9px">↺ 复用历史接龙</button>
+                <div class="meta" style="margin:9px 2px 0">复用历史商品＝挑几件；复用历史接龙＝整场照搬，含活动资料与全部商品</div>
+              </section>
+
+              <section class="page-pad">
+                <div class="section-head"><h3>本次接龙设置</h3><span class="meta">已有默认值</span></div>
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div><strong>接龙时间</strong><small>现在开始 · 9 月 17 日 18:00 截止</small></div><button class="mini-button">修改</button></div>
+                  <div class="table-row"><div><strong>交付方式</strong><small>送货上门 · 团员填写收货地址</small></div><button class="mini-button">修改</button></div>
+                </div>
+              </section>
+
+              <div class="notice">交付方式发布后不可修改。选「自提」时只收集收货人姓名与电话，不收集地址。</div>
+
+              <div class="sticky-actions">
+                <div class="total-line"><span class="meta">还差一步：请添加至少 1 件商品</span></div>
+                <div class="button-row"><button class="ghost-button">保存草稿</button><button class="primary-button" disabled>下一步：确认发布</button></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-upd">更新</span>发起接龙</b><small>M-10 / D-067。主按钮由两个增为三个：「复用历史商品」挑单件，「复用历史接龙」整场照搬。右侧「管理商品库 ›」是 M-29 的<b>入口 2</b>，刻意做成轻量文字链接而非第四个并列按钮——再并排一个按钮，团长会分不清它和「复用历史商品」的区别（一个往活动里加商品、一个不加），降低视觉层级是消除歧义最省事的办法。跳转用 navigateTo，返回时草稿表单状态不丢失。</small></figcaption>
+      </figure>
+
+      <!-- B2 M-28 历史商品选择：分类筛选 chips -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>复用历史商品</strong><a class="text-link" style="margin-left:auto;margin-right:10px">管理</a><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad" style="padding-bottom:0">
+                <div class="card" style="display:flex;align-items:center;gap:8px;padding:11px 13px;margin-bottom:11px;color:var(--muted);font-size:13px"><span>⌕</span>搜索商品名称</div>
+
+                <div class="chips">
+                  <span class="chip on">全部 24</span>
+                  <span class="chip">蔬菜 9</span>
+                  <span class="chip">蛋奶 4</span>
+                  <span class="chip">水果 7</span>
+                  <span class="chip">未分组 4</span>
+                </div>
+
+                <div class="meta" style="margin:0 2px 10px">按最近使用排序 · 当前「全部」24 件</div>
+                <div class="card table-list" style="padding:0">
+
+                  <div class="pick-row">
+                    <span class="box on"></span>
+                    <div class="thumb">有机<br/>白菜</div>
+                    <div><strong>有机白菜</strong><small>上次 ¥5.00 / 份 · 库存 100 · 限购 5</small><small>蔬菜 · 用过 3 次 · 09-08</small></div>
+                  </div>
+
+                  <div class="pick-row">
+                    <span class="box on"></span>
+                    <div class="thumb">土鸡<br/>蛋</div>
+                    <div><strong>农家土鸡蛋</strong><small>上次 ¥36.00 / 盒 · 库存 40 · 不限购</small><small>蛋奶 · 用过 5 次 · 09-08</small></div>
+                  </div>
+
+                  <div class="pick-row">
+                    <span class="box"></span>
+                    <div class="thumb">红心<br/>猕猴桃</div>
+                    <div><strong>高山红心猕猴桃</strong><small>上次 ¥36.00 / 箱 · 库存 50 · 限购 3</small><small>水果 · 用过 2 次 · 08-30</small></div>
+                  </div>
+
+                  <div class="pick-row off">
+                    <span class="box"></span>
+                    <div class="thumb">进口<br/>保健品</div>
+                    <div><strong>进口复合维生素</strong><small style="color:var(--red)">该商品曾被平台下架，不能继续使用</small><small>未分组 · 用过 1 次 · 08-12</small></div>
+                  </div>
+
+                  <div class="pick-row">
+                    <span class="box"></span>
+                    <div class="thumb">现摘<br/>甜玉米</div>
+                    <div><strong>现摘甜玉米</strong><small>上次 ¥22.00 / 份 · 库存 30 · 限购 4</small><small>蔬菜 · 用过 4 次 · 08-24</small></div>
+                  </div>
+
+                </div>
+              </section>
+
+              <div class="notice">分类只用于筛选，仍需逐件勾选。整组重复的场景请用「复用历史接龙」。</div>
+
+              <div class="sticky-actions">
+                <div class="total-line"><span>已选 <b>2</b> 件 · 当前活动还可添加 50 件</span></div>
+                <button class="primary-button wide">加入本次接龙</button>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-upd">更新</span>历史商品选择 M-28</b><small>D-066。顶部新增分类筛选 chips，点击过滤列表。<b>刻意不提供「全选本分类」或任何批量加入</b>——整组重复由 D-067 覆盖，两条路径都做会功能重叠。右上角「管理」是 M-29 的<b>入口 3</b>：挑商品时发现模板信息过时可就地跳过去改，返回时本页需刷新。<code>governance_blocked</code> 的记录仍置灰不可选。</small></figcaption>
+      </figure>
+
+      <!-- B3 复用后逐项确认：推荐角标，且不置顶 -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>发起接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad" style="padding-bottom:0">
+                <div class="section-head"><h3>商品列表（3）</h3><span class="meta">3/50 件 · 拖拽调整顺序 · <a class="text-link">管理商品库 ›</a></span></div>
+
+                <article class="card confirm-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+                    <span><span class="drag">⠿</span> <strong style="font-size:15px">有机白菜</strong></span><span class="tag orange">待确认</span>
+                  </div>
+                  <div class="kv"><span>单价</span><b>¥5.00 / 份</b></div>
+                  <div class="kv"><span>总库存</span><b>100</b></div>
+                  <div class="kv"><span>每人限购</span><b>5</b></div>
+                  <div class="meta-line" style="color:#8b552b">以上为上次使用的值，确认或修改后生效</div>
+                  <div class="button-row" style="margin-top:11px">
+                    <button class="ghost-button">修改</button><button class="primary-button">确认</button>
+                  </div>
+                </article>
+
+                <article class="card rec">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div><span class="drag">⠿</span> <strong style="font-size:15px">农家土鸡蛋</strong><span class="rec-badge">推荐</span>
+                    <div class="meta" style="margin-top:5px">¥36.00 / 盒 · 总库存 40 · 不限购</div></div>
+                    <span class="tag">已确认</span>
+                  </div>
+                </article>
+
+                <article class="card confirm-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+                    <span><span class="drag">⠿</span> <strong style="font-size:15px">现摘甜玉米</strong></span><span class="tag orange">待确认</span>
+                  </div>
+                  <div class="kv"><span>单价</span><b>¥22.00 / 份</b></div>
+                  <div class="kv"><span>总库存</span><b>30</b></div>
+                  <div class="kv"><span>每人限购</span><b>4</b></div>
+                  <div class="meta-line" style="color:#8b552b">以上为上次使用的值，确认或修改后生效</div>
+                  <div class="button-row" style="margin-top:11px">
+                    <button class="ghost-button">修改</button><button class="primary-button">确认</button>
+                  </div>
+                </article>
+              </section>
+
+              <div class="notice">「推荐」只是这一场里的视觉强调，<b>不改变商品顺序</b>——顺序始终由拖拽决定。每场最多推荐 5 件。</div>
+
+              <div class="sticky-actions">
+                <div class="total-line"><span style="color:var(--orange)">还有 2 件商品待确认</span></div>
+                <div class="button-row"><button class="ghost-button">保存草稿</button><button class="primary-button" disabled>下一步：确认发布</button></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-upd">更新</span>复用后逐项确认</b><small>D-063 §5.3 + D-065。价格、总库存、每人限购逐件确认，全部确认前「下一步」禁用。<b>注意「推荐」的农家土鸡蛋排在第 2 位而非第 1 位</b>：<code>is_recommend</code> 不进入任何排序表达式，位置只由 <code>sort</code> 决定。</small></figcaption>
+      </figure>
+
+      <!-- B4 M-29 商品库管理：显示所属分类 -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>我的商品库</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 11px">
+                  <span class="meta">保存过的商品会自动出现在这里 · 共 24 件</span>
+                  <button class="mini-button">管理分类</button>
+                </div>
+
+                <div class="chips">
+                  <span class="chip on">全部 24</span><span class="chip">蔬菜 9</span><span class="chip">蛋奶 4</span><span class="chip">水果 7</span><span class="chip">未分组 4</span>
+                </div>
+
+                <article class="card" style="display:grid;grid-template-columns:58px 1fr;gap:12px">
+                  <div class="pick-row" style="padding:0;border:0"><div class="thumb">有机<br/>白菜</div></div>
+                  <div>
+                    <strong style="font-size:15px">有机白菜</strong><span class="tag gray" style="margin-left:7px">蔬菜</span>
+                    <div class="meta" style="margin-top:5px">¥5.00 / 份 · 库存 100 · 限购 5</div>
+                    <div class="meta" style="margin-top:3px">用过 3 次 · 最近 09-08</div>
+                    <div class="button-row" style="margin-top:10px"><button class="mini-button">编辑</button><button class="mini-button">删除</button></div>
+                  </div>
+                </article>
+
+                <article class="card" style="display:grid;grid-template-columns:58px 1fr;gap:12px">
+                  <div class="pick-row" style="padding:0;border:0"><div class="thumb">土鸡<br/>蛋</div></div>
+                  <div>
+                    <strong style="font-size:15px">农家土鸡蛋</strong><span class="tag gray" style="margin-left:7px">蛋奶</span>
+                    <div class="meta" style="margin-top:5px">¥36.00 / 盒 · 库存 40 · 不限购</div>
+                    <div class="meta" style="margin-top:3px">用过 5 次 · 最近 09-08</div>
+                    <div class="button-row" style="margin-top:10px"><button class="mini-button">编辑</button><button class="mini-button">删除</button></div>
+                  </div>
+                </article>
+
+                <article class="card" style="display:grid;grid-template-columns:58px 1fr;gap:12px;opacity:.6">
+                  <div class="pick-row" style="padding:0;border:0"><div class="thumb">进口<br/>保健品</div></div>
+                  <div>
+                    <strong style="font-size:15px">进口复合维生素</strong><span class="tag gray" style="margin-left:7px">未分组</span><span class="tag red" style="margin-left:5px">禁止复用</span>
+                    <div class="meta" style="margin-top:5px;color:var(--red)">曾被平台下架，不可编辑或复用</div>
+                    <div class="button-row" style="margin-top:10px"><button class="mini-button" disabled>编辑</button><button class="mini-button">删除</button></div>
+                  </div>
+                </article>
+              </section>
+              <div class="notice green">分类是你自己的收纳方式，<b>参与者永远看不到</b>，也不进入清单。修改模板只影响以后的复用。</div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-upd">更新</span>商品库管理 M-29</b><small>D-066。每条显示所属分类，顶部可按分类筛选，右上新增「管理分类」入口。分类为用户私有，不进活动展示、不进 Excel 清单、无需内容安全检测。</small></figcaption>
+      </figure>
+
+      <!-- B5 M-30 分类管理（新增） -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>管理分类</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad">
+                <div class="meta" style="margin:0 2px 11px">长按拖动调整顺序 · 分类顺序决定筛选栏的排列</div>
+
+                <div class="card table-list" style="padding:0">
+                  <div class="cat-row"><span class="drag">⠿</span><div><strong>蔬菜</strong><div class="meta" style="margin-top:3px">9 件商品</div></div><span><button class="mini-button">重命名</button> <button class="mini-button">删除</button></span></div>
+                  <div class="cat-row"><span class="drag">⠿</span><div><strong>蛋奶</strong><div class="meta" style="margin-top:3px">4 件商品</div></div><span><button class="mini-button">重命名</button> <button class="mini-button">删除</button></span></div>
+                  <div class="cat-row"><span class="drag">⠿</span><div><strong>水果</strong><div class="meta" style="margin-top:3px">7 件商品</div></div><span><button class="mini-button">重命名</button> <button class="mini-button">删除</button></span></div>
+                </div>
+
+                <button class="ghost-button wide" style="border-style:dashed;margin-top:12px">＋ 新建分类</button>
+
+                <div class="card" style="margin-top:14px;background:var(--soft)">
+                  <div class="switch-line" style="align-items:flex-start">
+                    <div><strong style="font-size:14px">未分组</strong><div class="meta" style="margin-top:4px">4 件商品</div></div>
+                    <span class="tag gray">系统固定</span>
+                  </div>
+                  <div class="meta-line">未分组不是一条分类记录，而是「没有分类」的商品集合，不能重命名或删除。</div>
+                </div>
+              </section>
+
+              <div class="notice">删除分类<b>不会删除商品</b>，其下商品自动归入「未分组」。分类名 1–10 字，仅自己可见。</div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-new">新增</span>商品库分类管理 M-30</b><small>D-066。新建 / 重命名 / 删除 / 拖拽排序。一个商品至多属于一个分类；未设置即「未分组」，<b>不建默认分类记录</b>。删除分类不删商品。</small></figcaption>
+      </figure>
+
+      <!-- B6 商品编辑页（新增） -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>编辑商品</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="form-card">
+                <div class="field"><label>商品名称 <b style="color:var(--red)">*</b></label><input value="农家土鸡蛋" /></div>
+                <div class="field-row">
+                  <div class="field"><label>单价（元）<b style="color:var(--red)">*</b></label><input value="36.00" /></div>
+                  <div class="field"><label>单位 <b style="color:var(--red)">*</b></label><input value="盒" /></div>
+                </div>
+                <div class="field-row">
+                  <div class="field"><label>总库存</label><input value="40" /><small class="meta">0 表示不限</small></div>
+                  <div class="field"><label>每人限购</label><input value="0" /><small class="meta">0 表示不限购</small></div>
+                </div>
+              </section>
+
+              <section class="page-pad" style="padding-top:0">
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div><strong>所属分类</strong><small>仅自己可见，用于商品库筛选</small></div><button class="mini-button">蛋奶 ›</button></div>
+                </div>
+
+                <div class="card" style="margin-top:11px">
+                  <div class="switch-line">
+                    <div><strong style="font-size:14px">设为推荐商品</strong><div class="meta" style="margin-top:4px">本场已推荐 1 / 5 件</div></div>
+                    <span class="switch on"></span>
+                  </div>
+                  <div class="meta-line">推荐只在商品卡上加标记，<b>不会把它排到前面</b>。顺序请用列表页拖拽调整。</div>
+                </div>
+              </section>
+
+              <div class="notice">分类是商品库的收纳方式，参与者看不到；推荐是这一场活动内的展示强调，参与者可见。两者互不相关。</div>
+
+              <div class="sticky-actions">
+                <div class="button-row"><button class="ghost-button">取消</button><button class="primary-button">保存</button></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-new">新增</span>商品编辑页</b><small>M-11 / D-065 + D-066。新增「所属分类」与「设为推荐商品」。推荐上限 5 件由服务端校验；开关下方明写「不会把它排到前面」，避免团长误解为置顶。</small></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ C 组 ============ -->
+  <section class="group">
+    <h2>C · 复用历史接龙</h2>
+    <p>D-067 新增能力，把整场接龙照搬为新草稿。与「复用历史商品」的区别：后者挑单件商品，前者连活动资料、交付方式、封面图与全部商品一起复制。P1-08 由「后续迭代」转为已确认。</p>
+    <div class="shots">
+      <!-- C1 M-31 历史接龙选择（新增） -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>复用历史接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad" style="padding-bottom:0">
+                <div class="meta" style="margin:0 2px 11px">选择一场作为模板 · 只能选一场</div>
+
+                <div class="card table-list" style="padding:0">
+
+                  <div class="pick-row single">
+                    <span class="box on"></span>
+                    <div class="thumb">蔬菜<br/>周三团</div>
+                    <div><strong>社区蔬菜周三团</strong><small>已截止 09-10 · 8 件商品 · 42 张订单</small><small>送货上门 · 开团时长 2 天 18 小时</small></div>
+                  </div>
+
+                  <div class="pick-row single">
+                    <span class="box"></span>
+                    <div class="thumb">八月<br/>坚果团</div>
+                    <div><strong>八月坚果团</strong><small>已截止 08-28 · 5 件商品 · 31 张订单</small><small>自提 · 开团时长 3 天</small></div>
+                  </div>
+
+                  <div class="pick-row single">
+                    <span class="box"></span>
+                    <div class="thumb">中秋<br/>果篮</div>
+                    <div><strong>中秋果篮预订</strong><small><span class="tag gray">已取消</span> 取消于 09-02 · 6 件商品</small><small>团长自行取消的活动仍可复用</small></div>
+                  </div>
+
+                  <div class="pick-row single">
+                    <span class="box"></span>
+                    <div class="thumb">九月<br/>办公</div>
+                    <div><strong>九月办公用品补充</strong><small><span class="tag">进行中</span> 明天 20:00 截止 · 7 件商品</small><small style="color:var(--green-dark)">将创建新草稿，不影响当前正在进行的活动</small></div>
+                  </div>
+
+                </div>
+              </section>
+
+              <div class="notice">草稿不能作为模板；被平台下架的活动也不能，那是违规内容，不允许换个活动重新上架。</div>
+
+              <div class="sticky-actions">
+                <div class="total-line"><span>已选「社区蔬菜周三团」</span></div>
+                <button class="primary-button wide">复制为新草稿</button>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-new">新增</span><span class="pill lg-core">核心</span>历史接龙选择 M-31</b><small>D-067。<b>单选</b>，可选范围为已截止、已取消与进行中三类。进行中的活动带「进行中」标签与明确提示——团长常在本场还没结束时就排下一场。草稿与被平台下架的活动不可作为源（后者是与 D-064 同类的绕过路径）。</small></figcaption>
+      </figure>
+
+      <!-- C2 复制结果草稿（新增） -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>发起接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad" style="padding-bottom:0">
+                <div class="warn-bar">
+                  <b>其中 1 件商品因违规已被下架，未包含在本次复制中：</b><br/>进口复合维生素
+                </div>
+
+                <div class="card" style="border:1.5px solid var(--green);background:var(--green-soft)">
+                  <div class="switch-line" style="align-items:flex-start">
+                    <div>
+                      <strong style="font-size:15px">9 月 18 日 18:00 截止</strong>
+                      <div class="meta" style="margin-top:5px;color:var(--green-dark)">按上次接龙时长 2 天 18 小时推算，可修改</div>
+                    </div>
+                    <button class="mini-button">修改</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="form-card" style="margin-top:12px">
+                <div class="field"><label>接龙标题 <b style="color:var(--red)">*</b></label><input value="社区蔬菜周三团" /><small class="meta">已复制原标题，未加「副本」后缀，可直接改成新名字</small></div>
+              </section>
+
+              <section class="page-pad" style="padding-bottom:0">
+                <div class="section-head"><h3>商品列表（7）</h3><span class="meta">7/50 件 · 原 8 件</span></div>
+
+                <article class="card confirm-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+                    <span><span class="drag">⠿</span> <strong style="font-size:15px">有机白菜</strong></span><span class="tag orange">待确认</span>
+                  </div>
+                  <div class="kv"><span>单价</span><b>¥5.00 / 份</b></div>
+                  <div class="kv"><span>总库存</span><b>100</b></div>
+                  <div class="meta-line" style="color:#8b552b">沿用上次的值，确认或修改后生效</div>
+                  <div class="button-row" style="margin-top:11px"><button class="ghost-button">修改</button><button class="primary-button">确认</button></div>
+                </article>
+
+                <article class="card confirm-card rec">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+                    <span><span class="drag">⠿</span> <strong style="font-size:15px">农家土鸡蛋</strong><span class="rec-badge">推荐</span></span><span class="tag orange">待确认</span>
+                  </div>
+                  <div class="kv"><span>单价</span><b>¥36.00 / 盒</b></div>
+                  <div class="kv"><span>总库存</span><b>40</b></div>
+                  <div class="meta-line" style="color:#8b552b">推荐标记已一并复制，位置仍按原顺序</div>
+                  <div class="button-row" style="margin-top:11px"><button class="ghost-button">修改</button><button class="primary-button">确认</button></div>
+                </article>
+
+                <div class="meta" style="margin:11px 2px 0">其余 5 件商品待确认…</div>
+              </section>
+
+              <div class="notice">交付方式、封面图与商品顺序已一并复制；订单、参与记录、举报与治理记录一律不复制。复制出的活动仍需重新提交审核。</div>
+
+              <div class="sticky-actions">
+                <div class="total-line"><span style="color:var(--orange)">7 件商品待确认</span></div>
+                <div class="button-row"><button class="ghost-button">保存草稿</button><button class="primary-button" disabled>下一步：确认发布</button></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-new">新增</span><span class="pill lg-core">核心</span>复制结果草稿</b><small>D-067 / ACTIVITY_COPY_SPEC §4。三处要点：① 被下架商品<b>剔除并明确告知</b>，不静默消失；② 截止时间<b>已按源活动时长推算预填</b>并显眼展示可改，不是空值也不是任意默认值；③ 价格与库存复用 D-063 的同一套「预填＋逐项确认」组件，不另做一套。</small></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ D 组 ============ -->
+  <section class="group">
+    <h2>D · 参与者侧</h2>
+    <p>参与者只看到推荐角标，看不到分类。自提活动不收集地址（D-060），敏感数据面与隐私指引的收集范围同步缩小。</p>
+    <div class="shots">
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>社区蔬菜周三团</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <div class="activity-cover" style="padding:18px 16px;background:linear-gradient(135deg,#168a55,#0f6b41);color:white">
+                <span class="tag">进行中</span>
+                <h2 style="margin:10px 0 6px;font-size:19px">社区蔬菜周三团</h2>
+                <div style="font-size:12px;opacity:.9">团长 王姐 · 9 月 17 日 18:00 截止 · 送货上门</div>
+              </div>
+
+              <section class="page-pad">
+                <article class="card product-card">
+                  <div class="product-thumb" style="background:#e8eee9;border-radius:12px;display:grid;place-items:center;font-size:10px;color:#7e8a84">有机<br/>白菜</div>
+                  <div class="product-info">
+                    <div class="product-title-line"><h4>有机白菜</h4></div>
+                    <div class="meta">已购买 87 份 · 剩余 13 · 每人限 5</div>
+                    <div class="product-bottom" style="display:flex;justify-content:space-between;align-items:center;margin-top:9px">
+                      <span class="price">¥5.00<small style="color:var(--muted);font-weight:400"> / 份</small></span>
+                      <div class="stepper"><button>−</button><b>2</b><button class="plus">＋</button></div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="card product-card rec">
+                  <div class="product-thumb" style="background:#e8eee9;border-radius:12px;display:grid;place-items:center;font-size:10px;color:#7e8a84">土鸡<br/>蛋</div>
+                  <div class="product-info">
+                    <div class="product-title-line"><h4>农家土鸡蛋</h4><span class="rec-badge">推荐</span></div>
+                    <div class="meta">已购买 12 盒 · 库存不限 · 不限购</div>
+                    <div class="product-bottom" style="display:flex;justify-content:space-between;align-items:center;margin-top:9px">
+                      <span class="price">¥36.00<small style="color:var(--muted);font-weight:400"> / 盒</small></span>
+                      <div class="stepper"><button disabled>−</button><b>0</b><button class="plus">＋</button></div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="card product-card" style="opacity:.6">
+                  <div class="product-thumb" style="background:#e8eee9;border-radius:12px;display:grid;place-items:center;font-size:10px;color:#7e8a84">小<br/>油菜</div>
+                  <div class="product-info">
+                    <div class="product-title-line"><h4>本地小油菜</h4><span class="tag gray">已停售</span></div>
+                    <div class="meta">已购买 30 份 · 团长已停售</div>
+                    <div class="product-bottom" style="margin-top:9px"><span class="price">¥4.00<small style="color:var(--muted);font-weight:400"> / 份</small></span></div>
+                  </div>
+                </article>
+              </section>
+
+              <div class="notice">接龙成功不代表已付款，平台不收款、不发货、不担保成交。费用与交付由团长线下处理。</div>
+
+              <div class="sticky-actions">
+                <div class="total-line"><span>已选 2 件 · 预计 <b class="price">¥10.00</b></span><span class="meta">举报</span></div>
+                <button class="primary-button wide">提交接龙</button>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-upd">更新</span>活动详情</b><small>M-13 / D-065。「推荐」的农家土鸡蛋<b>排在第 2 位</b>——推荐只加角标与边框高亮，<b>位置完全不变</b>，仍由团长拖拽的 <code>sort</code> 决定。平台不提供任何推荐、榜单或流量分配，这是与 D-059 私域定位一致的形态边界。从群卡片单页启动时，左上角返回须 <code>switchTab</code> 回大厅。</small></figcaption>
+      </figure>
+
+      <!-- 10 确认订单 自提 -->
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>确认接龙</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page">
+              <section class="page-pad" style="padding-bottom:0">
+                <article class="card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+                    <strong style="font-size:15px">交付方式</strong><span class="tag">自提</span>
+                  </div>
+                  <div class="meta">周五 17:00–19:00 · 5 号楼架空层自提，无需填写地址</div>
+                </article>
+
+                <div class="section-head"><h3>自提联系人</h3><button>更换</button></div>
+                <article class="card">
+                  <div class="field" style="padding-top:0"><label>取货人姓名 <b style="color:var(--red)">*</b></label><input value="李阿姨" /></div>
+                  <div class="field" style="padding-bottom:0"><label>联系电话 <b style="color:var(--red)">*</b></label><input value="138****6021" /></div>
+                </article>
+                <div class="form-tip">本次活动为自提，不收集收货地址。电话仅供团长分货时联系，不用于账号验证。</div>
+
+                <div class="section-head"><h3>接龙明细</h3></div>
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div><strong>有机白菜</strong><small>¥5.00 / 份 × 2</small></div><b>¥10.00</b></div>
+                  <div class="table-row"><div><strong>农家土鸡蛋</strong><small>¥36.00 / 盒 × 1</small></div><b>¥36.00</b></div>
+                </div>
+
+                <article class="card total-card" style="margin-top:12px">
+                  <div class="summary-line" style="display:flex;justify-content:space-between;font-size:13px"><span>预计金额</span><b class="price">¥46.00</b></div>
+                  <div class="meta-line">金额为预估，实际以团长线下结算为准</div>
+                </article>
+              </section>
+
+              <div class="sticky-actions">
+                <div class="total-line"><span>预计 <b class="price">¥46.00</b></span><span class="meta">限购按你的全部订单合计</span></div>
+                <button class="primary-button wide">确认提交</button>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-new">新增分支</span>确认订单 · 自提</b><small>自提活动只要姓名与电话，地址簿不参与。敏感数据面与隐私指引的收集范围同步缩小。</small></figcaption>
+      </figure>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

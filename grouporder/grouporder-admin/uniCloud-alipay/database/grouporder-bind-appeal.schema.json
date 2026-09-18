@@ -1,0 +1,143 @@
+{
+  "bsonType": "object",
+  "required": [
+    "appeal_no",
+    "applicant_uid",
+    "appeal_type",
+    "status"
+  ],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "description": "账号绑定申诉表。解绑与重新绑定不改变任何业务数据归属",
+  "properties": {
+    "_id": {
+      "description": "存储文档 ID（申诉 ID），系统自动生成"
+    },
+    "appeal_no": {
+      "bsonType": "string",
+      "title": "申诉编号",
+      "description": "全局唯一",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "applicant_uid": {
+      "bsonType": "string",
+      "title": "申诉人",
+      "foreignKey": "uni-id-users._id",
+      "description": "提交申诉的用户"
+    },
+    "wx_identity": {
+      "bsonType": "string",
+      "title": "微信身份标识摘要",
+      "description": "不存完整凭证（OPS §9）",
+      "maxLength": 128
+    },
+    "target_account_uid": {
+      "bsonType": "string",
+      "title": "目标平台账号",
+      "foreignKey": "uni-id-users._id",
+      "description": "待解绑或重新绑定的目标账号"
+    },
+    "current_binding": {
+      "bsonType": "object",
+      "title": "当前绑定关系快照",
+      "description": "处理时的绑定关系"
+    },
+    "both_have_data": {
+      "bsonType": "int",
+      "title": "双方是否均有业务数据",
+      "description": "为 1 时首版不提供申诉解决、合并或迁移，用户继续分别使用原账号（D-055）",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "否"
+        },
+        {
+          "value": 1,
+          "text": "是"
+        }
+      ]
+    },
+    "appeal_type": {
+      "bsonType": "int",
+      "title": "申诉类型",
+      "description": "1解绑 2重新绑定",
+      "enum": [
+        {
+          "value": 1,
+          "text": "解绑"
+        },
+        {
+          "value": 2,
+          "text": "重新绑定"
+        }
+      ]
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "处理状态",
+      "description": "1待处理 2处理中 3处理成功 4处理失败",
+      "defaultValue": 1,
+      "enum": [
+        {
+          "value": 1,
+          "text": "待处理"
+        },
+        {
+          "value": 2,
+          "text": "处理中"
+        },
+        {
+          "value": 3,
+          "text": "处理成功"
+        },
+        {
+          "value": 4,
+          "text": "处理失败"
+        }
+      ]
+    },
+    "handler_uid": {
+      "bsonType": "string",
+      "title": "处理人",
+      "foreignKey": "uni-id-users._id",
+      "description": "账号与隐私专员"
+    },
+    "identity_verify_result": {
+      "bsonType": "string",
+      "title": "身份核验结果",
+      "description": "身份核验过程与结果",
+      "maxLength": 500
+    },
+    "handle_reason": {
+      "bsonType": "string",
+      "title": "处理原因",
+      "description": "处理依据",
+      "maxLength": 500
+    },
+    "fail_reason": {
+      "bsonType": "string",
+      "title": "失败原因摘要",
+      "description": "向用户展示，不含内部敏感信息",
+      "maxLength": 500
+    },
+    "handle_time": {
+      "bsonType": "timestamp",
+      "title": "处理时间",
+      "description": "处理时间"
+    },
+    "create_date": {
+      "bsonType": "timestamp",
+      "title": "申诉提交时间",
+      "description": "申诉提交时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

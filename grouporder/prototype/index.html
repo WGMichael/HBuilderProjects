@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>群接龙 · 核心流程原型</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div style="background:#fff4e5;border-bottom:2px solid #f0a020;padding:14px 20px;font:14px/1.7 -apple-system,'PingFang SC',sans-serif;color:#7a4a00">
+      <strong style="font-size:15px">⚠ 此原型已废弃，不代表当前设计</strong><br>
+      本文件基于已废止的 D-047（首页展示公开活动列表）。自 2026-09-15 起，产品改为
+      <b>三 tab 大厅（接龙 / 发起接龙 / 我的），不设首页</b>，活动仅通过分享入口进入（D-059、D-061）。<br>
+      当前设计请看 <a href="./mockup-v2.html" style="color:#168a55;font-weight:700">mockup-v2.html</a>；
+      正式定义以 <code>docs/product/DECISIONS.md</code> 与 <code>docs/ux/UX_FLOW_SPEC.md</code> 为准。
+    </div>
+    <main class="prototype-shell">
+      <aside class="prototype-panel" aria-label="原型页面导航">
+        <div class="brand-block">
+          <span class="brand-mark">接</span>
+          <div>
+            <strong>群接龙</strong>
+            <small>核心流程 · 低保真原型</small>
+          </div>
+        </div>
+
+        <p class="panel-label">参与者流程</p>
+        <nav class="screen-nav" id="screenNav">
+          <button data-screen="home"><span>01</span>首页</button>
+          <button data-screen="login"><span>02</span>登录</button>
+          <button data-screen="activity"><span>03</span>活动详情</button>
+          <button data-screen="address"><span>04</span>收货信息</button>
+          <button data-screen="confirm"><span>05</span>确认接龙</button>
+          <button data-screen="orders"><span>06</span>我的接龙</button>
+        </nav>
+
+        <p class="panel-label">团长流程</p>
+        <nav class="screen-nav">
+          <button data-screen="create"><span>07</span>创建活动</button>
+          <button data-screen="product"><span>08</span>编辑商品</button>
+          <button data-screen="preview"><span>09</span>发布预览</button>
+          <button data-screen="leader"><span>10</span>活动管理</button>
+        </nav>
+
+        <div class="panel-note">
+          <strong>原型说明</strong>
+          <p>使用模拟数据展示关键业务路径，不连接支付、采购或配送。</p>
+        </div>
+      </aside>
+
+      <section class="device-stage">
+        <div class="stage-copy">
+          <span class="eyebrow">WECHAT MINI PROGRAM</span>
+          <h1 id="stageTitle">首页</h1>
+          <p id="stageDescription">浏览公开活动或发起一次新的接龙。</p>
+        </div>
+
+        <div class="phone-frame">
+          <div class="phone-status">
+            <strong>9:41</strong>
+            <div class="status-icons" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
+          <header class="mini-header">
+            <button class="icon-button back-button" id="backButton" aria-label="返回">‹</button>
+            <strong id="miniTitle">群接龙</strong>
+            <span class="capsule"><b>•••</b><i></i></span>
+          </header>
+          <div class="toast" id="toast" role="status"></div>
+          <section class="mini-screen" id="app" aria-live="polite"></section>
+        </div>
+
+        <div class="stage-actions">
+          <button class="secondary-button" id="resetButton">重置演示数据</button>
+          <span>点击手机内按钮可体验完整流程</span>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
