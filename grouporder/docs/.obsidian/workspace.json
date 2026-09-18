@@ -20,8 +20,37 @@
               "icon": "lucide-file",
               "title": "DATA_MODEL"
             }
+          },
+          {
+            "id": "91826745efe4a49e",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "update-admin-mockup.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "update-admin-mockup"
+            }
+          },
+          {
+            "id": "df9818be93185c85",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "arch/ADMIN_BUILD_PLAN.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "ADMIN_BUILD_PLAN"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -99,7 +128,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "arch/DATA_MODEL.md",
+                "file": "update-admin-mockup.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +147,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "arch/DATA_MODEL.md",
+                "file": "update-admin-mockup.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +190,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "arch/DATA_MODEL.md",
+                "file": "update-admin-mockup.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -188,24 +217,29 @@
       "bases:新建数据库": false
     }
   },
-  "active": "41ed46c3930f0004",
+  "active": "91826745efe4a49e",
   "lastOpenFiles": [
-    "arch/ADMIN_BUILD_PLAN.md",
-    "arch/ADMIN_REUSE_MAP.md",
-    "arch/ADMIN_KNOWN_ISSUES.md",
+    "app-ui/IMG_4873.PNG",
+    "app-ui/IMG_4872.PNG",
+    "app-ui/IMG_4871 2.PNG",
+    "app-ui",
     "product/DECISIONS.md",
-    "product/OPS_ADMIN_REQUIREMENTS.md",
-    "ux/UX_FLOW_SPEC.md",
-    "update-admin-mockup.md",
-    "compliance/CATEGORY_VERIFICATION.md",
-    "compliance/RELEASE_AUDIT_CHECKLIST.md",
-    "arch/ACTIVITY_COPY_SPEC.md",
+    "arch/ADMIN_BUILD_PLAN.md",
     "product/PRD.md",
-    "arch/GOODS_LIB_EXT_ASSESSMENT.md",
+    "update-admin-mockup.md",
+    "arch/ADMIN_REUSE_MAP.md",
+    "arch/ACTIVITY_COPY_SPEC.md",
     "arch/GOODS_LIB_SPEC.md",
-    "arch/DATA_MODEL.md",
+    "ux/UX_STATE_MATRIX.md",
     "ux/UX_REVIEW_GATE.md",
+    "ux/UX_FLOW_SPEC.md",
+    "product/OPS_ADMIN_REQUIREMENTS.md",
+    "arch/GOODS_LIB_EXT_ASSESSMENT.md",
+    "arch/ADMIN_KNOWN_ISSUES.md",
+    "arch/DATA_MODEL.md",
     "update.md",
+    "compliance/RELEASE_AUDIT_CHECKLIST.md",
+    "compliance/CATEGORY_VERIFICATION.md",
     "arch/schema/grouporder-goods-category.index.json",
     "arch/schema/grouporder-goods-category.schema.json",
     "README.md",
@@ -215,17 +249,12 @@
     "review/FEASIBILITY_REVIEW.md",
     "arch/schema/grouporder-goods-lib.index.json",
     "arch/schema/grouporder-goods-lib.schema.json",
-    "app-ui/IMG_4873.PNG",
-    "app-ui/IMG_4872.PNG",
-    "app-ui/IMG_4871 2.PNG",
-    "app-ui",
     "app. ui/IMG_4873.PNG",
     "app. ui/IMG_4872.PNG",
     "app. ui/IMG_4871 2.PNG",
     "app. ui",
     "未命名文件夹",
     "arch/schema/uni-id-users.schema.json",
-    "ux/UX_STATE_MATRIX.md",
     "ux/afdsf/UX_FLOW_SPEC.md"
   ]
 }

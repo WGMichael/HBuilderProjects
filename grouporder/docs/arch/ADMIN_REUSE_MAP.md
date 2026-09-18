@@ -2,7 +2,7 @@
 
 - 文档版本：v0.2
 - 日期：2026-09-17
-- 性质：**实施依据**。回答「18 屏里哪些是现成的、哪些要改、哪些真要从零写」
+- 性质：**实施依据**。回答「17 屏里哪些是现成的、哪些要改、哪些真要从零写」
 - 事实来源：`grouporder-admin` 工程实际代码（已逐文件核对）、`OPS_ADMIN_REQUIREMENTS.md` v0.9、`DECISIONS.md` v1.7
 - 配套：`prototype/admin/admin-mockup-v2.html`（按本文结论绘制）、**`ADMIN_KNOWN_ISSUES.md`（已知问题与风险清单，40 条，实施时逐条核对）**
 - **v0.2 起本文不只是盘点，§6～§9 的结论已落地到工程文件**（菜单、角色、权限点初始数据与 `admin.config.js`）
@@ -112,14 +112,14 @@ uni-page-wrapper   padding 15px，背景 #f5f5f5
 
 ---
 
-## 3. 18 屏逐屏盘点
+## 3. 逐屏盘点（A-01～A-18，共 17 屏）
 
 图例：**◆ 复用** = 现成页面，改配置即可；**◇ 改造** = 在现成页面上增删；**○ 新建** = 需从零开发（但仍复用组件）。
 
 | 屏 | 页面 | 结论 | 对应既有资产 / 改造点 |
 |---|---|---|---|
 | A-01 | 运营登录 | **◆ 复用** | `uni-id-pages/pages/login/login-withpwd.vue`。改 `uni_modules/uni-id-pages/config.js`：`loginTypes: ['username']`、`isAdmin: true`（D-069）。**不新建页面。** 注意该文件在模块升级后会被默认值覆盖，每次升级需重新核对 |
-| A-02 | 验证与访问结果 | **○ 新建** | 二次验证为 `uni-popup` 弹窗组件（全局可复用），校验走云对象；结果态页复用 `pages/error/404.vue` 的形态 |
+| A-02 | 验证与访问结果 | **○ 新建** | 结果态页复用 `pages/error/404.vue` 的形态 |
 | A-03 | 工作台 | **◇ 改造** | `pages/index/index.vue`。**移除** uni-stat 的设备/用户概览表格与平台选择 tabs，**换成** D-070 的三档待办 + 本人最近处理记录。保留 `uni-notice-bar` 与 `uni-stat--x` 卡片结构 |
 | A-04 | 全局检索 | **○ 新建** | uni-admin 无全局检索。复用 `uni-table` 列头筛选 + `uni-pagination`；Tab 切换用 `uni-stat-tabs type="boldLine"` |
 | A-05 | 运营统计 | **○ 新建** | `pages/uni-stat/*` 是 **uni 应用统计**（设备、留存、错误），与业务数据不通，**不可复用数据层**。可复用 `uni-stat--x` 卡片、`uni-stat-tabs`、`qiun-data-charts` |
@@ -128,10 +128,9 @@ uni-page-wrapper   padding 15px，背景 #f5f5f5
 | A-08 | 举报与内容审核 | **○ 新建** | 复用 `uni-table` + `uni-forms` |
 | A-09 | 下架 / 恢复确认 | **○ 新建** | 弹窗用 `uni-popup` + `uni-popup-dialog` |
 | A-10 | 发布者处置 | **○ 新建** | 复用 `uni-forms` + `uni-datetime-picker`（临时限制起止） |
-| A-11 | 敏感资料受控查看 | **○ 新建** | 复用 A-02 的二次验证弹窗组件 |
 | A-12 | 账号绑定申诉 | **○ 新建** | 复用 `uni-table` + `uni-forms` |
 | A-13 | Excel 事件审计 | **○ 新建** | 复用 `uni-table` 列头筛选 |
-| A-14 | 日志与审计 | **◇ 部分复用** | **登录类事件**：`pages/system/safety/list.vue` 已基于 `uni-id-log` 实现，可直接挂菜单。**业务操作日志**：`grouporder-oplog` 的 9 字段与 11 类事件需新建页面，两者**不要合并**（数据源不同） |
+| A-14 | 日志与审计 | **◇ 部分复用** | **登录类事件**：`pages/system/safety/list.vue` 已基于 `uni-id-log` 实现，可直接挂菜单。**业务操作日志**：`grouporder-oplog` 的 9 字段与 10 类事件需新建页面，两者**不要合并**（数据源不同） |
 | A-15 | 运营账号与权限 | **◆ 复用 + ◇ 改造** | `pages/system/user/{list,add,edit}.vue`、`system/role/*`、`system/permission/*` 六页现成。改造点见 §4 |
 | A-16 | 隐私与注销事项 | **○ 新建** | 复用 `uni-table` + `uni-forms` |
 | A-17 | 活动发布审核 | **○ 新建** | 复用 `uni-table` + `uni-forms` |
@@ -151,18 +150,18 @@ uni-page-wrapper   padding 15px，背景 #f5f5f5
 
 这不是「字段不该露」，而是「对象根本不对」。
 
-**必须改为**：`where` 增加运营角色过滤，只列持有 `ops-*` 角色的账号。小程序用户的查询归 A-04 全局检索，走云对象 + 脱敏，两条路径不可混用。
+**必须改为**：`where` 增加运营角色过滤，只列持有 `ops-*` 角色的账号。小程序用户的查询归 A-04 全局检索，走云对象（D-072 起不脱敏，但仍须逐次鉴权并入审计），两条路径不可混用。
 
 ### 4.2 其余四处
 
 | # | uni-admin 现状 | 必须改为 | 依据 |
 |---|---|---|---|
-| ② | 按钮组自带 `<download-excel>` **导出 Excel** | **删除该按钮** | OPS §15「运营后台不提供导出」 |
-| ③ | 表格含**手机号码**、**邮箱**两列且带搜索筛选 | **隐藏两列** | D-029 账号不采集手机号；与默认脱敏冲突 |
+| ② | 按钮组自带 `<download-excel>` **导出 Excel** | **保留**（D-072 导出放开）。但导出对象须先按 §4.1 收窄为运营账号，且每次导出写入审计 | D-072；OPS §13 |
+| ③ | 表格含**手机号码**、**邮箱**两列且带搜索筛选 | **隐藏两列** | D-029 账号不采集手机号，列恒为空且易误导；与脱敏无关 |
 | ④ | 角色列直接渲染 `item.role` 原始值 | 映射为 **4 个中文角色名**，并将 `ops-stat-view` 单列 | OPS §3.2；统计权限是独立权限点，不随角色获得 |
-| ⑤ | 按钮组含**批量删除** | **删除，只保留停用** | OPS §3.1 只提到「停用」，停用与删除是两回事 |
+| ⑤ | 按钮组含**批量删除** | **保留删除**，但须弹出二次确认窗、要求输入 `delete` 才执行；停用与删除分开呈现 | D-072；OPS §3.1（停用与删除是两回事） |
 
-> 同样的 `<download-excel>` 组件若被顺手用到 A-13 Excel 事件审计页，违规更直接——OPS §10 明令「运营人员不能通过日志下载、预览或重新生成团长清单」。
+> `<download-excel>` 用到 A-13 Excel 事件审计页时注意：D-072 起运营**可以**下载团长清单，但下载必须**重新校验权限并换取新的临时地址**，页面不得显示或复用审计记录中的历史地址（D-071③）。直接把日志里存的地址渲染成链接是错的。
 
 ---
 
@@ -180,7 +179,7 @@ uni-page-wrapper   padding 15px，背景 #f5f5f5
 | 方案 | 做法 | 代价 |
 |---|---|---|
 | **甲（建议）** | 业务页一律走云对象，`uni-table` 手动喂数据 | 开发量增加，但「业务规则不可旁路」的原则完整保留 |
-| 乙 | 为运营端开放受限 JQL 只读权限 | 省事，但与 DATA_MODEL §1 冲突，且脱敏、二次验证、审计三条链路难以在客户端强制执行 |
+| 乙 | 为运营端开放受限 JQL 只读权限 | 省事，但与 DATA_MODEL §1 冲突，且逐次鉴权与审计两条链路难以在客户端强制执行 |
 
 **本文不裁决，提请产品负责人与架构确认后写入 `DATA_MODEL.md`。** 效果图 v2 按方案甲绘制（表格形态一致，差别只在数据来源）。
 
@@ -217,26 +216,25 @@ if (!role.includes('admin')) {
 
 ### 6.2 18 个权限点（`uni-id-permissions.init_data.json`）
 
-| permission_id | 名称 | 对应页面 |
-|---|---|---|
-| `ops-workbench` | 工作台 | A-03。**全部角色必须持有**，缺少它登录后看不到任何菜单 |
-| `ops-content-review` | 活动发布审核 | A-17 |
-| `ops-content-report` | 举报与内容审核 | A-08 |
-| `ops-content-activity` | 活动与商品治理 | A-07、A-09、A-10 |
-| `ops-search` | 全局检索 | A-04 |
-| `ops-stat-view` | 运营统计查看 | A-05、A-06。**独立权限点，默认不绑定任何角色** |
-| `ops-privacy-appeal` | 账号绑定申诉 | A-12 |
-| `ops-privacy-sensitive` | 敏感资料受控查看 | A-11 |
-| `ops-privacy-case` | 隐私与注销事项 | A-16 |
-| `ops-audit-export` | Excel 事件审计 | A-13 |
-| `ops-audit-oplog` | 操作日志查询 | A-14 业务日志 |
-| `ops-audit-login` | 登录日志查询 | A-14 登录日志（复用 `system/safety/list`） |
-| `ops-sys-account` | 运营账号管理 | A-15 |
-| `ops-sys-role` | 角色管理 | `system/role` |
-| `ops-sys-permission` | 权限管理 | `system/permission` |
-| `ops-sys-menu` | 菜单管理 | `system/menu` |
-| `ops-sys-config` | 平台配置 | A-18 |
-| `ops-sys-error` | 错误统计 | 技术排障。**归属已确认：挂在超级管理员下**（产品负责人 2026-09-17）；启用条件见 §7.5 |
+| permission_id           | 名称         | 对应页面                                                 |
+| ----------------------- | ---------- | ---------------------------------------------------- |
+| `ops-workbench`         | 工作台        | A-03。**全部角色必须持有**，缺少它登录后看不到任何菜单                      |
+| `ops-content-review`    | 活动发布审核     | A-17                                                 |
+| `ops-content-report`    | 举报与内容审核    | A-08                                                 |
+| `ops-content-activity`  | 活动与商品治理    | A-07、A-09、A-10                                       |
+| `ops-search`            | 全局检索       | A-04                                                 |
+| `ops-stat-view`         | 运营统计查看     | A-05、A-06。**独立权限点，默认不绑定任何角色**                        |
+| `ops-privacy-appeal`    | 账号绑定申诉     | A-12                                                 |
+| `ops-privacy-case`      | 隐私与注销事项    | A-16                                                 |
+| `ops-audit-export`      | Excel 事件审计 | A-13                                                 |
+| `ops-audit-oplog`       | 操作日志查询     | A-14 业务日志                                            |
+| `ops-audit-login`       | 登录日志查询     | A-14 登录日志（复用 `system/safety/list`）                   |
+| `ops-sys-account`       | 运营账号管理     | A-15                                                 |
+| `ops-sys-role`          | 角色管理       | `system/role`                                        |
+| `ops-sys-permission`    | 权限管理       | `system/permission`                                  |
+| `ops-sys-menu`          | 菜单管理       | `system/menu`                                        |
+| `ops-sys-config`        | 平台配置       | A-18                                                 |
+| `ops-sys-error`         | 错误统计       | 技术排障。**归属已确认：挂在超级管理员下**（产品负责人 2026-09-17）；启用条件见 §7.5 |
 
 ### 6.3 5 个角色（`uni-id-roles.init_data.json`）
 
@@ -389,5 +387,6 @@ if (role.includes("admin")) return { role, permission: [] }   // 跳过权限查
 
 | 日期 | 版本 | 变化 |
 |---|---|---|
-| 2026-09-16 | v0.1 | 建立盘点：核对 uni-admin 既有资产、实测视觉规范、18 屏逐屏定性、A-15 改造点、菜单初始数据；登记 `unicloud-db` 与全表 `permission: false` 的架构冲突 |
+| 2026-09-18 | v0.3 | 按 D-072 改写：A-11 标记取消（编号保留空缺，实 17 屏）、A-02 去掉二次验证弹窗组件；§4.2 五个坑中第 ② 条导出按钮由「删除」改为「保留但收窄对象并入审计」、第 ⑤ 条批量删除由「删除」改为「保留但须输入 `delete` 确认」、第 ③ 条理由去掉脱敏；§5 乙方案的否决理由由「脱敏/二次验证/审计三链路」改为「全量审计与提交时鉴权两链路」 |
+| 2026-09-16 | v0.1 | 建立盘点：核对 uni-admin 既有资产、实测视觉规范、逐屏定性、A-15 改造点、菜单初始数据；登记 `unicloud-db` 与全表 `permission: false` 的架构冲突 |
 | 2026-09-17 | v0.2 | **更正 v0.1 的错误**：菜单 `permission` 存的是权限点而非角色 id（§6.1）。新增：A-15 查询范围错误这一更严重问题（§4.1）；18 个权限点与 5 个角色的完整设计（§6.2、§6.3）；自带资产处置清单（§7）；内置 `admin` 角色与 OPS §3.1 冲突的解决流程（§8）；模块升级必检清单（§9）。**§6～§7 的结论已落地到工程文件**：`opendb-admin-menus.init_data.json`（60 条 / 启用 23）、`uni-id-roles.init_data.json`（5 个角色）、`uni-id-permissions.init_data.json`（18 个权限点）、`admin.config.js`（清空 staticMenu）、`pages.json`（移除 demo 路由）、删除 `pages/demo/table/` |

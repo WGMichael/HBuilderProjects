@@ -4,7 +4,7 @@
 - 更新日期：2026-09-15
 - 文档状态：**方案已定，可实施**
 - 对应决策：D-063、D-064、D-065（推荐标识）、D-066（商品库分类），均已写入 `DECISIONS.md` v1.4
-- 依据：`docs/review/NAV_AND_GOODS_ALIGNMENT.md` §2 C-04、§4；产品负责人 2026-09-15 确认采用方案 A
+- 依据：产品负责人 2026-09-15 确认采用方案 A（原始评审文档 `NAV_AND_GOODS_ALIGNMENT.md` 已于 2026-09-18 删除，结论见 `DECISIONS.md` v1.3 变更记录与 D-063～D-066）
 - 适用版本：PRD v1.0 / DATA_MODEL v1.3
 - 读者：实现本功能的开发 Agent。本文是自包含的，除本文外只需阅读 `grouporder-goods.schema.json` 与 `grouporder-address.schema.json`（作为命名约定参照）
 

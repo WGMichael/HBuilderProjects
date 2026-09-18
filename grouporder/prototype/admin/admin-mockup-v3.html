@@ -1,0 +1,2335 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>群接龙 · 平台运营后台效果图 v3（uni-admin 形态）</title>
+<style>
+/* =========================================================
+   运营后台效果图 v3 · 17 屏（A-01 ~ A-18，A-11 已取消）
+   —— 在 v2 基础上按 D-072 增量修订：取消全部脱敏、二次验证与受控解敏
+   —— 按 grouporder-admin 工程内 uni-admin 的实测规范绘制
+   色值：uni.scss L20-23     骨架：common/uni.css
+   表格：uni_modules/uni-table  菜单：windows/leftWindow.vue
+   单文件自包含，不引用任何外部资源
+   ========================================================= */
+:root {
+  /* uni.scss 实测色值 */
+  --primary: #2979ff;
+  --success: #18bc37;
+  --warning: #f3a73f;
+  --error: #e43d33;
+  --menu-active: #409eff;
+
+  /* uni-table / uni.css 实测色值 */
+  --tb-border: #ebeef5;
+  --th-color: #909399;
+  --td-color: #606266;
+  --stripe: #fafafa;
+  --hover: #f5f7fa;
+  --page-bg: #f5f5f5;
+  --header-line: #f5f5f5;
+  --search-border: #dcdfe6;
+
+  --text: #333;
+  --text-grey: #999;
+  --card-shadow: -1px -1px 5px 0 rgba(0, 0, 0, .1);
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #e9ecf0;
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ===================== 页头 ===================== */
+.page-head { max-width: 1360px; margin: 0 auto; padding: 42px 40px 6px; }
+.page-head h1 { margin: 0 0 10px; font-size: 26px; letter-spacing: -.3px; }
+.page-head .sub { color: #5a6270; font-size: 14px; line-height: 1.78; margin: 0 0 16px; max-width: 1000px; }
+.page-head .sub b { color: var(--text); }
+.meta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.meta-row span { font-size: 12px; background: #fff; border: 1px solid #e0e4ea; border-radius: 5px; padding: 5px 11px; color: #5a6270; }
+.meta-row span b { color: var(--primary); }
+
+.panel { max-width: 1360px; margin: 18px auto 0; padding: 0 40px; }
+.panel .box { background: #fff; border: 1px solid #e0e4ea; border-radius: 6px; padding: 16px 18px; }
+.panel .box h3 { margin: 0 0 10px; font-size: 15px; }
+.panel table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.panel th { text-align: left; padding: 7px 9px; color: var(--th-color); font-weight: 600; border-bottom: 1px solid var(--tb-border); white-space: nowrap; }
+.panel td { padding: 7px 9px; border-bottom: 1px solid var(--tb-border); color: var(--td-color); vertical-align: top; }
+.panel tr:last-child td { border-bottom: none; }
+.panel td b { color: var(--text); }
+.panel code { background: #f4f6f9; border-radius: 3px; padding: 1px 5px; font-size: 11.5px; color: #476582; }
+
+/* ===================== 画廊 ===================== */
+.gallery { max-width: 1360px; margin: 0 auto; padding: 24px 40px 70px; }
+.group { margin-top: 38px; }
+.group > h2 { font-size: 17px; margin: 0 0 6px; padding-bottom: 9px; border-bottom: 2px solid #d5dae2; }
+.group > p { margin: 0 0 20px; color: #5a6270; font-size: 13px; line-height: 1.75; max-width: 1080px; }
+.group > p b { color: var(--text); }
+
+.shot { margin: 0 0 34px; }
+.shot figcaption { width: 1280px; max-width: 100%; margin-top: 12px; }
+.shot figcaption b { display: block; font-size: 14px; margin-bottom: 5px; }
+.shot figcaption small { display: block; color: #5a6270; font-size: 12.5px; line-height: 1.72; }
+.shot figcaption small em { font-style: normal; color: var(--error); font-weight: 600; }
+.shot figcaption small b { display: inline; font-size: inherit; color: var(--text); }
+.pill { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 4px; padding: 2px 7px; margin-right: 7px; vertical-align: 1px; background: #e8f1ff; color: #1c5fd4; letter-spacing: .3px; }
+.pill.p-key { background: #fdecea; color: #b3241c; }
+
+/* ===================== 复用标注条 ===================== */
+.reuse {
+  width: 1280px; max-width: 100%;
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 9px 13px; border-radius: 6px 6px 0 0;
+  font-size: 12.5px; line-height: 1.65; border: 1px solid; border-bottom: none;
+}
+.reuse .rtag { font-weight: 700; white-space: nowrap; font-size: 12px; padding: 1px 8px; border-radius: 4px; flex: none; }
+.reuse .rbody { color: #4a5263; }
+.reuse .rbody b { color: var(--text); }
+.reuse code { background: rgba(255,255,255,.75); border-radius: 3px; padding: 1px 5px; font-size: 11.5px; color: #476582; }
+.reuse.r-use  { background: #eaf8ed; border-color: #c6e9cf; }
+.reuse.r-use .rtag  { background: var(--success); color: #fff; }
+.reuse.r-mod  { background: #fef5e8; border-color: #f5ddb6; }
+.reuse.r-mod .rtag  { background: var(--warning); color: #fff; }
+.reuse.r-new  { background: #eef2f7; border-color: #dbe1ea; }
+.reuse.r-new .rtag  { background: #8a919e; color: #fff; }
+
+/* ===================== 浏览器框 + uni-admin 骨架 ===================== */
+.win { width: 1280px; max-width: 100%; border: 1px solid #d5dae2; border-radius: 0 0 6px 6px; overflow: hidden; background: #fff; }
+
+/* topWindow：logo + 汉堡 | 页面标题 | 主题/语言/用户 */
+.top {
+  height: 50px; display: flex; align-items: center; padding: 0 14px;
+  background: #fff; border-bottom: 1px solid #ececec;
+}
+.top .lw { display: flex; align-items: center; gap: 9px; width: 196px; flex: none; }
+.top .logo-img { width: 24px; height: 24px; border-radius: 5px; background: var(--primary); position: relative; flex: none; }
+.top .logo-img::after { content: ""; position: absolute; left: 6px; top: 6px; width: 12px; height: 12px; border: 2px solid #fff; border-radius: 2px; }
+.top .logo-text { font-size: 15px; font-weight: 600; white-space: nowrap; }
+.top .bars { width: 18px; height: 14px; display: flex; flex-direction: column; justify-content: space-between; margin-left: 4px; }
+.top .bars i { height: 2px; background: var(--text-grey); border-radius: 2px; }
+.top .mid { flex: 1; text-align: center; font-size: 14px; color: var(--text); }
+.top .rw { display: flex; align-items: center; gap: 16px; color: var(--text-grey); font-size: 12.5px; }
+.top .ic { width: 18px; height: 18px; border-radius: 4px; background: #dcdfe6; }
+.top .uname { color: #606266; display: flex; align-items: center; gap: 6px; }
+.top .ava { width: 24px; height: 24px; border-radius: 50%; background: #e8f1ff; color: #1c5fd4; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+.body { display: grid; grid-template-columns: 196px 1fr; background: var(--page-bg); min-height: 640px; }
+
+/* leftWindow：uni-data-menu，数据来自 opendb-admin-menus */
+.side { background: #fff; border-right: 1px solid #ececec; padding: 6px 0; }
+.side .cap { font-size: 12px; color: #909399; padding: 12px 18px 6px; }
+.side .mi { display: flex; align-items: center; gap: 9px; padding: 11px 18px; font-size: 13.5px; color: #303133; }
+.side .mi i { width: 13px; height: 13px; border-radius: 3px; background: #c8ccd4; flex: none; }
+.side .mi.on { color: var(--menu-active); background: #ecf5ff; }
+.side .mi.on i { background: var(--menu-active); }
+.side .mi .bdg { margin-left: auto; min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px; background: var(--error); color: #fff; font-size: 10px; line-height: 17px; text-align: center; font-weight: 700; }
+.side .sub { padding-left: 30px; font-size: 13px; }
+.side .note { margin: 12px 12px 0; padding: 8px 10px; background: #fafafa; border: 1px dashed #dcdfe6; border-radius: 4px; font-size: 11px; color: #909399; line-height: 1.6; }
+
+/* uni-page-wrapper → uni-page-body：白色整卡 */
+.wrap { padding: 15px; }
+.paper { background: #fff; border-radius: 5px; box-shadow: var(--card-shadow); min-height: 596px; }
+
+/* .uni-header */
+.uhead {
+  min-height: 55px; padding: 0 15px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid var(--header-line); flex-wrap: wrap; gap: 8px;
+}
+.crumb { font-size: 14px; color: #606266; display: flex; align-items: center; gap: 7px; }
+.crumb span { color: #c0c4cc; }
+.crumb b { color: var(--text); font-weight: 500; }
+.ugroup { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+/* .uni-search */
+.usearch {
+  width: 268px; height: 28px; line-height: 28px; font-size: 12px; color: #c0c4cc;
+  padding: 0 10px; border: 1px solid var(--search-border); border-radius: 3px; background: #fff;
+}
+.usearch.w160 { width: 160px; }
+.usearch.w200 { width: 200px; }
+.usearch.filled { color: var(--td-color); }
+
+/* uni-button（列表页一律 mini） */
+.ubtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  height: 28px; padding: 0 12px; font-size: 12px; border-radius: 4px;
+  border: 1px solid var(--search-border); background: #fff; color: #606266; white-space: nowrap;
+}
+.ubtn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.ubtn.warn { background: var(--error); border-color: var(--error); color: #fff; }
+.ubtn.success { background: var(--success); border-color: var(--success); color: #fff; }
+.ubtn.disabled { background: #f5f7fa; border-color: #e4e7ed; color: #c0c4cc; }
+.ubtn.lg { height: 36px; padding: 0 22px; font-size: 14px; }
+.ubtn.full { width: 100%; }
+
+/* .uni-container */
+.ucont { padding: 15px; }
+
+/* .uni-stat--x 子卡片 */
+.xcard { border-radius: 4px; box-shadow: var(--card-shadow); margin-bottom: 15px; background: #fff; }
+.xcard:last-child { margin-bottom: 0; }
+.xcard.pm { padding: 15px; }
+.xhead { font-size: 14px; font-weight: 600; padding: 12px 15px; border-bottom: 1px solid var(--tb-border); display: flex; align-items: center; gap: 9px; }
+.xhead .r { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--th-color); display: flex; align-items: center; gap: 8px; }
+.xbody { padding: 15px; }
+
+/* uni-notice-bar */
+.notice { display: flex; align-items: flex-start; gap: 8px; padding: 9px 12px; border-radius: 4px; font-size: 12.5px; line-height: 1.68; margin-bottom: 15px; }
+.notice i { width: 14px; height: 14px; border-radius: 50%; flex: none; margin-top: 2px; }
+.notice.blue { background: #ecf5ff; color: #409eff; } .notice.blue i { background: #409eff; }
+.notice.green { background: #f0f9eb; color: #67c23a; } .notice.green i { background: #67c23a; }
+.notice.orange { background: #fdf6ec; color: #e6a23c; } .notice.orange i { background: #e6a23c; }
+.notice.red { background: #fef0f0; color: #f56c6c; } .notice.red i { background: #f56c6c; }
+.notice.gray { background: #f4f4f5; color: #909399; } .notice.gray i { background: #909399; }
+.notice b { font-weight: 700; }
+
+/* uni-table */
+.utb { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--tb-border); border-radius: 5px; font-size: 14px; }
+.utb th {
+  padding: 12px 10px; font-size: 14px; color: var(--th-color); font-weight: 400;
+  border-bottom: 1px solid var(--tb-border); text-align: center; white-space: nowrap; background: #fff;
+}
+.utb td {
+  padding: 8px 10px; font-size: 14px; color: var(--td-color);
+  border-bottom: 1px solid var(--tb-border); text-align: center; vertical-align: middle;
+}
+.utb tr:last-child td { border-bottom: none; }
+.utb tbody tr:nth-child(2n) { background: var(--stripe); }
+.utb tbody tr.hover { background: var(--hover); }
+.utb td.l, .utb th.l { text-align: left; }
+.utb .sm { font-size: 12px; color: var(--th-color); }
+.utb b { color: #303133; font-weight: 600; }
+/* 列头筛选 / 排序图标（uni-th filter-type + sortable） */
+.fil { display: inline-flex; align-items: center; gap: 4px; justify-content: center; }
+.fil .fi { width: 11px; height: 11px; opacity: .62; flex: none; position: relative; }
+.fil .fi.search::before { content: ""; position: absolute; left: 0; top: 0; width: 8px; height: 8px; border: 1.4px solid var(--th-color); border-radius: 50%; }
+.fil .fi.search::after { content: ""; position: absolute; right: 0; bottom: 0; width: 5px; height: 1.4px; background: var(--th-color); transform: rotate(45deg); }
+.fil .fi.sel::before { content: ""; position: absolute; left: 1px; top: 3px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid var(--th-color); }
+.fil .fi.date::before { content: ""; position: absolute; inset: 1px 0 0; border: 1.4px solid var(--th-color); border-radius: 2px; }
+.fil .so { display: inline-flex; flex-direction: column; gap: 2px; flex: none; }
+.fil .so::before { content: ""; border-left: 3.5px solid transparent; border-right: 3.5px solid transparent; border-bottom: 4px solid #c0c4cc; }
+.fil .so::after  { content: ""; border-left: 3.5px solid transparent; border-right: 3.5px solid transparent; border-top: 4px solid #c0c4cc; }
+/* 操作列：uni-group 包 mini 按钮 */
+.ops { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+
+/* .uni-pagination-box */
+.pagi { margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.pagi .pg { min-width: 28px; height: 28px; padding: 0 8px; border: 1px solid var(--search-border); border-radius: 4px; background: #fff; color: #606266; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.pagi .pg.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.pagi .txt { font-size: 12px; color: var(--th-color); margin-right: 4px; }
+
+/* uni-tag */
+.tg { display: inline-block; font-size: 12px; line-height: 1.6; padding: 1px 7px; border-radius: 3px; border: 1px solid; white-space: nowrap; }
+.tg.primary { background: #ecf5ff; border-color: #b3d8ff; color: #409eff; }
+.tg.success { background: #f0f9eb; border-color: #c2e7b0; color: #67c23a; }
+.tg.warning { background: #fdf6ec; border-color: #f5dab1; color: #e6a23c; }
+.tg.error   { background: #fef0f0; border-color: #fbc4c4; color: #f56c6c; }
+.tg.info    { background: #f4f4f5; border-color: #d3d4d6; color: #909399; }
+.tg.purple  { background: #f3eefe; border-color: #ddd0fa; color: #7b52d3; }
+
+/* uni-forms */
+.frm { display: grid; gap: 14px; }
+.frm.c2 { grid-template-columns: 1fr 1fr; }
+.frm.c3 { grid-template-columns: repeat(3, 1fr); }
+.frm.c4 { grid-template-columns: repeat(4, 1fr); }
+.fitem { display: grid; grid-template-columns: 96px 1fr; align-items: start; gap: 10px; }
+.fitem.w120 { grid-template-columns: 120px 1fr; }
+.fitem > label { font-size: 14px; color: var(--td-color); text-align: right; line-height: 35px; }
+.fitem > label em { font-style: normal; color: var(--error); margin-right: 3px; }
+.finput { min-height: 35px; border: 1px solid #e5e5e5; border-radius: 5px; padding: 7px 10px; font-size: 14px; color: var(--td-color); background: #fff; display: flex; align-items: center; }
+.finput.ph { color: #808080; }
+.finput.ta { min-height: 80px; align-items: flex-start; line-height: 1.65; }
+.finput.ro { background: #f5f7fa; color: #c0c4cc; }
+.finput.sel::after { content: "▾"; margin-left: auto; color: #c0c4cc; font-size: 12px; }
+.ftips { color: var(--text-grey); font-size: 12px; margin-top: 8px; line-height: 1.6; }
+
+/* radio / checkbox（uni-data-checkbox 形态） */
+.rd, .ck { display: inline-flex; align-items: flex-start; gap: 7px; font-size: 14px; color: var(--td-color); padding: 6px 0; }
+.rd i, .ck i { width: 14px; height: 14px; border: 1px solid #dcdfe6; flex: none; margin-top: 3px; background: #fff; }
+.rd i { border-radius: 50%; }
+.ck i { border-radius: 2px; }
+.rd.on i { border-color: var(--primary); box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 9px var(--primary); }
+.ck.on i { background: var(--primary); border-color: var(--primary); position: relative; }
+.ck.on i::after { content: "✓"; position: absolute; left: 1px; top: -3px; color: #fff; font-size: 11px; font-weight: 700; }
+.ck.lock i { background: #f5f7fa; border-color: #e4e7ed; }
+.ck.lock { color: #c0c4cc; }
+.rdgroup { display: grid; gap: 2px; }
+
+/* uni-popup + uni-popup-dialog */
+.mask { position: absolute; inset: 0; background: rgba(0, 0, 0, .4); display: flex; align-items: center; justify-content: center; z-index: 9; padding: 20px; }
+.dlg { width: 560px; max-width: 100%; background: #fff; border-radius: 5px; box-shadow: 0 18px 50px rgba(0,0,0,.25); overflow: hidden; }
+.dlg.w460 { width: 460px; }
+.dlg.w660 { width: 660px; }
+.dlg-h { padding: 14px 16px; font-size: 16px; font-weight: 500; border-bottom: 1px solid var(--tb-border); display: flex; align-items: center; gap: 8px; }
+.dlg-b { padding: 16px; max-height: 452px; overflow: auto; font-size: 14px; color: var(--td-color); }
+.dlg-f { padding: 12px 16px; border-top: 1px solid var(--tb-border); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* 键值对 */
+.kv { display: grid; grid-template-columns: 104px 1fr; gap: 9px 14px; font-size: 14px; }
+.kv.w130 { grid-template-columns: 130px 1fr; }
+.kv .k { color: var(--th-color); }
+.kv .v { color: var(--td-color); }
+
+/* 双状态 */
+.stcell { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; }
+.stlab { font-size: 11px; color: #c0c4cc; }
+
+/* 统计数字块 */
+.nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+.nums.c4 { grid-template-columns: repeat(4, 1fr); }
+.num { border-radius: 4px; box-shadow: var(--card-shadow); padding: 14px 15px; background: #fff; }
+.num .k { font-size: 13px; color: var(--th-color); margin-bottom: 7px; }
+.num .v { font-size: 22px; font-weight: 600; color: #303133; font-variant-numeric: tabular-nums; }
+.num .v small { font-size: 13px; font-weight: 400; color: var(--th-color); margin-left: 3px; }
+
+/* uni-stat-tabs type=boldLine */
+.tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--tb-border); margin-bottom: 15px; padding: 0 2px; }
+.tabs > span { padding: 9px 0 10px; font-size: 14px; color: #606266; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tabs > span.on { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* 时间线 */
+.tl { position: relative; padding-left: 15px; }
+.tl::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--tb-border); }
+.tl .it { position: relative; padding-bottom: 13px; font-size: 13px; color: var(--td-color); line-height: 1.66; }
+.tl .it:last-child { padding-bottom: 0; }
+.tl .it::before { content: ""; position: absolute; left: -15px; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: #fff; border: 2px solid #c8ccd4; }
+.tl .it.on::before { border-color: var(--primary); }
+.tl .tm { color: var(--th-color); font-size: 12px; margin-bottom: 3px; }
+
+/* 内容快照 */
+.snap { background: #fafafa; border: 1px solid var(--tb-border); border-radius: 4px; padding: 12px 13px; font-size: 13.5px; line-height: 1.7; color: var(--td-color); }
+.snap .st { font-size: 12px; color: var(--th-color); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+.imgph { width: 52px; height: 52px; border-radius: 4px; background: #f0f2f5; border: 1px solid var(--tb-border); display: inline-block; position: relative; }
+.imgph::after { content: "图"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #c0c4cc; font-size: 12px; }
+
+/* 步骤条 */
+.steps { display: flex; align-items: center; margin-bottom: 15px; }
+.stp { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--th-color); }
+.stp i { width: 20px; height: 20px; border-radius: 50%; background: #e4e7ed; color: #909399; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.stp.done { color: #67c23a; } .stp.done i { background: var(--success); color: #fff; }
+.stp.now { color: var(--primary); font-weight: 600; } .stp.now i { background: var(--primary); color: #fff; }
+.stpl { flex: 1; height: 1px; background: var(--tb-border); margin: 0 12px; min-width: 20px; }
+
+/* 结果态 */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.gridm { display: grid; grid-template-columns: 1.9fr 1fr; gap: 15px; }
+.gridm2 { display: grid; grid-template-columns: 1fr 1.9fr; gap: 15px; }
+.rcard { border-radius: 4px; box-shadow: var(--card-shadow); padding: 13px 14px; background: #fff; }
+.rcard .t { font-size: 14px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 7px; color: #303133; }
+.rcard .d { font-size: 12.5px; color: var(--th-color); line-height: 1.66; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.r { background: var(--error); } .dot.o { background: var(--warning); }
+.dot.g { background: #909399; } .dot.b { background: var(--primary); }
+
+/* 登录页（uni-id-pages 形态） */
+.loginbg { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; background: #fff; padding: 40px; min-height: 640px; }
+.logincard { width: 400px; }
+.logincard .lgo { width: 56px; height: 56px; border-radius: 12px; background: var(--primary); margin: 0 auto 16px; position: relative; }
+.logincard .lgo::after { content: ""; position: absolute; left: 15px; top: 15px; width: 26px; height: 26px; border: 3px solid #fff; border-radius: 5px; }
+.logincard h4 { margin: 0 0 6px; font-size: 20px; text-align: center; font-weight: 500; }
+.logincard .s { text-align: center; color: var(--text-grey); font-size: 13px; margin-bottom: 26px; }
+.logininput { height: 44px; border-bottom: 1px solid #ececec; display: flex; align-items: center; font-size: 15px; color: #808080; margin-bottom: 10px; }
+
+.footnote { margin-top: 44px; padding: 20px 0 0; border-top: 1px solid #d5dae2; color: #5a6270; font-size: 12.5px; line-height: 1.85; }
+.footnote b { color: var(--text); }
+
+@media (max-width: 1400px) { .page-head, .gallery, .panel { padding-left: 20px; padding-right: 20px; } }
+@media (max-width: 1340px) {
+  .win, .shot figcaption, .reuse { width: 100%; }
+  .body { grid-template-columns: 170px 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>群接龙 · 平台运营后台效果图 v3 · 17 屏（A-01 ~ A-18，A-11 已取消）</h1>
+  <p class="sub">
+    相对 v2 的变化：<b>形态一处未动，只改规则层</b>。依据 <b>D-072</b>，运营后台<b>不做任何数据脱敏</b>，也不设二次验证与受控解敏机制，
+    导出完全放开；A-11「敏感资料查看」整屏取消，A-02 收敛为纯访问结果页。<b>取消脱敏不等于取消约束</b>——原来靠「看不见」来防，
+    现在靠「看得见但全记录」来防，见新增的<b>红线⑨</b>。<br>
+    形态部分沿用 v2：按 <code>grouporder-admin</code> 工程内 uni-admin 的<b>实测规范</b>绘制——
+    骨架取自 <code>common/uni.css</code>，色值取自 <code>uni.scss</code>，表格取自 <code>uni_modules/uni-table</code>，菜单取自 <code>windows/leftWindow.vue</code>。
+    每屏顶部标注<b>复用 / 改造 / 新建</b>，并写明对应的既有文件与改造点。
+  </p>
+  <div class="meta-row">
+    <span>规格 <b>OPS_ADMIN_REQUIREMENTS v0.9</b></span>
+    <span>决策 <b>DECISIONS v1.9</b>（重点 D-072）</span>
+    <span>页面编号 <b>UX_FLOW_SPEC §3.2</b></span>
+    <span>复用盘点 <b>docs/arch/ADMIN_REUSE_MAP.md</b></span>
+    <span>日期 <b>2026-09-18</b></span>
+  </div>
+</header>
+
+<div class="panel">
+  <div class="box">
+    <h3>一、17 屏复用定性总览</h3>
+    <table>
+      <thead><tr><th style="width:74px">屏</th><th style="width:150px">页面</th><th style="width:96px">结论</th><th>既有资产 / 说明</th></tr></thead>
+      <tbody>
+        <tr><td>A-01</td><td>运营登录</td><td><span class="tg success">◆ 复用</span></td><td><code>uni-id-pages/pages/login/login-withpwd.vue</code> —— 改 <code>config.js</code> 的 <code>loginTypes</code> 与 <code>isAdmin</code> 即可，<b>不新建页面</b></td></tr>
+        <tr><td>A-03</td><td>工作台</td><td><span class="tg warning">◇ 改造</span></td><td><code>pages/index/index.vue</code> —— 移除 uni-stat 概览，换成三档待办</td></tr>
+        <tr><td>A-14</td><td>日志与审计</td><td><span class="tg warning">◇ 部分复用</span></td><td>登录类日志用现成的 <code>pages/system/safety/list.vue</code>；业务操作日志 <code>grouporder-oplog</code> 新建，两者不合并</td></tr>
+        <tr><td>A-15</td><td>运营账号与权限</td><td><span class="tg success">◆ 复用</span> + <span class="tg warning">◇ 改造</span></td><td><code>pages/system/{user,role,permission}/*</code> 九个页面现成 —— 三处必改见该屏标注</td></tr>
+        <tr><td>其余 13 屏</td><td>A-02、A-04～A-10、A-12、A-13、A-16～A-18</td><td><span class="tg info">○ 新建</span></td><td>业务治理页面，模板不可能自带；但一律复用 <code>uni-table</code>、<code>uni-forms</code>、<code>uni-popup</code>、<code>uni-notice-bar</code> 等组件</td></tr>
+      </tbody>
+    </table>
+    <div class="ftips">左侧菜单不是「画出来的」，而是 <code>opendb-admin-menus</code> 表的初始数据 + <code>permission</code> 字段控制可见性。菜单数据见 ADMIN_REUSE_MAP §6。</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="box">
+    <h3>二、v1 画错、v2 已修正的八处形态问题</h3>
+    <table>
+      <thead><tr><th style="width:36px">#</th><th style="width:300px">v1 画法</th><th>uni-admin 实际（v2 采用）</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>内容区灰底 + 多张独立卡片</td><td><b>白色整卡</b>（<code>uni-page-body</code> radius 5px + 阴影），内部用 <code>.uni-stat--x</code> 分区</td></tr>
+        <tr><td>2</td><td>表头灰底 <code>#f7f9fc</code></td><td>表头<b>白底无背景</b>（源码中该行已被注释），文字 <code>#909399</code></td></tr>
+        <tr><td>3</td><td>表格列左对齐</td><td><b>全部 <code>align="center"</code></b>，与现有 9 个 system 页面一致</td></tr>
+        <tr><td>4</td><td>表格上方独立筛选表单区</td><td><b>筛选长在列头里</b>：<code>filter-type="search|select|timestamp"</code> + <code>sortable</code></td></tr>
+        <tr><td>5</td><td>操作列文字链接</td><td><b>mini 按钮</b>，<code>type="primary"</code> / <code>type="warn"</code></td></tr>
+        <tr><td>6</td><td>面包屑放在顶栏</td><td>面包屑在<b>页面 <code>.uni-header</code></b> 内；顶栏中间放页面标题</td></tr>
+        <tr><td>7</td><td>自研 <code>.btn</code> 样式体系</td><td><code>.uni-button</code> + <code>size="mini"</code>，高 28px</td></tr>
+        <tr><td>8</td><td>A-01 / A-15 当成新页面画</td><td><b>均已存在</b>，改配置与裁剪即可</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="box" style="border-left:3px solid var(--error)">
+    <h3>三、待裁定的架构冲突（不影响本图形态，但影响开发方式）</h3>
+    <div style="font-size:13px;line-height:1.8;color:#4a5263">
+      uni-admin 现成页面的取数方式是 <code>&lt;unicloud-db :collection="…"&gt;</code>，即<b>客户端 JQL 直连数据库</b>；
+      而 <code>DATA_MODEL.md §1</code> 规定 <b>19 张 <code>grouporder-*</code> 表的 permission 全部为 false，一切读写走云函数</b>。
+      两者不兼容——所有业务页面<b>不能用 <code>unicloud-db</code> + <code>uni-table</code> 的零代码组合</b>，须自行调云对象取数再喂给 <code>uni-table</code>，分页与列头筛选也要自己接。
+      <code>system/user/*</code> 等页面不受影响（<code>uni-id-users</code> 是另一套权限体系）。
+      本图按「业务页走云对象」绘制（<b>表格形态一致，差别只在数据来源</b>）。详见 ADMIN_REUSE_MAP §5，提请产品与架构裁定后写入 DATA_MODEL。
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="box" style="border-left:3px solid var(--primary)">
+    <h3>四、九条红线（图注角标 <span class="pill p-key">红线…</span> 即指本表）</h3>
+    <table>
+      <thead><tr><th style="width:44px">#</th><th class="l" style="width:330px">内容</th><th class="l">v3 状态</th></tr></thead>
+      <tbody>
+        <tr style="color:#c0c4cc"><td>①</td><td class="l">一切默认脱敏</td><td class="l"><b>作废</b>（D-072）。编号<b>不重排</b>，留空缺，否则既有图注角标与其他文档的交叉引用全部失效</td></tr>
+        <tr><td>②</td><td class="l">业务状态与治理状态必须并列，不能合并</td><td class="l">保留。运营下架不改写团长的业务状态</td></tr>
+        <tr><td>③</td><td class="l">运营不得代替团长经营</td><td class="l">保留（OPS §2.2）。<b>D-072 未触及</b></td></tr>
+        <tr style="color:#c0c4cc"><td>④</td><td class="l">二次验证不是登录</td><td class="l"><b>作废</b>（D-072）。二次验证整体取消，A-11 随之取消，<code>grouporder-ops-verify</code> 表停用</td></tr>
+        <tr><td>⑤</td><td class="l">统计指标只能用白名单里的词</td><td class="l">保留。不出现销售额、实收金额、GMV</td></tr>
+        <tr><td>⑥</td><td class="l">菜单按权限展示</td><td class="l">保留。菜单由 <code>opendb-admin-menus</code> 按 permission 过滤</td></tr>
+        <tr><td>⑦</td><td class="l">审计日志不可修改删除</td><td class="l">保留（OPS §13）。超管同样没有编辑与删除按钮</td></tr>
+        <tr style="color:#c0c4cc"><td>⑧</td><td class="l">Excel 审计不提供下载</td><td class="l"><b>作废</b>（D-072）。A-13 可直接下载清单，但须重新校验权限并换取新的临时地址</td></tr>
+        <tr style="background:#ecf5ff"><td><b>⑨</b></td><td class="l"><b>不脱敏，但每一次查看和导出都必须入审计</b></td><td class="l"><b>本版新增</b>。D-072 取消脱敏，约束并没有消失，只是换了形式：<b>原来靠「看不见」来防，现在靠「看得见但全记录」来防</b>。凡展示完整姓名、电话、地址或提供导出的屏（A-04、A-05、A-06、A-07、A-12、A-13、A-16），图注都点明这一次访问会入审计</td></tr>
+      </tbody>
+    </table>
+    <div class="ftips">
+      「既不脱敏也不提审计」是本次修订最容易犯的错——那等于把 D-072 读成「运营后台对数据没有任何约束」，而 D-072 的原文<b>把审计链路完整保留了下来</b>。
+      日志本身仍<b>不记录密码等凭证，也不记录可继续使用的下载地址</b>（D-071③）。
+    </div>
+  </div>
+</div>
+
+<main class="gallery">
+
+<!-- ================================================================
+     第一组 · 登录与访问控制（A-01、A-02）
+     ================================================================ -->
+<section class="group">
+  <h2>第一组 · 登录与访问控制（A-01、A-02）</h2>
+  <p>A-01 <b>是现成页面</b>，本屏用于确认改配置后的形态；A-02 是<b>访问结果页</b>，表达账号停用、权限不足、会话失效、对象已变化四类被拒绝的场景。<b>D-072 取消了二次验证</b>，原先画在本组的验证弹窗已整体移除。</p>
+
+  <!-- ===== A-01 ===== -->
+  <figure class="shot">
+    <div class="reuse r-use">
+      <span class="rtag">◆ 复用</span>
+      <span class="rbody">
+        <b>现成页面：</b><code>uni_modules/uni-id-pages/pages/login/login-withpwd.vue</code> —— <b>不需要新建</b>。
+        <b>唯一改动：</b><code>uni_modules/uni-id-pages/config.js</code> 设 <code>loginTypes: ['username']</code>（去掉微信/短信/苹果等）、<code>isAdmin: true</code>（D-069）。
+        <b>运维风险：</b>该配置文件在模块升级后会被默认值覆盖，每次升级 uni-id-pages 后必须重新核对这两项。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">登录</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div></div>
+      </div>
+      <div class="body" style="grid-template-columns:1fr">
+        <div class="loginbg">
+          <div class="logincard">
+            <div class="lgo"></div>
+            <h4>群接龙 · 平台运营后台</h4>
+            <div class="s">仅供平台内部运营人员使用</div>
+            <div class="logininput">请输入用户名</div>
+            <div class="logininput">请输入密码</div>
+            <div class="ubtn primary lg full" style="margin:22px 0 14px">登录</div>
+            <div class="notice gray" style="margin-bottom:0"><i></i><span>运营账号由<b>超级管理员</b>在「系统管理 → 运营账号」中创建，不提供注册、第三方登录或自助找回。</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-01</span>运营登录 · <span style="color:#67c23a">复用既有页</span></b>
+      <small>
+        OPS §4.1、§3.1 / <b>D-069</b>。这一屏的意义不是「设计一个登录页」，而是确认<em>配置裁剪后应该长什么样</em>：只剩用户名、密码、登录按钮三个元素，<b>没有微信/苹果/华为第三方登录按钮、没有短信验证码入口、没有注册链接、没有找回密码链接</b>。第三方登录在后台场景没有意义且徒增攻击面；短信验证码需付费开通并采集手机号，与 D-029 冲突。登录页不画左侧菜单——菜单按权限渲染，登录前无权限可言。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-02 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建：</b>访问结果页做成<b>全局可复用组件</b>，任何鉴权失败、会话失效、对象变化都跳到同一组件，不各页自画提示。
+        <b>复用组件：</b><code>uni-notice-bar</code>；结果态页沿用 <code>pages/error/404.vue</code> 的形态。
+        <b>服务端：</b>鉴权在云对象内完成，<b>以提交时的最新权限为准</b>；被拒绝的访问同样写入 <code>grouporder-oplog</code>。
+        <b>已取消：</b><code>grouporder-ops-verify</code> 表与二次验证组件随 <b>D-072</b> 停用，不再建设。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">全局检索</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">李</div>李工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">3</span></div>
+          <div class="mi on"><i></i>全局检索</div>
+          <div class="cap">账号与隐私</div>
+          <div class="mi sub"><i></i>账号绑定申诉<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>隐私与注销事项<span class="bdg">1</span></div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+          <div class="note">账号与隐私专员视角。菜单由 <b>opendb-admin-menus</b> 按 permission 过滤后渲染；A-11 取消后<b>不再有「敏感资料查看」菜单项</b>。</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">全局检索 <span>/</span> <b>访问结果</b></div>
+            </div>
+            <div class="ucont">
+              <div style="padding:62px 0;text-align:center">
+                <div style="font-size:42px;line-height:1;color:var(--error);margin-bottom:16px">&#8856;</div>
+                <div style="font-size:18px;font-weight:600;color:#303133;margin-bottom:10px">权限不足 / 权限已撤销</div>
+                <div style="font-size:14px;color:#909399;line-height:1.9;max-width:600px;margin:0 auto">
+                  当前角色没有<b>订单明细查看</b>能力，本次请求已被拒绝，并已<b>记入审计日志</b>（操作人、时间、目标对象、拒绝原因）。<br>
+                  鉴权以<b>提交时的最新权限</b>为准，页面不保留任何可继续操作的状态。
+                </div>
+                <div style="margin-top:22px;display:flex;gap:10px;justify-content:center">
+                  <div class="ubtn primary">返回工作台</div>
+                  <div class="ubtn">重新登录</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="xcard pm" style="width:1280px;max-width:100%;margin-top:12px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">访问结果态（均为独立结果页，复用 404 页形态）</div>
+      <div class="grid3">
+        <div class="rcard"><div class="t"><span class="dot r"></span>账号已停用</div><div class="d">停用立即失效，<b>未完成的操作不得继续提交</b>；已打开的页面再次操作被拒绝。</div></div>
+        <div class="rcard"><div class="t"><span class="dot o"></span>权限不足 / 已撤销</div><div class="d">立即拒绝并记审计，<b>不保留可操作的页面状态</b>。鉴权以提交时的最新权限为准。</div></div>
+        <div class="rcard"><div class="t"><span class="dot g"></span>会话失效</div><div class="d">终止未提交的操作，重新登录后回到原任务。</div></div>
+        <div class="rcard"><div class="t"><span class="dot b"></span>对象不存在 / 已变化</div><div class="d">停止操作并说明原因，<b>不创建替代对象</b>，不用旧页面覆盖新状态。</div></div>
+      </div>
+    </div>
+
+    <figcaption>
+      <b><span class="pill">A-02</span>访问结果</b>
+      <small>
+        OPS §4.1、§12.2 / <b>D-072</b>。<em>二次验证已随 D-072 取消</em>，原先画在这里的验证弹窗、失败锁定与有效期规则全部作废，<code>grouporder-ops-verify</code> 表停用。本屏因此收敛为<b>纯粹的访问结果态</b>：账号停用、权限不足或已撤销、会话失效、对象不存在或已变化，四类都跳到同一个结果页，<b>不由各业务页各自画提示</b>。三条不受 D-072 影响的规则继续有效：<em>鉴权以提交时的最新权限为准</em>、<em>被拒绝的访问同样写入审计</em>、<em>不保留可继续操作的页面状态</em>。
+      </small>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================
+     第二组 · 工作台与检索（A-03、A-04）
+     ================================================================ -->
+<section class="group">
+  <h2>第二组 · 工作台与检索（A-03、A-04）</h2>
+  <p>A-03 是在<b>现成的 <code>pages/index/index.vue</code> 上改造</b>——把 uni 统计的设备/用户概览换成 D-070 的三档待办，保留其 <code>uni-notice-bar</code> 与 <code>.uni-stat--x</code> 卡片结构。A-04 是新建页，但筛选<b>全部走 uni-table 的列头</b>，不再另起筛选表单区。</p>
+
+  <!-- ===== A-03 ===== -->
+  <figure class="shot">
+    <div class="reuse r-mod">
+      <span class="rtag">◇ 改造</span>
+      <span class="rbody">
+        <b>改造既有页：</b><code>pages/index/index.vue</code>。
+        <b>移除：</b><code>uni-stat-tabs</code> 平台选择、「设备概览」「用户概览」两张 uni-stat 表格、三条 uni-stat 相关的 notice-bar。
+        <b>新增：</b>三档待办（每档一个 <code>.uni-stat--x</code> 卡片 + <code>uni-table</code>）、本人最近处理记录。
+        <b>保留：</b><code>.uni-header</code> + 面包屑、<code>uni-notice-bar</code> 组件、卡片骨架。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">工作台</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi on"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub"><i></i>活动与商品</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+          <div class="note">内容运营视角：<b>没有</b>运营统计、账号与隐私、系统管理三块——菜单按 <code>permission</code> 过滤。</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb"><b>工作台</b></div>
+              <div class="ugroup"><span style="font-size:12px;color:#909399">待办按紧迫度分三档，同档按提交时间正序</span><div class="ubtn">刷新</div></div>
+            </div>
+            <div class="ucont">
+              <div class="notice gray"><i></i><span>未获得「<b>运营统计查看</b>」权限，本页不展示任何活动汇总指标。该权限是独立权限点，默认关闭，<b>不随任何角色自动获得</b>。</span></div>
+
+              <div class="xcard">
+                <div class="xhead"><span class="tg error">第 1 档</span>举报与内容检测复核<span class="r">5 项 · 违规内容仍在线上，每延迟一分钟风险多一分</span></div>
+                <div class="xbody">
+                  <table class="utb">
+                    <thead><tr>
+                      <th><span class="fil">事项编号<span class="fi search"></span></span></th>
+                      <th><span class="fil">类型<span class="fi sel"></span></span></th>
+                      <th class="l">对象</th>
+                      <th>发布者</th>
+                      <th><span class="fil">状态<span class="fi sel"></span></span></th>
+                      <th><span class="fil">提交时间 ↑<span class="fi date"></span><span class="so"></span></span></th>
+                      <th>操作</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr><td><b>RP-20260916-0032</b></td><td>举报</td><td class="l">社区蔬菜周三团 · 商品「进口复合维生素」</td><td>u_7f3a91c8</td><td><span class="tg error">待处理</span></td><td>09-16 09:12:40</td><td><div class="ops"><span class="ubtn primary">领取</span></div></td></tr>
+                      <tr><td><b>RP-20260916-0033</b></td><td>举报</td><td class="l">九月办公用品补充 · 整个活动</td><td>u_2b91d704</td><td><span class="tg error">待处理</span></td><td>09-16 10:03:18</td><td><div class="ops"><span class="ubtn primary">领取</span></div></td></tr>
+                      <tr><td><b>CC-20260916-0114</b></td><td>内容复核</td><td class="l">周末产地水果接龙 · 图片异步回调命中</td><td>u_55c0e83b</td><td><span class="tg warning">待复核</span></td><td>09-16 10:47:02</td><td><div class="ops"><span class="ubtn primary">复核</span></div></td></tr>
+                      <tr><td><b>RP-20260916-0034</b></td><td>举报</td><td class="l">八月坚果团 · 商品「进口开心果」</td><td>u_7f3a91c8</td><td><span class="tg warning">处理中</span></td><td>09-16 11:20:55</td><td><div class="ops"><span class="ubtn primary">继续</span></div></td></tr>
+                      <tr><td><b>CC-20260916-0115</b></td><td>内容复核</td><td class="l">周三生鲜团 · 文本检测命中需人工判断</td><td>u_9d44b2a6</td><td><span class="tg warning">待复核</span></td><td>09-16 13:05:31</td><td><div class="ops"><span class="ubtn primary">复核</span></div></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="xcard">
+                <div class="xhead"><span class="tg warning">第 2 档</span>活动发布审核<span class="r">2 项 · 团长在等待，但内容尚未公开</span></div>
+                <div class="xbody">
+                  <table class="utb">
+                    <thead><tr>
+                      <th><span class="fil">活动编号<span class="fi search"></span></span></th>
+                      <th class="l">活动名称</th><th>内容版本</th><th>团长</th>
+                      <th><span class="fil">审核模式<span class="fi sel"></span></span></th>
+                      <th><span class="fil">提交时间 ↑<span class="fi date"></span><span class="so"></span></span></th>
+                      <th>操作</th>
+                    </tr></thead>
+                    <tbody>
+                      <tr><td><b>ACT-9K2M</b></td><td class="l">十月新米预订接龙</td><td>v3</td><td>u_1c8e57d0</td><td><span class="tg primary">人工</span></td><td>09-16 08:40:12</td><td><div class="ops"><span class="ubtn primary">审核</span></div></td></tr>
+                      <tr><td><b>ACT-7QD4</b></td><td class="l">周末烘焙材料团</td><td>v1</td><td>u_3a07c146</td><td><span class="tg primary">人工</span></td><td>09-16 12:55:09</td><td><div class="ops"><span class="ubtn primary">审核</span></div></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="xcard">
+                <div class="xhead"><span class="tg info">第 3 档</span>账号绑定申诉 / 隐私与注销事项<span class="r">需人工核验身份，本就无法快速处理</span></div>
+                <div class="xbody">
+                  <div class="notice gray" style="margin:0"><i></i><span>该档由<b>账号与隐私专员</b>处理。当前账号为内容运营，<b>无权处理的事项不出现在列表中，也不计入角标</b>（左侧「工作台」角标 7 = 第 1 档 5 + 第 2 档 2）。</span></div>
+                </div>
+              </div>
+
+              <div class="xcard">
+                <div class="xhead">本人最近处理记录<span class="r">仅本人，不含他人处理轨迹</span></div>
+                <div class="xbody">
+                  <table class="utb">
+                    <thead><tr><th>事项编号</th><th>动作</th><th class="l">对象</th><th>结论</th><th>完成时间</th></tr></thead>
+                    <tbody>
+                      <tr><td>RP-20260915-0028</td><td>举报结案</td><td class="l">八月零食团 · 商品「电子烟弹」</td><td><span class="tg error">下架商品 + 永久限制发布</span></td><td>09-15 17:22:40</td></tr>
+                      <tr><td>ACT-5H8P</td><td>发布审核</td><td class="l">中秋礼盒接龙</td><td><span class="tg success">审核通过</span></td><td>09-15 15:08:11</td></tr>
+                      <tr><td>RP-20260915-0026</td><td>举报结案</td><td class="l">周三生鲜团 · 整个活动</td><td><span class="tg info">无违规</span></td><td>09-15 11:45:03</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-03</span><span class="pill p-key">红线⑥</span>工作台 · <span style="color:#e6a23c">改造既有页</span></b>
+      <small>
+        OPS §4.2 / <b>D-070</b>。待办<b>分三档</b>：① 举报与内容复核（违规内容仍在线上）② 发布审核（团长在等但内容未公开）③ 绑定申诉与隐私事项（需人工核验）。<em>同档按提交时间正序</em>——列头「提交时间 ↑」带 <code>filter-type="timestamp"</code> 与 <code>sortable</code>，是先到先处理。<em>三档都没有「忽略」「标记已读」按钮</em>：待办是派生视图，<b>不建待办表</b>，消退直接复用各对象的状态机，与小程序端 D-062 的 <code>grouporder-todo-dismiss</code> 相反——运营不存在「知道了但不处理」的中间态。角标只统计<b>第 1、2 档合计</b>（5+2=7），<b>无权处理的事项不展示也不计入</b>。左侧是内容运营视角，看不到统计、隐私、系统三块——菜单由 <code>opendb-admin-menus</code> 的 <code>permission</code> 字段过滤，不是页面里写死的。未获统计权限时不展示任何汇总指标。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-04 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建：</b>uni-admin 无全局检索页。<b>复用组件：</b><code>uni-stat-tabs type="boldLine"</code> 切换四类对象、<code>uni-table</code> 的列头 <code>filter-type</code> 筛选与 <code>sortable</code> 排序、<code>uni-pagination</code>。
+        <b>注意：</b>本页取数走云对象（见页头第三条），不能用 <code>unicloud-db</code> 直连 —— 但表格形态与 <code>system/user/list.vue</code> 完全一致。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">全局检索</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi on"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub"><i></i>活动与商品</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">工作 <span>/</span> <b>全局检索</b></div>
+              <div class="ugroup">
+                <div class="usearch">按订单号 / 活动编号 / 平台用户标识检索</div>
+                <div class="ubtn primary">搜索</div>
+                <div class="ubtn">重置</div>
+                <div class="ubtn">导出结果</div>
+              </div>
+            </div>
+            <div class="ucont">
+              <div class="tabs"><span>活动</span><span>商品</span><span>用户</span><span class="on">订单</span></div>
+
+              <div class="notice orange"><i></i><span>检索结果<b>直接展示完整的收货人姓名、电话与地址</b>，不做任何脱敏，也不需要关联事项或二次验证（<b>D-072</b>）。代价是<b>每一次检索与每一次导出都写入审计日志</b>——记操作人、时间、检索条件与命中条数，日志不可修改删除。</span></div>
+
+              <table class="utb">
+                <thead><tr>
+                  <th><span class="fil">订单号<span class="fi search"></span><span class="so"></span></span></th>
+                  <th><span class="fil">所属活动<span class="fi search"></span></span></th>
+                  <th><span class="fil">交付方式<span class="fi sel"></span></span></th>
+                  <th>收货人</th><th>电话</th><th class="l">收货地址</th>
+                  <th><span class="fil">份数<span class="so"></span></span></th>
+                  <th><span class="fil">预计金额<span class="so"></span></span></th>
+                  <th><span class="fil">状态<span class="fi sel"></span></span></th>
+                  <th><span class="fil">提交时间<span class="fi date"></span><span class="so"></span></span></th>
+                  <th>操作</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td><b>260914-A3F2-8821</b></td><td>ACT-A3F2</td><td><span class="tg primary">送货上门</span></td>
+                    <td>张明华</td><td>13812342468</td><td class="l">广东省深圳市南山区科苑南路 2001 号 B 座 1203</td>
+                    <td>6</td><td>￥138.00</td><td><span class="tg success">有效</span></td><td>09-14 10:22</td>
+                    <td><div class="ops"><span class="ubtn">查看</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>260914-A3F2-9033</b></td><td>ACT-A3F2</td><td><span class="tg primary">送货上门</span></td>
+                    <td>李文倩</td><td>15987657712</td><td class="l">广东省深圳市福田区莲花路 88 号 5 栋 2402</td>
+                    <td>3</td><td>￥72.00</td><td><span class="tg info">已取消</span></td><td>09-14 11:05</td>
+                    <td><div class="ops"><span class="ubtn">查看</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>260913-7QD4-4102</b></td><td>ACT-7QD4</td><td><span class="tg purple">自提</span></td>
+                    <td>王振海</td><td>13655120945</td><td class="l" style="color:#c0c4cc">—— 自提不采集地址</td>
+                    <td>12</td><td>￥264.00</td><td><span class="tg success">有效</span></td><td>09-13 19:41</td>
+                    <td><div class="ops"><span class="ubtn">查看</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>260913-7QD4-4188</b></td><td>ACT-7QD4</td><td><span class="tg purple">自提</span></td>
+                    <td>陈小敏</td><td>18743213320</td><td class="l" style="color:#c0c4cc">—— 自提不采集地址</td>
+                    <td>2</td><td>￥44.00</td><td><span class="tg error">已作废</span></td><td>09-13 20:18</td>
+                    <td><div class="ops"><span class="ubtn">查看</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="pagi">
+                <span class="txt">共 4 条</span>
+                <span class="pg">‹</span><span class="pg on">1</span><span class="pg">›</span>
+              </div>
+
+              <div class="notice green" style="margin:15px 0 0"><i></i><span>操作列<b>只有「查看」一个按钮</b>。本页及订单详情<b>没有编辑、取消、作废、改数量或改金额的入口</b>——作废异常订单是团长在小程序内的能力，运营代为操作即越界（OPS §2.2）。</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-04</span><span class="pill p-key">红线③⑨</span>全局检索</b>
+      <small>
+        OPS §4.4、§4.5、§8 / <b>D-060</b>。与 v1 最大的形态差别：<em>筛选不再是表格上方的独立表单区，而是长在列头里</em>——放大镜图标是 <code>filter-type="search"</code>，倒三角是 <code>filter-type="select"</code>，日历是 <code>filter-type="timestamp"</code>，上下箭头是 <code>sortable</code>，与 <code>system/user/list.vue</code> 的写法一致；顶部 <code>.uni-header</code> 只放一个 <code>uni-search</code> 关键字框与按钮组。四类对象用 <code>uni-stat-tabs</code> 切换。<em>结果不脱敏，完整明文直接展示</em>（D-072）；按钮组里的<b>「导出结果」不受限制</b>，但<b>检索与导出都入审计</b>（红线⑨）。<b>交付方式区分两种订单</b>（D-060）：送货上门有地址，<b>自提不采集完整地址</b>，该列显示「——」而非空值。<em>操作列只有「查看」</em>，全页无业务字段编辑入口。
+      </small>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================
+     第三组 · 只读运营统计（A-05、A-06）
+     ================================================================ -->
+<section class="group">
+  <h2>第三组 · 只读运营统计（A-05、A-06）</h2>
+  <p>容易误以为能复用 <code>pages/uni-stat/*</code>——那 20 多个页面是 <b>uni 应用统计</b>（设备、留存、错误、支付），数据源是 <code>uni-stat-*</code> 表，与业务数据不通，<b>只能复用卡片与图表组件，不能复用数据层</b>。</p>
+
+  <!-- ===== A-05 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建：</b><code>pages/uni-stat/*</code> 是 uni 应用统计，<b>数据层不可复用</b>。
+        <b>复用组件：</b><code>.uni-stat--x</code> 卡片骨架、<code>uni-stat-tabs</code> 时间筛选、<code>uni-datetime-picker</code> 自定义区间、<code>uni-table</code>、<code>qiun-data-charts</code>（若后续加趋势图）。
+        <b>菜单：</b><code>go_stat</code> 分组的 <code>permission</code> 为 <code>ops-stat-view</code>，未授权者整块菜单不渲染。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">运营统计 · 团长汇总</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub"><i></i>活动与商品</div>
+          <div class="cap">运营统计</div>
+          <div class="mi sub on"><i></i>统计总览</div>
+          <div class="mi sub"><i></i>团长与活动</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+          <div class="note">「运营统计」分组<b>仅在额外授予 <code>ops-stat-view</code> 后出现</b>；未授权时菜单不渲染，直接访问也被拒绝并审计。</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">运营统计 <span>/</span> <b>统计总览</b></div>
+              <div class="ugroup">
+                <div class="usearch w200">按平台用户标识查询团长</div>
+                <div class="ubtn primary">查询</div>
+                <div class="ubtn">刷新</div>
+                <div class="ubtn">导出</div>
+              </div>
+            </div>
+            <div class="ucont">
+              <div class="notice blue"><i></i><span>数据截至 <b>2026-09-16 14:20:00</b>。汇总若存在处理延迟，此处明确标注截至时间，<b>不以零值代替未知结果</b>，也不宣称实时。</span></div>
+
+              <div class="tabs" style="margin-bottom:12px">
+                <span>今天</span><span>近 7 天</span><span class="on">近 30 天</span><span>自定义</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;margin-bottom:15px">
+                <div class="usearch filled" style="width:230px">2026-08-18 ~ 2026-09-16</div>
+                <span style="font-size:12px;color:#909399">活动范围<b>默认按发布时间</b>筛选；微信与平台账号绑定后归属同一平台用户，<b>不重复计算</b></span>
+              </div>
+
+              <div class="nums" style="margin-bottom:15px">
+                <div class="num"><div class="k">已发布活动数</div><div class="v">312</div></div>
+                <div class="num"><div class="k">有效订单数</div><div class="v">4 869</div></div>
+                <div class="num"><div class="k">有效总份数</div><div class="v">18 244</div></div>
+                <div class="num"><div class="k">预计金额</div><div class="v">￥421 806<small>.50</small></div></div>
+                <div class="num"><div class="k">当前已下架活动数</div><div class="v">7</div></div>
+              </div>
+
+              <table class="utb">
+                <thead><tr>
+                  <th><span class="fil">平台用户标识<span class="fi search"></span></span></th>
+                  <th><span class="fil">账号状态<span class="fi sel"></span></span></th>
+                  <th>微信绑定</th>
+                  <th><span class="fil">已发布<br>活动数<span class="so"></span></span></th>
+                  <th>草稿</th>
+                  <th class="l">各业务状态活动数</th>
+                  <th>当前<br>已下架</th>
+                  <th><span class="fil">有效<br>订单数<span class="so"></span></span></th>
+                  <th><span class="fil">有效<br>总份数<span class="so"></span></span></th>
+                  <th><span class="fil">预计金额<span class="so"></span></span></th>
+                  <th><span class="fil">最近发起时间<span class="fi date"></span><span class="so"></span></span></th>
+                  <th>操作</th>
+                </tr></thead>
+                <tbody>
+                  <tr class="hover">
+                    <td><b>u_7f3a2c</b></td><td><span class="tg success">正常</span></td><td><span class="tg primary">已绑定</span></td>
+                    <td>28</td><td>3</td>
+                    <td class="l"><span class="tg warning">审核中 1</span> <span class="tg success">进行中 4</span> <span class="tg info">已截止 21</span> <span class="tg error">已取消 2</span></td>
+                    <td>1</td><td>642</td><td>2 318</td><td>￥54 120.00</td><td>09-16 08:12</td>
+                    <td><div class="ops"><span class="ubtn primary">下钻</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>u_2b91d4</b></td><td><span class="tg success">正常</span></td><td><span class="tg info">未绑定</span></td>
+                    <td>19</td><td>1</td>
+                    <td class="l"><span class="tg success">进行中 2</span> <span class="tg info">已截止 16</span> <span class="tg error">已取消 1</span></td>
+                    <td>0</td><td>401</td><td>1 566</td><td>￥33 890.00</td><td>09-15 19:40</td>
+                    <td><div class="ops"><span class="ubtn primary">下钻</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>u_55c0e8</b></td><td><span class="tg warning">临时限制发布</span></td><td><span class="tg primary">已绑定</span></td>
+                    <td>11</td><td>0</td>
+                    <td class="l"><span class="tg info">已截止 10</span> <span class="tg error">已取消 1</span></td>
+                    <td>2</td><td>188</td><td>702</td><td>￥15 240.00</td><td>09-12 10:05</td>
+                    <td><div class="ops"><span class="ubtn primary">下钻</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>u_1c8e07</b></td><td><span class="tg success">正常</span></td><td><span class="tg primary">已绑定</span></td>
+                    <td>6</td><td>2</td>
+                    <td class="l"><span class="tg warning">审核中 1</span> <span class="tg success">进行中 1</span> <span class="tg info">已截止 4</span></td>
+                    <td>0</td><td>97</td><td>358</td><td>￥7 960.00</td><td>09-16 08:40</td>
+                    <td><div class="ops"><span class="ubtn primary">下钻</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="pagi"><span class="txt">共 46 位团长</span><span class="pg">‹</span><span class="pg on">1</span><span class="pg">2</span><span class="pg">3</span><span class="pg">›</span></div>
+
+              <div class="notice green" style="margin:15px 0 0"><i></i><span>「已发布活动数」<b>只统计至少审核通过并进入过进行中的活动</b>（以首次 <code>publish_date</code> 是否存在为准）；<b>最近发起时间取最近一次成功发布的时间，不使用草稿创建时间</b>。<b>页面无修改、无校正、无批量导出入口</b>——注意 <code>system/user/list.vue</code> 自带的导出 Excel 按钮在此<b>不得出现</b>。</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-05</span><span class="pill p-key">红线⑤⑥⑨</span>运营统计</b>
+      <small>
+        OPS §4.6、§11 / <b>D-042</b>。<em>需额外授予 <code>ops-stat-view</code> 独立权限</em>——默认关闭，不随超级管理员或任一业务角色自动获得；未授权时「运营统计」整个菜单分组不渲染。指标<em>只用白名单词</em>：已发布活动数、有效订单数、有效总份数、预计金额；<b>不出现销售额、实收金额、实际成交、GMV</b>——平台没有支付能力，预计金额是有效明细的价格快照乘数量之和，不代表已付款或平台担保成交。时间筛选四档用 <code>uni-stat-tabs</code>，与 uni-stat 各页的交互一致。<b>各业务状态与治理状态分列</b>，「当前已下架」不与业务状态混为一类。<b>导出已放开</b>（D-072）：按钮组里保留「导出」，导出内容与页面口径一致，<b>每次导出写入审计日志</b>（操作人、时间、筛选条件、导出行数）——约束从「不给导出」换成了「导出可查」。uni-admin 的 <code>system/user/list.vue</code> 自带的 <code>&lt;download-excel&gt;</code> 因此<b>不必删除</b>，但导出对象须先收窄（见 A-05 权限与 A-15 第 ② 条）。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-06 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>.uni-stat--x</code> 卡片、<code>uni-table</code>、<code>uni-tag</code>。
+        <b>与 A-05 的关系：</b>同一菜单分组下的下钻页，权限同为 <code>ops-stat-view</code>。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">活动统计</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub"><i></i>活动与商品</div>
+          <div class="cap">运营统计</div>
+          <div class="mi sub"><i></i>统计总览</div>
+          <div class="mi sub on"><i></i>团长与活动</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">运营统计 <span>/</span> 团长 u_7f3a2c <span>/</span> <b>活动 ACT-A3F2</b></div>
+              <div class="ugroup"><span style="font-size:12px;color:#909399">只读 · 统计口径只到活动与商品粒度</span><div class="ubtn">导出</div><div class="ubtn">返回团长汇总</div></div>
+            </div>
+            <div class="ucont">
+              <div class="xcard pm">
+                <div class="grid2">
+                  <div class="kv w130">
+                    <div class="k">活动名称</div><div class="v"><b>社区蔬菜周三团</b></div>
+                    <div class="k">活动编号</div><div class="v">ACT-A3F2（短码 A3F2）</div>
+                    <div class="k">发布时间</div><div class="v">2026-09-09 10:20</div>
+                    <div class="k">截止时间</div><div class="v">2026-09-14 20:00（定时自动截止）</div>
+                  </div>
+                  <div class="kv w130">
+                    <div class="k">业务状态</div><div class="v"><span class="tg info">已截止</span></div>
+                    <div class="k">治理状态</div><div class="v"><span class="tg success">正常</span> <span class="tg info">曾被下架</span></div>
+                    <div class="k">交付方式</div><div class="v"><span class="tg primary">送货上门</span>（发布后不可修改）</div>
+                    <div class="k">团长</div><div class="v">u_7f3a91c8</div>
+                  </div>
+                </div>
+                <div class="notice gray" style="margin:14px 0 0"><i></i><span>进入单个活动后展示该活动<b>从发布至查询时刻的完整累计数据</b>，不按订单提交时间截断。「曾被下架」是<b>单独的历史标记</b>，与当前治理状态分开展示。</span></div>
+              </div>
+
+              <div class="nums" style="margin-bottom:15px">
+                <div class="num"><div class="k">有效订单数</div><div class="v">86</div></div>
+                <div class="num"><div class="k">有效总份数</div><div class="v">412</div></div>
+                <div class="num"><div class="k">预计金额</div><div class="v">￥9 064<small>.00</small></div></div>
+                <div class="num"><div class="k">取消订单数</div><div class="v" style="color:#909399">9</div></div>
+                <div class="num"><div class="k">作废订单数</div><div class="v" style="color:#909399">2</div></div>
+              </div>
+
+              <div class="xcard">
+                <div class="xhead">商品汇总<span class="r">使用有效订单明细 · 按 sort 正序、create_date 正序</span></div>
+                <div class="xbody">
+                  <table class="utb">
+                    <thead><tr>
+                      <th style="width:50px">#</th><th class="l">商品名称</th><th>单位</th>
+                      <th><span class="fil">已购买份数<span class="so"></span></span></th>
+                      <th><span class="fil">预计金额<span class="so"></span></span></th>
+                      <th>售卖状态<div class="sm">团长</div></th>
+                      <th>治理状态<div class="sm">平台</div></th>
+                    </tr></thead>
+                    <tbody>
+                      <tr><td>1</td><td class="l"><b>本地小油菜</b></td><td>把</td><td>126</td><td>￥756.00</td><td><span class="tg success">在售</span></td><td><span class="tg success">正常</span></td></tr>
+                      <tr><td>2</td><td class="l"><b>散养土鸡蛋</b> <span class="tg warning">推荐</span></td><td>盒</td><td>98</td><td>￥3 626.00</td><td><span class="tg success">在售</span></td><td><span class="tg success">正常</span></td></tr>
+                      <tr><td>3</td><td class="l"><b>山地红薯</b></td><td>箱</td><td>74</td><td>￥2 220.00</td><td><span class="tg info">停售</span></td><td><span class="tg success">正常</span></td></tr>
+                      <tr><td>4</td><td class="l"><b>五常大米</b></td><td>袋</td><td>62</td><td>￥1 860.00</td><td><span class="tg success">在售</span></td><td><span class="tg success">正常</span></td></tr>
+                      <tr><td>5</td><td class="l"><b>进口复合维生素</b></td><td>瓶</td><td>52</td><td>￥602.00</td><td><span class="tg info">停售</span></td><td><span class="tg error">已下架</span></td></tr>
+                    </tbody>
+                  </table>
+                  <div class="notice green" style="margin:15px 0 0"><i></i><span>商品汇总<b>只展示名称、已购买份数与预计金额，不展示任何收货资料</b>。<b>「停售」与「已下架」是两列</b>：第 3 行只停售未下架，第 5 行两者同时成立——合成一列就分不清是团长的经营决定还是平台的治理结论。推荐角标是<b>团长在自己活动内的排版强调，不影响排序</b>，后台无任何干预入口（D-065）。</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-06</span><span class="pill p-key">红线②⑤⑨</span>团长与活动统计</b>
+      <small>
+        OPS §11.2、§11.3 / <b>D-065</b>。从 A-05 下钻到单个活动，全部只读。<em>业务状态与治理状态并列展示</em>，「曾被下架」作为单独历史标记；活动被下架但业务状态仍有效时统计数据继续保留，是否计入有效汇总以业务状态与订单状态为准。<b>取消订单数与作废订单数单独展示，不并入有效指标</b>。商品层同样分「售卖状态（团长停售）」与「治理状态（平台下架）」两列。任何层级<b>都不列收货人姓名、电话、地址或备注</b>——这是<em>统计口径</em>的结果（只统计到活动与商品粒度），<b>不是脱敏</b>；需要看订单明细走 A-04，那里直接展示完整明文（D-072）。本屏的<b>「导出」不受限制，但每次导出写入审计</b>（红线⑨）。已取消活动只能查看标记清晰的取消前历史快照，不计入团长当前有效汇总。后台不提供「设为推荐」「加权排序」入口——平台不参与商品推荐（D-065），也没有「推荐活动」「首页配置」，因为活动不进入任何公开列表（D-059）。
+      </small>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================
+     第四组 · 内容治理（A-07 ~ A-10）
+     ================================================================ -->
+<section class="group">
+  <h2>第四组 · 内容治理（A-07、A-08、A-09、A-10）</h2>
+  <p>后台的主链路，四屏全部新建——模板不可能自带业务治理页面。但表格、表单、弹窗、提示条一律复用 uni-admin 组件，形态与 <code>system/*</code> 各页保持一致。</p>
+
+  <!-- ===== A-07 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-table</code>（商品列表）、<code>uni-tag</code>（双状态标签）、<code>.uni-stat--x</code> 卡片、<code>uni-popup</code>（跳 A-09 确认弹窗）。
+        <b>无编辑入口：</b>页面只有「下架 / 恢复」两个治理按钮，<b>不得出现</b>编辑商品、改价格、改库存、改限购、停售等团长能力（OPS §2.2）。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">活动与商品详情</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub on"><i></i>活动与商品</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">内容治理 <span>/</span> 活动与商品 <span>/</span> <b>ACT-A3F2</b></div>
+              <div class="ugroup">
+                <div class="ubtn">查看关联举报（2）</div>
+                <div class="ubtn warn">下架活动</div>
+              </div>
+            </div>
+            <div class="ucont">
+              <div class="xcard pm">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px">
+                  <div><div class="stlab">业务状态（团长）</div><div style="margin:5px 0"><span class="tg info">已截止</span></div><div style="font-size:12px;color:#909399">2026-09-14 20:00 定时自动截止</div></div>
+                  <div><div class="stlab">治理状态（平台）</div><div style="margin:5px 0"><span class="tg success">正常</span> <span class="tg info">曾被下架</span></div><div style="font-size:12px;color:#909399">历史标记，置 1 后不回退</div></div>
+                  <div><div class="stlab">发布审核</div><div style="margin:5px 0"><span class="tg success">审核通过</span></div><div style="font-size:12px;color:#909399">内容版本 v2 · 人工模式 · 09-09 10:18</div></div>
+                  <div><div class="stlab">交付方式</div><div style="margin:5px 0"><span class="tg primary">送货上门</span></div><div style="font-size:12px;color:#909399">发布后不可修改（D-060）</div></div>
+                </div>
+                <div class="notice orange" style="margin:14px 0 0"><i></i><span><b>业务状态与治理状态相互独立、互不改写。</b>活动可以同时是「进行中 + 已下架」——业务上没结束，但被平台限制了。运营下架<b>不改写团长的业务状态，也不删除订单、商品或历史快照</b>。</span></div>
+              </div>
+
+              <div class="gridm">
+                <div>
+                  <div class="xcard">
+                    <div class="xhead">活动内容快照<span class="r">内容版本 v2 · 送审时的版本，不随团长后续编辑变化</span></div>
+                    <div class="xbody">
+                      <div class="snap">
+                        <div class="st"><b>标题</b></div>社区蔬菜周三团
+                        <div class="st" style="margin-top:9px"><b>活动说明</b></div>
+                        每周三统一采购本地时令蔬菜，周四上午配送到楼下。接龙成功不代表已付款，线下微信转账。
+                        <div class="st" style="margin-top:9px"><b>封面图 + 轮播图 3 张</b></div>
+                        <div style="display:flex;gap:6px;margin-top:5px"><span class="imgph"></span><span class="imgph"></span><span class="imgph"></span><span class="imgph"></span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">活动内商品（5）<span class="r">售卖状态与治理状态分列 · 无编辑入口</span></div>
+                    <div class="xbody">
+                      <table class="utb">
+                        <thead><tr>
+                          <th style="width:44px">#</th><th class="l">商品</th><th>单价</th><th>已购买<br>份数</th>
+                          <th>售卖状态<div class="sm">团长</div></th><th>治理状态<div class="sm">平台</div></th>
+                          <th>图片检测</th><th>治理操作</th>
+                        </tr></thead>
+                        <tbody>
+                          <tr><td>1</td><td class="l"><b>本地小油菜</b><div class="sm">把 · 库存不限</div></td><td>￥6.00</td><td>126</td><td><span class="tg success">在售</span></td><td><span class="tg success">正常</span></td><td><span class="tg success">通过</span></td><td><div class="ops"><span class="ubtn warn">下架</span></div></td></tr>
+                          <tr><td>2</td><td class="l"><b>散养土鸡蛋</b> <span class="tg warning">推荐</span><div class="sm">盒 · 总库存 200</div></td><td>￥37.00</td><td>98</td><td><span class="tg success">在售</span></td><td><span class="tg success">正常</span></td><td><span class="tg success">通过</span></td><td><div class="ops"><span class="ubtn warn">下架</span></div></td></tr>
+                          <tr><td>3</td><td class="l"><b>山地红薯</b><div class="sm">箱 · 总库存 80</div></td><td>￥30.00</td><td>74</td><td><span class="tg info">停售</span></td><td><span class="tg success">正常</span></td><td><span class="tg success">通过</span></td><td><div class="ops"><span class="ubtn warn">下架</span></div></td></tr>
+                          <tr><td>4</td><td class="l"><b>五常大米</b><div class="sm">袋 · 总库存 100</div></td><td>￥30.00</td><td>62</td><td><span class="tg success">在售</span></td><td><span class="tg success">正常</span></td><td><span class="tg warning">待人工复核</span></td><td><div class="ops"><span class="ubtn warn">下架</span></div></td></tr>
+                          <tr class="hover"><td>5</td><td class="l"><b>进口复合维生素</b><div class="sm">瓶 · 总库存 60</div></td><td>￥11.58</td><td>52</td><td><span class="tg info">停售</span></td><td><span class="tg error">已下架</span></td><td><span class="tg error">已拦截</span></td><td><div class="ops"><span class="ubtn success">恢复</span></div></td></tr>
+                        </tbody>
+                      </table>
+                      <div class="notice green" style="margin:15px 0 0"><i></i><span>商品行的操作列<b>只有「下架」「恢复」两个治理动作</b>。全页<b>没有</b>编辑商品、改价格、改库存、改限购、改单位、停售或恢复售卖的入口——停售是团长的经营动作，运营执行的是<b>治理下架</b>，两者分开记录。</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="xcard">
+                    <div class="xhead">内容检测记录</div>
+                    <div class="xbody">
+                      <div class="tl">
+                        <div class="it on"><div class="tm">09-16 10:47 · 图片异步回调</div>商品「进口复合维生素」详情图命中 <b>医药保健</b> → <span class="tg error">已拦截</span><div class="sm" style="margin-top:3px">系统转治理下架并通知团长，<b>不回退业务状态、不删除订单</b></div></div>
+                        <div class="it"><div class="tm">09-16 09:30 · 图片异步回调</div>商品「五常大米」详情图 → <span class="tg warning">待人工复核</span></div>
+                        <div class="it"><div class="tm">09-09 10:18 · 文本检测 v2</div>活动标题 + 说明 + 5 个商品名称 → <span class="tg success">通过</span></div>
+                        <div class="it"><div class="tm">09-09 09:52 · 文本检测 v1</div>活动说明含风险词「特效」→ <span class="tg warning">命中需人工</span> → 团长修改后产生 v2</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">处置历史</div>
+                    <div class="xbody">
+                      <div class="tl">
+                        <div class="it on"><div class="tm">09-16 10:48 · 系统</div>商品「进口复合维生素」<b>治理下架</b><div class="sm" style="margin-top:3px">同时反写发布者商品库记录为<b>禁止复用</b>（D-064）</div></div>
+                        <div class="it"><div class="tm">09-11 16:20 · ops_wang</div>整个活动<b>恢复</b>（复核结论：举报不成立）</div>
+                        <div class="it"><div class="tm">09-10 14:05 · ops_li</div>整个活动<b>治理下架</b>（举报 RP-20260910-0019）</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">发布者</div>
+                    <div class="xbody">
+                      <div class="kv">
+                        <div class="k">平台标识</div><div class="v"><b>u_7f3a2c</b></div>
+                        <div class="k">账号类型</div><div class="v">微信 + 平台账号（已绑定）</div>
+                        <div class="k">发布权限</div><div class="v"><span class="tg success">正常</span></div>
+                        <div class="k">历史处置</div><div class="v">警告 1 次（09-10）</div>
+                      </div>
+                      <div class="ubtn" style="margin-top:12px">发布者处置 →</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-07</span><span class="pill p-key">红线②③⑨</span>活动与商品详情</b>
+      <small>
+        OPS §4.4、§6 / <b>D-054、D-058、D-064</b>。<em>业务状态与治理状态并列为两个独立字段</em>，画成一个状态标签是错的——运营下架不改写团长的业务状态，这是后台不越界成为「万能数据改写工具」的结构性保证。商品同样<b>分「售卖状态」与「治理状态」两列</b>：第 3 行只停售未下架，第 5 行两者同时成立。内容快照<b>绑定送审时的内容版本</b>，不能用当前内容替换历史证据。图片异步检测<b>不阻塞审核放行</b>（D-058）：回调命中时系统将该商品转治理下架并通知团长，<b>不回退业务状态、不删除已有订单</b>。商品治理下架<b>同步反写发布者商品库为禁止复用</b>（D-064），否则违规商品可从商品库无限复制到新活动。<em>操作列只有下架与恢复</em>。发布者与举报人的<b>平台用户标识完整展示、不再截断</b>（D-072），打开本屏即<b>写入审计</b>（红线⑨）。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-08 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-table</code> 列头筛选（举报编号 / 类型 / 状态 / 时间）、<code>uni-forms</code> + <code>uni-data-checkbox</code>（结论单选）、<code>uni-stat-tabs</code>（5 状态切换）。
+        <b>与 A-17 分页不合并：</b>A-08 是上线后事后治理，A-17 是发布前拦截，对象、时机与结论集合都不同。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">举报处理</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub on"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub"><i></i>活动与商品</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">内容治理 <span>/</span> 举报与内容审核 <span>/</span> <b>RP-20260916-0032</b></div>
+              <div class="ugroup">
+                <div class="usearch w200">举报编号 / 活动编号 / 商品关键词</div>
+                <div class="ubtn primary">搜索</div>
+              </div>
+            </div>
+            <div class="ucont">
+              <div class="tabs"><span class="on">全部 5</span><span>待处理 3</span><span>处理中 1</span><span>已结案 0</span><span>复核中 1</span><span>复核完成 0</span></div>
+
+              <div class="gridm">
+                <div>
+                  <div class="xcard">
+                    <div class="xhead">RP-20260916-0032 <span class="tg warning">处理中</span><span class="r">处理人 ops_wang · 领取于 09-16 14:02</span></div>
+                    <div class="xbody">
+                      <div class="kv w130" style="margin-bottom:14px">
+                        <div class="k">被举报对象</div><div class="v">活动 <b>ACT-A3F2</b> 社区蔬菜周三团 · 商品 <b>进口复合维生素</b></div>
+                        <div class="k">发布者</div><div class="v">u_7f3a91c8</div>
+                        <div class="k">举报人</div><div class="v">u_9d44b2a6</div>
+                        <div class="k">举报类型</div><div class="v"><span class="tg error">需特殊资质商品 · 保健品</span></div>
+                        <div class="k">举报描述</div><div class="v">该商品属于保健品，发布者未展示任何资质。</div>
+                        <div class="k">提交时间</div><div class="v">2026-09-16 09:12:40</div>
+                      </div>
+                      <div class="snap">
+                        <div class="st"><b>被举报内容快照</b><span class="tg info">举报时的内容，不随当前内容变化</span></div>
+                        <b>进口复合维生素</b> · ￥11.58 / 瓶 · 总库存 60<br>
+                        商品说明：每日一粒，补充多种维生素与矿物质，增强免疫力。
+                        <div style="display:flex;gap:6px;margin-top:8px"><span class="imgph"></span><span class="imgph"></span></div>
+                      </div>
+                      <div class="notice orange" style="margin:14px 0 0"><i></i><span><b>举报提交本身不触发下架</b>（D-054）。当前商品治理状态由图片异步检测于 10:48 置为已下架，与本举报无关——只有本次审核结论成立后才会由本举报执行处置。</span></div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">审核结论<span class="r">6 选 1 · 理由必填</span></div>
+                    <div class="xbody">
+                      <div class="rdgroup">
+                        <div class="rd"><i></i><div><b>无违规</b><div class="sm">结案，不产生任何处置</div></div></div>
+                        <div class="rd"><i></i><div><b>警告发布者</b><div class="sm">处置记录，不改变账号状态</div></div></div>
+                        <div class="rd on"><i></i><div><b>下架单个商品</b><div class="sm">仅「进口复合维生素」，活动内其他 4 个正常商品继续参与</div></div></div>
+                        <div class="rd"><i></i><div><b>下架整个活动</b><div class="sm">禁止新建订单或扩大已有订单数量，不删除任何数据</div></div></div>
+                        <div class="rd"><i></i><div><b>临时限制发布</b><div class="sm">需填写起止时间</div></div></div>
+                        <div class="rd"><i></i><div><b>永久限制发布</b><div class="sm">无自动结束时间</div></div></div>
+                      </div>
+                      <div class="fitem w120" style="margin-top:14px">
+                        <label><em>*</em>结论理由</label>
+                        <div class="finput ta">保健品属第一版负面清单范围，发布者未提供任何资质证明，举报成立。仅下架该商品，活动内其他商品不受影响。</div>
+                      </div>
+                      <div style="display:flex;gap:10px;margin-top:14px;padding-left:130px">
+                        <div class="ubtn primary">提交结论并结案</div>
+                        <div class="ubtn">保存草稿</div>
+                      </div>
+                      <div class="notice gray" style="margin:14px 0 0"><i></i><span>提交时<b>重新校验对象状态与本人权限</b>，成功后记录前后状态。若期间状态已被他人改变，展示最新处理人与可公开原因，<b>不用旧页面覆盖新结果</b>。</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="xcard">
+                    <div class="xhead">举报状态流转</div>
+                    <div class="xbody">
+                      <div class="tl">
+                        <div class="it"><div class="tm">1</div><span class="tg error">待处理</span> 用户提交，系统创建唯一举报记录</div>
+                        <div class="it on"><div class="tm">2 · 当前</div><span class="tg warning">处理中</span> 运营领取，记录处理人与开始时间</div>
+                        <div class="it"><div class="tm">3</div><span class="tg success">已结案</span> 形成结论并执行处置</div>
+                        <div class="it"><div class="tm">4</div><span class="tg purple">复核中</span> 对结论发起复核，<b>创建新的复核记录</b></div>
+                        <div class="it"><div class="tm">5</div><span class="tg primary">复核完成</span> <b>原举报、原结论与原日志继续保留</b></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">关联举报（2）</div>
+                    <div class="xbody">
+                      <div class="tl">
+                        <div class="it on"><div class="tm">RP-20260916-0032 · 本条</div>商品「进口复合维生素」· 保健品</div>
+                        <div class="it"><div class="tm">RP-20260910-0019 · 已结案</div>整个活动 · 虚假宣传 → <span class="tg info">无违规</span>，已于 09-11 恢复</div>
+                      </div>
+                      <div class="notice gray" style="margin:12px 0 0"><i></i><span>多条举报指向同一活动时<b>可关联查看，但不得删除、覆盖或静默合并原始举报记录</b>。已产生相同处置结果的重复提交返回当前结果，不重复执行处置。</span></div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">关联内容检测</div>
+                    <div class="xbody">
+                      <div class="kv">
+                        <div class="k">检测记录</div><div class="v">CC-20260916-0113</div>
+                        <div class="k">内容版本</div><div class="v">v2（与举报快照一致）</div>
+                        <div class="k">检测结果</div><div class="v"><span class="tg error">已拦截</span> 医药保健</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-08</span><span class="pill p-key">红线③</span>举报与内容审核</b>
+      <small>
+        OPS §4.3、§5.1 / <b>D-054</b>。<em>举报 5 状态</em>：待处理 → 处理中 → 已结案 → 复核中 → 复核完成；复核<b>创建新记录，不覆盖原结论</b>。运营需先<b>领取</b>才进入处理中。<b>被举报内容快照是举报时的内容</b>，不能用当前内容替换历史证据。<em>举报提交本身不触发下架</em>——只有审核认定成立后才执行处置，这与图中商品因图片回调已下架是两条独立路径。结论 <b>6 选 1 且理由必填</b>。多条举报指向同一活动<b>可关联查看但不得删除、覆盖或静默合并</b>。提交时重新校验状态与权限，并发时以最新状态为准。本页是<b>上线后的事后治理</b>，与 A-17 的发布前拦截<b>不合并</b>。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-09 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-popup</code> + <code>uni-popup-dialog</code>（高风险二次确认）、<code>uni-forms</code>、<code>uni-data-checkbox</code>、<code>uni-notice-bar</code>。
+        <b>不是独立页面：</b>它是 A-07 / A-08 上的弹窗，与 uni-admin 各页「删除前确认」的交互方式一致。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">活动与商品详情</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub on"><i></i>活动与商品</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper" style="position:relative">
+            <div class="uhead">
+              <div class="crumb">内容治理 <span>/</span> 活动与商品 <span>/</span> <b>ACT-A3F2</b></div>
+              <div class="ugroup"><div class="ubtn">查看关联举报（2）</div><div class="ubtn warn">下架活动</div></div>
+            </div>
+            <div class="ucont" style="opacity:.4">
+              <div class="xcard pm">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px">
+                  <div><div class="stlab">业务状态</div><div style="margin-top:5px"><span class="tg info">已截止</span></div></div>
+                  <div><div class="stlab">治理状态</div><div style="margin-top:5px"><span class="tg success">正常</span></div></div>
+                  <div><div class="stlab">发布审核</div><div style="margin-top:5px"><span class="tg success">审核通过</span></div></div>
+                  <div><div class="stlab">交付方式</div><div style="margin-top:5px"><span class="tg primary">送货上门</span></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mask">
+              <div class="dlg w660">
+                <div class="dlg-h"><span class="tg error">高风险</span>执行治理下架</div>
+                <div class="dlg-b">
+                  <div style="margin-bottom:14px">
+                    <div style="font-size:14px;color:#606266;margin-bottom:6px"><em style="font-style:normal;color:var(--error)">*</em> 下架范围</div>
+                    <div class="rdgroup">
+                      <div class="rd on"><i></i><div><b>仅下架单个商品</b> —— 进口复合维生素<div class="sm">活动内其他 4 个正常商品继续参与接龙，该商品历史订单与明细保留</div></div></div>
+                      <div class="rd"><i></i><div><b>下架整个活动</b><div class="sm">禁止新建订单或扩大已有订单数量；不删除订单、商品、收货快照或历史清单记录</div></div></div>
+                    </div>
+                  </div>
+
+                  <div class="notice orange"><i></i><span><b>影响范围</b>：该商品已产生 <b>52 份</b>有效明细、涉及 <b>31 张</b>有效订单。下架后<b>禁止新增选择或扩大该商品数量</b>，已有订单仍允许参与者减少、移除、更换收货信息或取消整单。<b>不改变活动业务状态（已截止）</b>，不删除任何数据。</span></div>
+
+                  <div class="frm c2" style="margin-bottom:14px">
+                    <div class="fitem"><label><em>*</em>违规类型</label><div class="finput sel">需特殊资质商品 · 保健品</div></div>
+                    <div class="fitem"><label>关联事项</label><div class="finput ro">RP-20260916-0032</div></div>
+                  </div>
+                  <div class="fitem" style="margin-bottom:14px">
+                    <label><em>*</em>下架原因</label>
+                    <div>
+                      <div class="finput ta">该商品属于保健品，依据《商品发布规范》属需特殊资质类目，发布者未提供资质证明。</div>
+                      <div class="ftips">原因<b>向团长展示</b>，不得包含内部敏感信息。</div>
+                    </div>
+                  </div>
+
+                  <div class="notice red"><i></i><span><b>联动动作（自动执行，不可跳过）</b>：下架后将反查发布者的商品库记录并标记为<b>禁止复用</b>（D-064），匹配条件为<b>来源标记精确定位</b>与<b>团长 + 商品当前名称</b>两条的并集，<b>软删记录同样封禁</b>；该标记不可由用户自行解除。缺少此联动，违规商品可从商品库无限复制到新活动、绕过治理。</span></div>
+
+                  <div class="ck on"><i></i><span>我已确认上述影响范围，并理解<b>下架不改变活动业务状态、不删除任何订单数据</b>。</span></div>
+                </div>
+                <div class="dlg-f"><div class="ubtn">取消</div><div class="ubtn warn">确认下架</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="xcard pm" style="width:1280px;max-width:100%;margin-top:12px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">恢复确认（同一弹窗的另一形态）：提交时重新读取三类状态</div>
+      <div class="grid2">
+        <div>
+          <div class="notice green" style="margin-bottom:12px"><i></i><span><b>可恢复</b>——经复核结论允许，且活动业务状态仍为「进行中」、发布者无发布限制。恢复后治理状态回到「正常」，并把<b>「已恢复」保留为操作记录</b>；商品恢复时一并将商品库记录的禁止复用标记<b>置回正常</b>。</span></div>
+          <div class="kv w130">
+            <div class="k">复核结论</div><div class="v">RV-20260916-0007 · 允许恢复</div>
+            <div class="k">业务状态</div><div class="v"><span class="tg success">进行中</span> 未截止</div>
+            <div class="k">发布者限制</div><div class="v"><span class="tg success">正常</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="notice red" style="margin-bottom:12px"><i></i><span><b>不可恢复</b>——以下情形一律拒绝并显示具体原因：团长<b>已取消</b>活动；活动<b>已截止</b>；活动<b>在下架期间到达截止时间</b>（按已截止处理，不能通过恢复重新开放）。</span></div>
+          <div class="kv w130">
+            <div class="k">当前情形</div><div class="v"><span class="tg error">下架期间已到截止时间</span></div>
+            <div class="k">处理</div><div class="v">中止恢复，保留失败结果与原因；<b>重复恢复不产生新的业务变化</b></div>
+            <div class="k">并发</div><div class="v">提交时状态已被他人改变 → 展示最新状态与处理人，<b>不用旧页面覆盖新结果</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <figcaption>
+      <b><span class="pill">A-09</span><span class="pill p-key">红线②③</span>下架 / 恢复确认</b>
+      <small>
+        OPS §6.1、§6.2 / <b>D-054、D-064</b>。<em>下架范围二选一</em>：单个商品或整个活动。高风险操作<b>必须展示对象、影响范围与原因字段，并要求明确二次确认</b>。违规类型与原因均必填，原因<b>向团长展示，不得包含内部敏感信息</b>。<em>下架不改变活动的业务状态</em>（图中活动仍是「已截止」），<b>不删除订单、商品、收货快照或历史清单</b>。下架<b>自动反写发布者商品库为禁止复用</b>（D-064，两条匹配取并集、软删记录同样封禁），恢复时一并置回。恢复须有<b>允许恢复的复核结论</b>，且提交时<b>重新读取业务状态、治理状态与发布者限制状态</b>；团长已取消、活动已截止、下架期间到期三种情形<b>一律不可恢复为可参与状态</b>。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-10 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-forms</code>、<code>uni-data-checkbox</code>（四类处置单选）、<code>uni-datetime-picker</code>（临时限制起止时间）、<code>uni-table</code>（该发布者的活动列表）。
+        <b>数据：</b>当前限制状态读 <code>grouporder-user-ext</code>，处置流水写 <code>grouporder-restriction</code>，两表分工见 DATA_MODEL §10.9。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">发布者处置</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub on"><i></i>活动与商品</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">内容治理 <span>/</span> 发布者处置 <span>/</span> <b>u_55c0e8</b></div>
+              <div class="ugroup"><span style="font-size:12px;color:#909399">关联举报 RP-20260916-0034</span></div>
+            </div>
+            <div class="ucont">
+              <div class="gridm">
+                <div>
+                  <div class="xcard pm">
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px">
+                      <div><div class="stlab">当前发布权限</div><div style="margin:5px 0"><span class="tg warning">临时限制发布</span></div><div class="sm">2026-09-12 10:00 ~ 09-19 10:00</div></div>
+                      <div><div class="stlab">账号状态</div><div style="margin:5px 0"><span class="tg success">正常</span></div><div class="sm">可登录、可查看历史、可参与他人活动</div></div>
+                      <div><div class="stlab">产生限制的处置</div><div style="margin:5px 0;font-weight:600;color:#303133">CS-20260912-0006</div><div class="sm">可回溯到具体处置记录</div></div>
+                    </div>
+                    <div class="notice blue" style="margin:14px 0 0"><i></i><span><b>发布限制只作用于发起和发布活动</b>，不限制登录、查看本人历史或参与他人活动。对已有活动是否下架<b>必须逐个形成内容处置结论</b>，不能通过限制发布者静默改变已有活动状态。</span></div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">选择处置<span class="r">原因必填 · 提交时重新校验</span></div>
+                    <div class="xbody">
+                      <div class="rdgroup">
+                        <div class="rd"><i></i><div><b>警告</b><div class="sm">记录违规类型、原因、关联事项与时间，<b>不改变账号登录及参与能力，也不作为账号状态</b></div></div></div>
+                        <div class="rd on"><i></i><div><b>临时限制发布</b><div class="sm">在明确的起止时间内禁止创建或发布新活动</div></div></div>
+                        <div class="rd"><i></i><div><b>永久限制发布</b><div class="sm">无自动结束时间，禁止创建或发布新活动</div></div></div>
+                        <div class="rd"><i></i><div><b>解除限制</b><div class="sm">基于复核结论解除当前发布限制，<b>保留原处置记录</b></div></div></div>
+                      </div>
+
+                      <div class="frm c3" style="margin:14px 0">
+                        <div class="fitem"><label><em>*</em>违规类型</label><div class="finput sel">重复发布受限商品</div></div>
+                        <div class="fitem"><label><em>*</em>生效起</label><div class="finput">2026-09-19 10:00</div></div>
+                        <div class="fitem"><label><em>*</em>生效止</label><div class="finput">2026-10-19 10:00</div></div>
+                      </div>
+                      <div class="fitem w120" style="margin-bottom:12px">
+                        <label><em>*</em>处置原因</label>
+                        <div class="finput ta">临时限制期内再次发布受限类目商品，举报 RP-20260916-0034 成立，限制期延长至 30 天。</div>
+                      </div>
+                      <div class="fitem w120" style="margin-bottom:14px">
+                        <label>关联事项</label><div class="finput ro">RP-20260916-0034</div>
+                      </div>
+
+                      <div class="ck on" style="margin-bottom:12px"><i></i><span>我已确认当前发布权限状态，并理解本次处置<b>不会自动改变该发布者已有活动的业务状态</b>。</span></div>
+                      <div style="display:flex;gap:10px">
+                        <div class="ubtn warn">提交处置</div>
+                        <div class="ubtn">取消</div>
+                      </div>
+                      <div class="notice gray" style="margin:14px 0 0"><i></i><span><b>相同状态的重复操作不重复生效</b>；与其他运营人员并发处理时，以提交时最新状态为准并提示状态变化。</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="xcard">
+                    <div class="xhead">处置历史<span class="r">流水完整保留</span></div>
+                    <div class="xbody">
+                      <div class="tl">
+                        <div class="it on"><div class="tm">09-12 10:00 · ops_wang</div><span class="tg warning">临时限制发布</span> 7 天<div class="sm" style="margin-top:3px">前：正常 → 后：临时限制 · CS-20260912-0006 · 关联 RP-20260912-0021</div></div>
+                        <div class="it"><div class="tm">09-10 15:30 · ops_li</div><span class="tg info">警告</span><div class="sm" style="margin-top:3px">前：正常 → 后：正常（<b>警告不改变账号状态</b>）· CS-20260910-0004</div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">该发布者的活动</div>
+                    <div class="xbody">
+                      <table class="utb">
+                        <thead><tr><th class="l">活动</th><th>业务状态</th><th>治理状态</th></tr></thead>
+                        <tbody>
+                          <tr><td class="l">八月坚果团</td><td><span class="tg success">进行中</span></td><td><span class="tg error">已下架</span></td></tr>
+                          <tr><td class="l">七月干货团</td><td><span class="tg info">已截止</span></td><td><span class="tg success">正常</span></td></tr>
+                          <tr><td class="l">六月山货团</td><td><span class="tg info">已截止</span></td><td><span class="tg error">已下架</span></td></tr>
+                        </tbody>
+                      </table>
+                      <div class="notice orange" style="margin:14px 0 0"><i></i><span>此处<b>只展示状态，没有批量下架入口</b>。已有活动是否下架须<b>逐个在 A-09 形成内容处置结论</b>。第一行是「进行中 + 已下架」并存的实例。</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-10</span><span class="pill p-key">红线②</span>发布者处置</b>
+      <small>
+        OPS §7、§12.1。四类处置：<b>警告 / 临时限制 / 永久限制 / 解除限制</b>。<em>警告只是处置记录，不改变账号状态</em>——处置历史中「前：正常 → 后：正常」正是这条规则的体现。<b>临时限制必须有明确起止时间</b>。<b>发布限制只作用于发起和发布活动</b>，不限制登录、查看本人历史或参与他人活动。<em>不能通过限制发布者静默改变已有活动状态</em>——右下角活动列表只展示状态、<b>没有批量下架入口</b>，每个活动是否下架都要逐个在 A-09 形成结论；其中「进行中 + 已下架」并存再次印证双状态独立。处置前<b>必须展示当前限制状态并填写原因</b>，相同状态的重复操作不重复生效。当前限制状态存 <code>grouporder-user-ext</code> 供校验，处置流水存 <code>grouporder-restriction</code> 供审计，两者不可互相替代。
+      </small>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================
+     第五组 · 账号、申诉与审计（A-12、A-13、A-14）
+     ================================================================ -->
+<section class="group">
+  <h2>第五组 · 账号、申诉与审计（A-12、A-13、A-14）</h2>
+  <p>原第五组的 <b>A-11「敏感资料受控查看」已随 D-072 整屏取消</b>——不再有解敏申请、授权范围与二次验证这一套链路，需要看的字段各业务页直接展示。<b>编号不重排，A-11 留空缺</b>（与 UX_FLOW_SPEC §3.2 一致）。本组余下三屏都与「留痕」有关：申诉的处理留痕、Excel 事件的下载留痕、以及审计日志本身。</p>
+
+  <!-- ===== A-12 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-stat-tabs</code>（4 状态）、<code>uni-table</code>、<code>uni-forms</code>。
+        <b>注意：</b>后台<b>不得出现</b>「合并账号」「迁移数据」按钮——该能力首版明确不做（OPS §15、D-055）。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">账号绑定申诉</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">李</div>李工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">3</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">账号与隐私</div>
+          <div class="mi sub on"><i></i>账号绑定申诉<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>隐私与注销事项<span class="bdg">1</span></div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">账号与隐私 <span>/</span> <b>账号绑定申诉</b></div>
+              <div class="ugroup"><div class="usearch w200">申诉编号 / 平台用户标识</div><div class="ubtn primary">搜索</div></div>
+            </div>
+            <div class="ucont">
+              <div class="tabs"><span class="on">待处理 2</span><span>处理中 0</span><span>处理成功 5</span><span>处理失败 3</span></div>
+
+              <div class="grid2">
+                <div class="xcard">
+                  <div class="xhead">AP-20260916-0011 <span class="tg warning">处理中</span><span class="r">申诉类型：重新绑定</span></div>
+                  <div class="xbody">
+                    <div class="kv w130">
+                      <div class="k">申诉人</div><div class="v">u_3a07c146</div>
+                      <div class="k">微信身份</div><div class="v">wx_摘要 8f3c…a91d<div class="sm">仅存摘要，<b>不存完整凭证</b></div></div>
+                      <div class="k">目标账号</div><div class="v">u_3a07c146（平台注册账号）</div>
+                      <div class="k">当前绑定</div><div class="v">微信身份<b>未绑定任何账号</b>；目标账号<b>未绑定微信</b></div>
+                      <div class="k">业务数据</div><div class="v"><span class="tg success">仅单方有业务数据</span> 微信身份无活动、无订单</div>
+                    </div>
+
+                    <div class="fitem w120" style="margin-top:14px">
+                      <label><em>*</em>身份核验</label>
+                      <div class="finput ta">申诉人提供了平台账号的注册时间、最近 3 次活动标题与订单号，均与系统记录一致，核验通过。<b>未使用收货电话作为核验依据。</b></div>
+                    </div>
+                    <div class="fitem w120" style="margin:12px 0 14px">
+                      <label><em>*</em>处理原因</label>
+                      <div class="finput ta">符合一对一绑定约束，微信身份无业务数据，不触发数据合并，予以重新绑定。</div>
+                    </div>
+
+                    <div class="notice blue"><i></i><span><b>解绑与重新绑定不改变任何活动、订单、限购统计或收货信息的归属。</b>提交时<b>重新检查绑定状态</b>，防止并发覆盖新的绑定关系。</span></div>
+                    <div style="display:flex;gap:10px">
+                      <div class="ubtn primary">执行重新绑定</div>
+                      <div class="ubtn warn">拒绝申诉</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="xcard">
+                  <div class="xhead">AP-20260916-0012 <span class="tg error">不予受理</span><span class="r">申诉类型：解绑</span></div>
+                  <div class="xbody">
+                    <div class="kv w130">
+                      <div class="k">申诉人</div><div class="v">u_1c8e57d0</div>
+                      <div class="k">微信身份</div><div class="v">wx_摘要 22b6…70ef</div>
+                      <div class="k">目标账号</div><div class="v">u_6d52af39（平台注册账号）</div>
+                      <div class="k">当前绑定</div><div class="v">两者<b>各自独立存在</b>，均未互相绑定</div>
+                      <div class="k">业务数据</div><div class="v"><span class="tg error">双方均已有业务数据</span></div>
+                    </div>
+
+                    <table class="utb" style="margin:14px 0">
+                      <thead><tr><th class="l">身份</th><th>发起活动</th><th>有效订单</th></tr></thead>
+                      <tbody>
+                        <tr><td class="l">微信身份 wx_22b6…</td><td>3</td><td>17</td></tr>
+                        <tr><td class="l">平台账号 u_6d52af39</td><td>1</td><td>8</td></tr>
+                      </tbody>
+                    </table>
+
+                    <div class="notice red"><i></i><span><b>双方均已有业务数据，首版不受理该绑定冲突申诉</b>（D-031、D-055）：不执行解绑、重新绑定、数据合并或迁移，避免活动、订单、权限与限购归属混乱。用户继续<b>分别使用原账号</b>。</span></div>
+                    <div class="fitem w120" style="margin-bottom:14px">
+                      <label><em>*</em>失败原因摘要</label>
+                      <div>
+                        <div class="finput ta">两个账号均已产生业务数据，当前版本不提供绑定冲突的合并处理，请继续分别使用原账号登录。</div>
+                        <div class="ftips">向用户展示，<b>不含敏感内部信息</b>。</div>
+                      </div>
+                    </div>
+                    <div class="ubtn warn">记录为处理失败</div>
+                    <div class="notice gray" style="margin:14px 0 0"><i></i><span><b>页面没有「合并账号」「迁移数据」按钮</b>——该能力首版明确不做（OPS §15）。</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="notice green" style="margin:15px 0 0"><i></i><span>同一申诉被重复提交时<b>不得重复解绑或覆盖已建立的新关系</b>，应返回最新状态并保留重复请求结果。操作前后绑定关系、核验事项、原因、操作人与结果<b>全部写入审计日志</b>。运营<b>无权通过后台直接编辑用户密码、业务数据或身份归属</b>。</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-12</span><span class="pill p-key">红线③⑨</span>账号绑定申诉</b>
+      <small>
+        OPS §4.7、§9 / <b>D-031、D-055</b>。<em>4 状态</em>：待处理 / 处理中 / 处理成功 / 处理失败。左右两卡是必须同时画出的两种结局：左侧<b>单方有业务数据 → 可受理</b>，右侧<b>双方均已有业务数据 → 不受理</b>，直接终止，<em>不执行解绑、重新绑定、合并或迁移</em>——页面上<b>没有「合并账号」「迁移数据」按钮</b>。始终满足<b>微信身份与平台注册账号一对一</b>约束。<b>解绑与重新绑定不改变任何活动、订单、限购统计或收货信息的归属</b>。平台用户标识<b>完整展示</b>（D-072）；但微信身份一栏<em>仍然只有摘要</em>——这是<b>存储层</b>的决定，库里就没有完整凭证可显示，与 D-072 的展示层无关，<b>不要把它误当成脱敏而改成完整值</b>。<b>收货电话不得用于身份核验</b>（D-029、P1-02）。查看申诉详情<b>写入审计</b>（红线⑨）。失败原因摘要向用户展示，不含内部敏感信息。提交时重新检查绑定状态防止并发覆盖。
+      </small>
+    </figcaption>
+  </figure>
+  <!-- ===== A-13 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-table</code> 列头筛选、<code>uni-pagination</code>。
+        <b>下载按钮：</b><b>不能</b>直接照搬 <code>system/user/list.vue</code> 的 <code>&lt;download-excel&gt;</code>（它在前端拼数据成表），本页的下载须<b>调云对象重新校验权限、重新换取一个新的临时地址</b>再跳转，地址不落页面、不落日志。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">Excel 生成与下载事件</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">赵</div>赵工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台</div>
+          <div class="cap">审计</div>
+          <div class="mi sub on"><i></i>Excel 事件</div>
+          <div class="mi sub"><i></i>操作日志</div>
+          <div class="mi sub"><i></i>登录日志</div>
+          <div class="note">审计查看者视角，<b>只读</b>。「登录日志」直接挂现成的 <code>pages/system/safety/list.vue</code>。</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">审计 <span>/</span> <b>Excel 事件</b></div>
+              <div class="ugroup"><div class="usearch w200">活动编号 / 团长标识</div><div class="ubtn primary">搜索</div></div>
+            </div>
+            <div class="ucont">
+              <div class="notice orange"><i></i><span><b>可以下载清单</b>（D-072 取消了原「后台不提供下载」的限制）。但下载必须<b>重新校验权限并换取一个新的临时地址</b>：页面<b>不显示、不复用审计记录里的任何历史地址</b>（含已过期的），因为 <b>D-071③</b>「临时地址不得写入任何日志或页面」仍然有效。每次下载<b>另写一条审计记录</b>，请求人记为当前运营账号，不冒充团长。</span></div>
+
+              <table class="utb">
+                <thead><tr>
+                  <th><span class="fil">时间<span class="fi date"></span><span class="so"></span></span></th>
+                  <th><span class="fil">活动<span class="fi search"></span></span></th>
+                  <th>团长</th><th>请求人</th>
+                  <th>文件版本 / 生成标识</th>
+                  <th><span class="fil">事件<span class="fi sel"></span></span></th>
+                  <th>权限校验</th><th>链接有效性</th><th class="l">失败原因摘要</th><th>操作</th>
+                </tr></thead>
+                <tbody>
+                  <tr><td>09-16 10:12:03</td><td>ACT-A3F2</td><td>u_7f3a91c8</td><td>u_7f3a91c8</td><td>v3 · gen_8f21c4</td><td><span class="tg success">生成成功</span></td><td><span class="tg success">通过</span></td><td>—</td><td class="l">—</td><td><div class="ops"><span class="ubtn primary">下载</span></div></td></tr>
+                  <tr><td>09-16 10:12:40</td><td>ACT-A3F2</td><td>u_7f3a91c8</td><td>u_7f3a91c8</td><td>v3 · gen_8f21c4</td><td><span class="tg success">下载成功</span></td><td><span class="tg success">通过</span></td><td><span class="tg success">有效</span></td><td class="l">—</td><td><div class="ops"><span class="ubtn primary">下载</span></div></td></tr>
+                  <tr><td>09-16 11:40:18</td><td>ACT-A3F2</td><td>u_7f3a91c8</td><td>u_9d44b2a6</td><td>v3 · gen_8f21c4</td><td><span class="tg error">权限拒绝</span></td><td><span class="tg error">不通过</span></td><td><span class="tg success">有效</span></td><td class="l">请求人非该活动团长</td><td><div class="ops"><span class="ubtn primary">下载</span></div></td></tr>
+                  <tr><td>09-16 13:02:55</td><td>ACT-A3F2</td><td>u_7f3a91c8</td><td>u_7f3a91c8</td><td>v3 · gen_8f21c4</td><td><span class="tg warning">下载失败</span></td><td><span class="tg success">通过</span></td><td><span class="tg error">已过期</span></td><td class="l">下载地址已过有效期</td><td><div class="ops"><span class="ubtn primary">下载</span></div></td></tr>
+                  <tr><td>09-16 13:05:20</td><td>ACT-A3F2</td><td>u_7f3a91c8</td><td>u_7f3a91c8</td><td>v4 · gen_c50a19</td><td><span class="tg success">生成成功</span></td><td><span class="tg success">通过</span></td><td>—</td><td class="l">团长作废 1 张订单，清单版本由 v3 变为 v4</td><td><div class="ops"><span class="ubtn primary">下载</span></div></td></tr>
+                  <tr><td>09-15 21:33:07</td><td>ACT-7QD4</td><td>u_3a07c146</td><td>u_3a07c146</td><td>— · gen_fail_31</td><td><span class="tg error">生成失败</span></td><td><span class="tg success">通过</span></td><td>—</td><td class="l">数据版本在生成期间变化，已中止</td><td style="color:#c0c4cc">——</td></tr>
+                </tbody>
+              </table>
+
+              <div class="pagi"><span class="txt">共 6 条</span><span class="pg">‹</span><span class="pg on">1</span><span class="pg">›</span></div>
+
+              <div class="notice gray" style="margin:15px 0 0"><i></i><span>记录关联<b>活动、文件版本或生成标识、请求用户、时间、结果、失败原因摘要与权限校验结果</b>。<b>日志里没有可继续使用的下载地址</b>——列中只有文件版本与生成标识；链接过期、被转发或权限变化导致的拒绝均可追踪（第 3、4 行）。<b>「下载」按钮拿的是当场换取的新地址</b>，30 分钟失效（D-071①）。文件在云存储<b>保留 60 天</b>（D-071②），过期后按钮置灰不可点，<b>不随订单保留三年</b>。</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-13</span><span class="pill p-key">红线⑨</span>Excel 事件审计</b>
+      <small>
+        OPS §4.8、§10 / <b>D-072、D-071</b>。<em>本屏是 v2→v3 改动最大的一屏</em>：原「不提供任何下载能力、没有下载按钮、任何运营角色都不能下载团长清单」的结论<b>已整体作废</b>，红线⑧随之取消。现在操作列有<b>「下载」按钮</b>，运营可以取到清单。<em>但下载的方式受约束</em>：点击时<b>重新校验权限、重新换取新的临时地址</b>（30 分钟失效），<b>绝不显示也不复用日志中的历史地址</b>——D-071③「临时地址不得写入任何日志或页面」没有被 D-072 改动，这也是本页依旧只列<b>文件版本与生成标识</b>、不列地址的原因。生成失败的记录没有文件，按钮显示「——」。<em>5 种事件全部画出</em>：生成成功、生成失败、下载成功、下载失败、权限拒绝。第 3 行是非团长请求被拒、第 4 行是链接过期，两类拒绝都必须可追踪；第 5 行体现<b>团长作废订单会使清单版本变化</b>（v3 → v4）。运营的每一次下载<b>本身也是一条审计记录</b>（红线⑨），请求人记当前运营账号。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-14 ===== -->
+  <figure class="shot">
+    <div class="reuse r-mod">
+      <span class="rtag">◇ 部分复用</span>
+      <span class="rbody">
+        <b>复用：</b>登录类日志直接挂现成的 <code>pages/system/safety/list.vue</code>（基于 <code>uni-id-log</code>），菜单项 <code>go_login_log</code>。
+        <b>新建：</b>业务操作日志页（<code>grouporder-oplog</code> 的 9 字段、<b>10 类事件</b>——原「二次验证成功 / 失败 / 过期」一类随 D-072 取消）。
+        <b>两者不合并：</b>数据源不同（<code>uni-id-log</code> vs <code>grouporder-oplog</code>），合并会导致字段对不齐、检索条件互相污染。
+        <b>无增删改：</b>schema 的 update / delete 对所有角色关闭，页面也不得出现编辑或删除按钮。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">操作与访问审计日志</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">赵</div>赵工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+          <div class="mi sub on"><i></i>操作日志</div>
+          <div class="mi sub"><i></i>登录日志</div>
+          <div class="note">「登录日志」是 uni-admin 现成页 <code>system/safety/list</code>；本页是<b>新建</b>的业务操作日志，两者数据源不同。</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">审计 <span>/</span> <b>操作日志</b></div>
+              <div class="ugroup">
+                <div class="usearch">操作账号 / 对象标识 / 事项编号 / 请求标识</div>
+                <div class="ubtn primary">搜索</div>
+                <div class="ubtn">重置</div>
+              </div>
+            </div>
+            <div class="ucont">
+              <div class="notice red"><i></i><span><b>本页没有编辑按钮，也没有删除按钮，超级管理员同样没有。</b>审计日志的 update 与 delete 对所有角色关闭，只允许云函数写入。日志<b>不记录密码等凭证，也不记录可继续使用的下载地址</b>（D-071③）；除必要证据外<b>不重复保存完整姓名、电话和地址</b>——页面上不脱敏（D-072），但日志没必要再复制一份。</span></div>
+
+              <table class="utb">
+                <thead><tr>
+                  <th><span class="fil">日志编号<span class="fi search"></span></span></th>
+                  <th><span class="fil">操作时间<span class="fi date"></span><span class="so"></span></span></th>
+                  <th><span class="fil">操作账号 / 当时角色<span class="fi search"></span></span></th>
+                  <th><span class="fil">动作类型<span class="fi sel"></span></span></th>
+                  <th><span class="fil">结果<span class="fi sel"></span></span></th>
+                  <th>对象类型 / 标识</th>
+                  <th><span class="fil">关联事项<span class="fi search"></span></span></th>
+                  <th class="l">原因摘要</th>
+                  <th>请求标识</th>
+                </tr></thead>
+                <tbody>
+                  <tr class="hover"><td><b>LOG-260916-04412</b></td><td>09-16 14:06:12</td><td>ops_li<br><span class="tg info">账号与隐私专员</span></td><td>order_detail_view</td><td><span class="tg success">成功</span></td><td>order<br><span class="sm">260914-A3F2-8821</span></td><td>RP-20260916-0032</td><td class="l">核实举报人与收货人是否同一人<div class="sm">原因栏 D-072 后非必填，此处为自愿备注</div></td><td>req_9f21a</td></tr>
+                  <tr><td>LOG-260916-04398</td><td>09-16 10:48:30</td><td>system<br><span class="tg info">系统</span></td><td><b>goods_lib_blocked</b></td><td><span class="tg success">成功</span></td><td>goods_lib<br><span class="sm">lib_6a31c9</span></td><td>RP-20260916-0032</td><td class="l">商品治理下架联动封禁库记录</td><td>req_8c04d</td></tr>
+                  <tr><td>LOG-260916-04397</td><td>09-16 10:48:29</td><td>system<br><span class="tg info">系统</span></td><td>goods_governance_off</td><td><span class="tg success">成功</span></td><td>goods<br><span class="sm">gd_77f0e2</span></td><td>—</td><td class="l">图片异步检测回调命中</td><td>req_8c04d</td></tr>
+                  <tr><td>LOG-260916-04355</td><td>09-16 09:02:11</td><td>ops_wang<br><span class="tg info">内容运营</span></td><td>activity_review</td><td><span class="tg success">成功</span></td><td>activity<br><span class="sm">ACT-5H8P</span></td><td>—</td><td class="l">发布审核通过 · 内容版本 v2</td><td>req_7b93f</td></tr>
+                  <tr><td>LOG-260916-04301</td><td>09-16 08:31:05</td><td>ops_zhao<br><span class="tg info">审计查看者</span></td><td>stat_query</td><td><span class="tg error">拒绝</span></td><td>stat<br><span class="sm">u_7f3a2c</span></td><td>—</td><td class="l">未授予「运营统计查看」权限</td><td>req_7a118</td></tr>
+                </tbody>
+              </table>
+
+              <div class="xcard" style="margin-top:15px">
+                <div class="xhead">展开 LOG-260916-04412<span class="r">操作前后状态 · 无变化时明确记录</span></div>
+                <div class="xbody">
+                  <div class="grid2">
+                    <div>
+                      <div style="font-size:12px;color:#909399;margin-bottom:6px">操作前状态 prev_state</div>
+                      <div class="snap" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px">{ "masked": true, "scope": null }</div>
+                    </div>
+                    <div>
+                      <div style="font-size:12px;color:#909399;margin-bottom:6px">操作后状态 next_state</div>
+                      <div class="snap" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px">{ "masked": false, "scope": ["260914-A3F2-8821"], "expire": "2026-09-17T14:06:00" }</div>
+                    </div>
+                  </div>
+                  <div class="notice gray" style="margin:14px 0 0"><i></i><span>权限摘要、当时生效的角色与请求标识一并保存。<b>请求标识用于识别重复请求</b>——第 2、3 行共用 <code>req_8c04d</code>，说明商品下架与商品库封禁是<b>同一次请求内的联动</b>。</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-14</span><span class="pill p-key">红线⑦</span>日志与审计 · <span style="color:#e6a23c">部分复用</span></b>
+      <small>
+        OPS §4.10、§13 / <b>D-064</b>。<em>没有编辑按钮、没有删除按钮</em>，超级管理员也没有。<b>9 个必含字段全部呈现</b>：日志编号、操作时间、操作账号与<b>当时生效的角色</b>、动作类型、结果、对象类型与标识、关联事项、原因摘要、操作前后状态、请求标识。第 2 行 <code>goods_lib_blocked</code> 是 D-064 要求的商品库封禁反写记录，与第 3 行共用同一 request_id。末行体现<b>统计查询被拒绝同样入账</b>。事件类型<b>由 11 类减为 10 类</b>——「二次验证成功 / 失败 / 过期」随 D-072 取消，原先画在这里的那条验证失败记录已删除。<b>不记录密码等凭证，也不记录可用的下载地址</b>（第 1 行只记订单号与原因，不复制收货信息）。查看订单明细<b>不再需要关联事项或填写原因</b>（D-072），但<em>依然逐次入账</em>——这正是红线⑨的落点：约束从「看不见」换成了「看得见但全记录」。<em>与现成的登录日志页分开</em>：<code>system/safety/list.vue</code> 读 <code>uni-id-log</code>，本页读 <code>grouporder-oplog</code>，字段与检索条件都不同，合并会两边都对不齐。
+      </small>
+    </figcaption>
+  </figure>
+
+</section>
+
+<!-- ================================================================
+     第六组 · 账号权限与隐私事项（A-15、A-16）
+     ================================================================ -->
+<section class="group">
+  <h2>第六组 · 账号权限与隐私事项（A-15、A-16）</h2>
+  <p>本组含唯一一屏「复用既有页 + 五处必改」的 A-15。<b>这是 uni-admin 自带能力与本项目规则冲突最集中的地方</b>——照搬会直接违反 OPS 与 D-029。</p>
+
+  <!-- ===== A-15 ===== -->
+  <figure class="shot">
+    <div class="reuse r-use">
+      <span class="rtag">◆ 复用 + 改造</span>
+      <span class="rbody">
+        <b>现成页面（九个）：</b><code>pages/system/user/{list,add,edit}.vue</code>、<code>system/role/{list,add,edit}.vue</code>、<code>system/permission/{list,add,edit}.vue</code>。
+        <b>本质不是开发功能，而是配置：</b>在 <code>uni-id-roles</code> 建 4 条角色、在 <code>uni-id-permissions</code> 建 <code>ops-stat-view</code> 权限点。
+        <b>但必须做三处裁剪</b>（查询条件、手机号与邮箱列、删除按钮的确认方式），照搬会直接违反 <b>D-038</b> 与 <b>D-029</b> —— 见下方红色标注。<b>导出按钮不在裁剪之列</b>：D-072 已放开导出。
+      </span>
+    </div>
+
+    <div class="xcard pm" style="width:1280px;max-width:100%;border-radius:0;box-shadow:none;border:1px solid #f5ddb6;border-top:none;border-bottom:none;background:#fffdf8">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#a86a10">复用 <code>system/user/list.vue</code> 时的五处必改（照搬即违规）</div>
+      <table class="utb" style="border-color:#f5ddb6">
+        <thead><tr><th style="width:40px">#</th><th class="l" style="width:330px">uni-admin 现状</th><th class="l" style="width:250px">必须改为</th><th class="l">依据</th></tr></thead>
+        <tbody>
+          <tr style="background:#fef0f0"><td>①</td><td class="l">查询条件是 <code>whereState = ref('')</code> —— <b>空条件，列 uni-id-users 全表</b></td><td class="l"><b>加运营角色过滤，只列 ops-* 账号</b></td><td class="l"><b>最严重</b>：D-038 小程序用户与运营账号同表，照搬会列出全部 5 万小程序用户。这不是「字段不该露」，是「对象根本不对」</td></tr>
+          <tr><td>②</td><td class="l">页面按钮组自带 <code>&lt;download-excel&gt;</code> <b>导出 Excel</b></td><td class="l"><b>保留该按钮</b>，但导出对象须先按第 ① 条收窄，且每次导出写入审计</td><td class="l"><b>D-072 导出完全放开</b>（OPS §15 的批量导出限制已随之解除）；真正的风险不在「能不能导」，而在<b>照搬时导的是 uni-id-users 全表</b>——先修 ① 再谈导出</td></tr>
+          <tr><td>③</td><td class="l">表格含<b>手机号码</b>、<b>邮箱</b>两列，且带搜索筛选</td><td class="l"><b>隐藏两列</b></td><td class="l">D-029 运营账号不采集手机号，该列<b>恒为空且容易误导</b>；<b>与脱敏无关</b>——D-072 之后后台已无脱敏一说</td></tr>
+          <tr><td>④</td><td class="l">角色列直接渲染 <code>item.role</code> 原始值</td><td class="l"><b>映射 4 个中文角色 + 统计权限单列</b></td><td class="l">OPS §3.2；<code>ops-stat-view</code> 是独立权限点，不随角色获得</td></tr>
+          <tr><td>⑤</td><td class="l">按钮组含<b>批量删除</b>运营账号</td><td class="l"><b>保留删除</b>，但须弹出二次确认窗、<b>要求输入 <code>delete</code></b> 才执行；<b>停用与删除分开呈现</b></td><td class="l">D-072：删除类操作以输入 <code>delete</code> 的二次确认防误操作（ADM-07）。停用是可逆的状态变更，删除是不可逆的，两者不能共用一个入口</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="win" style="border-top:1px solid #d5dae2">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">运营账号</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">超</div>ops_admin ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台</div>
+          <div class="cap">系统管理</div>
+          <div class="mi sub on"><i></i>运营账号</div>
+          <div class="mi sub"><i></i>角色管理</div>
+          <div class="mi sub"><i></i>权限管理</div>
+          <div class="mi sub"><i></i>菜单管理</div>
+          <div class="mi sub"><i></i>平台配置</div>
+          <div class="note">超级管理员视角。<b>没有</b>内容治理、账号与隐私、运营统计、审计四块——<b>超管身份不自动继承业务权限</b>，需要时必须给自己额外授予角色。</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">系统管理 <span>/</span> <b>运营账号</b></div>
+              <div class="ugroup">
+                <div class="usearch">请输入查询内容</div>
+                <div class="ubtn">搜索</div>
+                <div class="ubtn primary">新增</div>
+                <div class="ubtn disabled">停用</div>
+                <div class="ubtn warn disabled">删除</div>
+                <div class="ubtn">导出</div>
+                <span style="font-size:11.5px;color:#e6a23c;border:1px dashed #f3d19e;border-radius:4px;padding:4px 8px;background:#fdf6ec">导出对象已收窄为运营账号 · 删除需输入 <b>delete</b></span>
+              </div>
+            </div>
+            <div class="ucont">
+              <div class="notice orange"><i></i><span><b>超级管理员身份不自动继承内容处置、订单明细查看或审计查看权限。</b>需要相应能力时必须额外授予对应角色——这一条很反直觉，但它保证了「能给别人授权的人」与「能看业务数据的人」默认不是同一个人。<b>D-072 没有改变这一条</b>：取消的是脱敏，不是角色边界。</span></div>
+
+              <table class="utb">
+                <thead><tr>
+                  <th><span class="fil">用户名<span class="fi search"></span><span class="so"></span></span></th>
+                  <th><span class="fil">昵称<span class="fi search"></span></span></th>
+                  <th><span class="fil">状态<span class="fi sel"></span></span></th>
+                  <th>超级<br>管理员</th><th>内容运营</th><th>账号与<br>隐私专员</th><th>审计<br>查看者</th>
+                  <th style="color:#e6a23c">运营统计查看<div class="sm" style="color:#e6a23c">独立权限点</div></th>
+                  <th><span class="fil">最后登录时间<span class="fi date"></span><span class="so"></span></span></th>
+                  <th>操作</th>
+                </tr></thead>
+                <tbody>
+                  <tr class="hover">
+                    <td><b>ops_admin</b><div class="sm">当前登录账号</div></td><td>系统管理员</td><td><span class="tg success">启用</span></td>
+                    <td><span class="ck on lock" style="padding:0"><i></i></span></td>
+                    <td><span class="ck lock" style="padding:0"><i></i></span></td>
+                    <td><span class="ck lock" style="padding:0"><i></i></span></td>
+                    <td><span class="ck lock" style="padding:0"><i></i></span></td>
+                    <td><span class="ck lock" style="padding:0"><i></i></span></td>
+                    <td>09-16 08:02</td>
+                    <td><div class="ops"><span class="ubtn disabled">不能改自己的角色</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>ops_wang</b></td><td>王工</td><td><span class="tg success">启用</span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck on" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck on" style="padding:0"><i></i></span></td>
+                    <td>09-16 08:55</td>
+                    <td><div class="ops"><span class="ubtn primary">修改</span><span class="ubtn warn">停用</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>ops_li</b></td><td>李工</td><td><span class="tg success">启用</span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck on" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td>09-16 09:40</td>
+                    <td><div class="ops"><span class="ubtn primary">修改</span><span class="ubtn warn">停用</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>ops_zhao</b></td><td>赵工</td><td><span class="tg success">启用</span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck on" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td>09-16 08:31</td>
+                    <td><div class="ops"><span class="ubtn primary">修改</span><span class="ubtn warn">停用</span></div></td>
+                  </tr>
+                  <tr>
+                    <td><b>ops_chen</b></td><td>陈工</td><td><span class="tg info">停用</span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck on" style="padding:0"><i></i></span></td>
+                    <td><span class="ck on" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td><span class="ck" style="padding:0"><i></i></span></td>
+                    <td>09-14 17:20</td>
+                    <td><div class="ops"><span class="ubtn primary">修改</span><span class="ubtn success">启用</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="pagi"><span class="txt">共 5 个运营账号</span><span class="pg">‹</span><span class="pg on">1</span><span class="pg">›</span></div>
+
+              <div class="grid2" style="margin-top:15px">
+                <div class="xcard">
+                  <div class="xhead">角色与权限变更记录<span class="r">写入 grouporder-oplog</span></div>
+                  <div class="xbody">
+                    <div class="tl">
+                      <div class="it on"><div class="tm">09-15 16:40 · ops_admin</div>为 <b>ops_wang</b> 授予「运营统计查看」<div class="sm" style="margin-top:3px">前：无 → 后：有 · 独立权限点，与内容运营角色分别授权</div></div>
+                      <div class="it"><div class="tm">09-14 18:05 · ops_admin</div><b>ops_chen</b> 停用<div class="sm" style="margin-top:3px">停用后立即失去后台访问能力，未完成操作不得继续提交</div></div>
+                      <div class="it"><div class="tm">09-12 09:15 · ops_admin</div>为 <b>ops_chen</b> 撤销「审计查看者」<div class="sm" style="margin-top:3px">撤销其一<b>不影响其余已授权角色</b>（内容运营、隐私专员仍在）</div></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="xcard">
+                  <div class="xhead">uni-id-roles 需建的 4 条角色<span class="r">在「角色管理」页配置，非开发工作</span></div>
+                  <div class="xbody">
+                    <table class="utb">
+                      <thead><tr><th class="l">role_id</th><th class="l">角色名称</th><th class="l">对应菜单可见范围</th></tr></thead>
+                      <tbody>
+                        <tr><td class="l"><code>ops-super</code></td><td class="l">超级管理员</td><td class="l">系统管理</td></tr>
+                        <tr><td class="l"><code>ops-content</code></td><td class="l">内容运营</td><td class="l">内容治理、全局检索</td></tr>
+                        <tr><td class="l"><code>ops-privacy</code></td><td class="l">账号与隐私专员</td><td class="l">账号与隐私、全局检索</td></tr>
+                        <tr><td class="l"><code>ops-auditor</code></td><td class="l">审计查看者</td><td class="l">审计</td></tr>
+                        <tr><td class="l" style="color:#e6a23c"><code>ops-stat-view</code></td><td class="l" style="color:#e6a23c">运营统计查看<div class="sm">权限点，非角色</div></td><td class="l" style="color:#e6a23c">运营统计（默认关闭）</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="xcard pm" style="width:1280px;max-width:100%;margin-top:12px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px">删除运营账号 · 二次确认弹窗（五个坑第 ⑤ 条 / <b>D-072 唯一新增的 UI 元素</b>）</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+        <div class="dlg w460" style="box-shadow:var(--card-shadow);flex:0 0 auto">
+          <div class="dlg-h">删除运营账号</div>
+          <div class="dlg-b">
+            <div class="notice red"><i></i><span>即将<b>永久删除</b>运营账号 <b>ops_chen</b>（内容运营 · 账号与隐私专员）。删除<b>不可撤销</b>；该账号已产生的<b>审计日志仍然保留</b>，不随账号删除（红线⑦）。</span></div>
+            <div class="fitem" style="grid-template-columns:1fr;margin-top:13px">
+              <label style="text-align:left;line-height:1.6;margin-bottom:-4px"><em>*</em>请逐字输入 <code>delete</code> 以确认（区分大小写）</label>
+              <div class="finput ph">delete</div>
+            </div>
+            <div class="notice gray" style="margin:14px 0 0"><i></i><span>只是想临时收回权限，请用<b>「停用」</b>——停用可逆、保留账号与授权记录；删除不可逆。两个入口在按钮组里<b>分开呈现</b>，不合并成一个下拉。</span></div>
+          </div>
+          <div class="dlg-f"><div class="ubtn">取消</div><div class="ubtn warn disabled">确认删除</div></div>
+        </div>
+        <div style="flex:1;min-width:300px;font-size:13px;color:#4a5263;line-height:2">
+          <b>为什么 D-072 之后反而多了这个弹窗</b><br>
+          D-072 取消了脱敏、二次验证与导出限制，理由是运营人员本就是这些数据的合法持有方，为极小规模团队建一整套内部防越权机制不划算。<br>
+          但它同时给出了替代约束：<b>删除类操作以输入 <code>delete</code> 的二次确认弹窗防误操作</b>。防的不再是「越权」，而是<b>误触</b>。<br><br>
+          <b>三条实现要点</b><br>
+          ① 输入框内容不等于 <code>delete</code> 时，「确认删除」<b>保持禁用态</b>（图中即为禁用态）；<br>
+          ② 同一套弹窗用于<b>所有删除类操作</b>，不各页自画；<br>
+          ③ 删除写入审计（操作人、时间、被删账号、删除前的角色快照），<b>日志不随账号一起删</b>。
+        </div>
+      </div>
+    </div>
+
+    <figcaption>
+      <b><span class="pill">A-15</span><span class="pill p-key">红线⑥</span>运营账号与权限 · <span style="color:#67c23a">复用既有页</span> + <span style="color:#e6a23c">五处必改</span></b>
+      <small>
+        OPS §3.1、§3.2、§4.9 / <b>D-069、D-029</b>。这一屏最大的价值不是「设计」，而是标出<em>照搬 uni-admin 会踩的五个坑</em>：现成的 <code>system/user/list.vue</code> <b>查询条件为空、会列出 uni-id-users 全表</b>（D-038 下小程序用户与运营账号同表），此外自带<b>导出 Excel 按钮</b>（<b>D-072 之后可以保留</b>，但必须先修好第 ① 条，否则一键导出五万小程序用户）、<b>手机号与邮箱列</b>（违反 D-029，且该列恒为空）、<b>批量删除</b>（保留，但要 <code>delete</code> 二次确认），角色列也需映射为 4 个中文角色。<em>四个角色分别授权</em>（四列复选框），同一账号可兼任多个（ops_chen 同时是内容运营与隐私专员），<b>撤销其一不影响其余</b>。<em>「运营统计查看」作为独立权限点单列</em>——默认关闭，<b>不随超级管理员或任一业务角色自动获得</b>。<em>超级管理员不自动继承业务权限</em>：当前账号 ops_admin 只勾了超管一列，因此左侧菜单只有工作台与系统管理两块。<b>自己那一行的角色复选框为禁用态</b>，不能自行提权。下方画出的<em><code>delete</code> 二次确认弹窗</em>是 <b>D-072 唯一新增的 UI 元素</b>：D-072 放开了看与导，但把删除类操作的误触成本抬高了——必须逐字输入 <code>delete</code>，且停用与删除分开呈现。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-16 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-stat-tabs</code>（5 状态）、<code>uni-table</code>、<code>uni-forms</code>。
+        <b>关键约束：</b>保存起点、到期日、状态三个字段<b>只读渲染，不做成可编辑表单项</b>——运营不得任意延长、缩短或绕过既定期限（OPS §15）。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">隐私与注销事项</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">李</div>李工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">3</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">账号与隐私</div>
+          <div class="mi sub"><i></i>账号绑定申诉<span class="bdg">2</span></div>
+          <div class="mi sub on"><i></i>隐私与注销事项<span class="bdg">1</span></div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">账号与隐私 <span>/</span> <b>隐私与注销事项</b></div>
+              <div class="ugroup"><div class="usearch w200">事项编号 / 对象用户标识</div><div class="ubtn primary">搜索</div><div class="ubtn">登记新事项</div></div>
+            </div>
+            <div class="ucont">
+              <div class="notice red"><i></i><span><b>运营人员不得任意延长、缩短或绕过既定期限。</b>保存起点、到期日与状态均由系统按 D-035 计算并<b>只读展示</b>；本页只做登记与跟踪，<b>不提供期限编辑入口</b>。</span></div>
+
+              <div class="tabs"><span class="on">全部 12</span><span>已登记 2</span><span>限制处理中 6</span><span>已到期待处理 1</span><span>已完成 2</span><span>执行失败 1</span></div>
+
+              <table class="utb">
+                <thead><tr>
+                  <th><span class="fil">事项编号<span class="fi search"></span></span></th>
+                  <th><span class="fil">类型<span class="fi sel"></span></span></th>
+                  <th>对象用户</th>
+                  <th>保存期起点<div class="sm">活动截止或取消之日</div></th>
+                  <th><span class="fil">三年到期日<span class="fi date"></span><span class="so"></span></span></th>
+                  <th><span class="fil">状态<span class="fi sel"></span></span></th>
+                  <th class="l">执行结果 / 说明</th><th>操作</th>
+                </tr></thead>
+                <tbody>
+                  <tr><td><b>PC-20260916-0021</b></td><td>账号注销</td><td>u_6d52af39</td><td>2026-09-14</td><td>2029-09-14</td><td><span class="tg warning">限制处理中</span></td><td class="l">账号资料与地址簿已删除；<b>三年期内订单资料转限制处理</b>，仅用于争议、审计与必要合规</td><td><div class="ops"><span class="ubtn">查看</span></div></td></tr>
+                  <tr><td><b>PC-20260915-0020</b></td><td>账号注销</td><td>u_4471b0e5</td><td>—</td><td>—</td><td><span class="tg error">已登记 · 阻止</span></td><td class="l"><b>不满足注销条件</b>：仍是 1 个进行中活动的团长、在 2 个未截止活动中有有效订单</td><td><div class="ops"><span class="ubtn">查看</span></div></td></tr>
+                  <tr><td><b>PC-20260910-0018</b></td><td>到期匿名化</td><td>u_88f32c7a</td><td>2023-09-10</td><td>2026-09-10</td><td><span class="tg purple">已到期待处理</span></td><td class="l">待删除或匿名化姓名、电话、地址及账号关联</td><td><div class="ops"><span class="ubtn">查看</span></div></td></tr>
+                  <tr><td><b>PC-20260902-0014</b></td><td>删除请求</td><td>u_2f60d914</td><td>2023-08-28</td><td>2026-08-28</td><td><span class="tg success">已完成</span></td><td class="l">已匿名化 14 张订单的个人字段，置 anonymized=1；<b>匿名汇总长期保留</b></td><td><div class="ops"><span class="ubtn">查看</span></div></td></tr>
+                  <tr><td><b>PC-20260828-0011</b></td><td>到期匿名化</td><td>u_0c19e6b2</td><td>2023-08-20</td><td>2026-08-20</td><td><span class="tg error">执行失败</span></td><td class="l"><b>部分失败</b>：3 张订单匿名化未完成，已限制其继续使用并进入受控处置</td><td><div class="ops"><span class="ubtn">查看</span></div></td></tr>
+                </tbody>
+              </table>
+
+              <div class="grid2" style="margin-top:15px">
+                <div class="xcard">
+                  <div class="xhead">PC-20260915-0020 · 注销前置条件检查</div>
+                  <div class="xbody">
+                    <div class="notice orange"><i></i><span>用户仍是<b>审核中或进行中活动的团长</b>，或在<b>尚未截止/取消的活动中仍有有效订单</b>时<b>不得注销</b>。页面必须明确列出阻止注销的对象。</span></div>
+                    <table class="utb">
+                      <thead><tr><th class="l">阻止项</th><th>业务状态</th><th class="l">需先完成</th></tr></thead>
+                      <tbody>
+                        <tr><td class="l">活动 ACT-9K2M 十月新米预订接龙</td><td><span class="tg success">进行中</span></td><td class="l">取消活动或等待截止</td></tr>
+                        <tr><td class="l">订单 260915-7QD4-1120</td><td><span class="tg success">有效</span></td><td class="l">取消订单或等待活动结束</td></tr>
+                        <tr><td class="l">订单 260916-5H8P-0345</td><td><span class="tg success">有效</span></td><td class="l">取消订单或等待活动结束</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="xcard">
+                  <div class="xhead">保存期规则<span class="r">全部只读</span></div>
+                  <div class="xbody">
+                    <div class="kv w130">
+                      <div class="k">订单相关数据</div><div class="v">自所属活动<b>截止或取消之日</b>起保存 <b>三年</b>，含订单、明细、价格快照、收货快照、取消与作废记录</div>
+                      <div class="k">到期后</div><div class="v">删除或匿名化姓名、电话、地址及账号关联；<b>不可识别个人的汇总数据可长期保留</b></div>
+                      <div class="k">账号与地址簿</div><div class="v">账号存续期间保存，<b>注销后删除或匿名化</b></div>
+                      <div class="k">Excel 文件</div><div class="v"><b>临时保存，不随订单保存三年</b>；有效期待安全方案确定</div>
+                      <div class="k">其他期限</div><div class="v"><span class="tg warning">待合规确认</span> 举报、内容检测、安全与审计记录期限，备份轮换与到期删除方式</div>
+                    </div>
+                    <div class="notice gray" style="margin:14px 0 0"><i></i><span>尚未确认的期限继续标记为待合规确认，<b>后台不自行承诺</b>。到期任务失败或匿名化不完整时，标记处理异常并<b>限制继续使用相关个人信息</b>，不得将失败数据恢复到正常展示或一般统计。</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-16</span><span class="pill p-key">红线③⑨</span>隐私与注销事项</b>
+      <small>
+        OPS §15、§16 / <b>D-035、D-056</b>。三类事项：账号注销 / 删除请求 / 到期匿名化，5 状态跟踪。<em>三年保存期从活动截止或取消之日起算</em>，不是从下单日；<b>保存起点、到期日与状态由系统计算并只读展示</b>——本页没有任何期限编辑入口。第 2 行是 <b>D-056 的注销前置条件</b>：用户仍是进行中活动的团长、或在未截止活动中有有效订单时<b>阻止注销，并明确列出需先处理的对象</b>。第 1 行体现注销后的分层处理：<b>账号资料与地址簿删除，仍在三年期内的订单资料转为限制处理</b>。第 5 行体现<b>部分失败不得显示整体成功</b>。未确认的期限继续标记待合规，后台不自行承诺。处理注销与删除请求时会看到<b>完整的账号资料与关联订单</b>（D-072 不脱敏），<b>每一次查看与每一步处理都入审计</b>（红线⑨）；但<em>期限本身依然只读</em>——运营看得见、改不了。
+      </small>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ================================================================
+     第七组 · 发布审核与平台配置（A-17、A-18）
+     ================================================================ -->
+<section class="group">
+  <h2>第七组 · 发布审核与平台配置（A-17、A-18）</h2>
+  <p>A-17 是<b>发布前拦截</b>，与 A-08 的事后治理是两条独立流程，<b>页面不合并</b>。A-18 挂在系统管理下，仅超级管理员可见。</p>
+
+  <!-- ===== A-17 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-table</code>（待审队列）、<code>uni-forms</code> + <code>uni-data-checkbox</code>（通过/不通过）、<code>uni-notice-bar</code>。
+        <b>与 A-08 分开：</b>对象是尚未公开的待审内容，结论只有通过与不通过两种，和 A-08 的 6 选 1 处置不是一回事。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">活动发布审核</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">王</div>王工 ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台<span class="bdg">7</span></div>
+          <div class="mi"><i></i>全局检索</div>
+          <div class="cap">内容治理</div>
+          <div class="mi sub on"><i></i>活动发布审核<span class="bdg">2</span></div>
+          <div class="mi sub"><i></i>举报与内容审核<span class="bdg">5</span></div>
+          <div class="mi sub"><i></i>活动与商品</div>
+          <div class="cap">审计</div>
+          <div class="mi sub"><i></i>Excel 事件</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper">
+            <div class="uhead">
+              <div class="crumb">内容治理 <span>/</span> 活动发布审核 <span>/</span> <b>ACT-9K2M</b></div>
+              <div class="ugroup"><span style="font-size:12px;color:#909399">发布前拦截 · 审核通过前活动不对外开放、不可分享、不接单</span></div>
+            </div>
+            <div class="ucont">
+              <div class="notice blue"><i></i><span>当前平台<b>发布审核模式：人工审核</b>（A-18 配置）——<b>全部提交发布的活动</b>进入本队列。若切为自动审核，则仅<b>内容检测命中、需人工判断</b>的活动进入队列。本活动提交时固化的模式为<b>人工</b>，<b>之后平台修改配置不影响它</b>。</span></div>
+
+              <div class="gridm">
+                <div>
+                  <div class="xcard">
+                    <div class="xhead">ACT-9K2M 十月新米预订接龙 <span class="tg warning">审核中</span><span class="r">团长 u_1c8e57d0 · 提交于 09-16 08:40:12</span></div>
+                    <div class="xbody">
+                      <div class="notice orange"><i></i><span>正在审核<b>内容版本 v3</b>。团长在审核期间再次编辑会<b>产生新版本并重新排队</b>；<b>运营不得用新版本内容替换正在审核版本的结论</b>。</span></div>
+
+                      <div class="snap" style="margin-bottom:14px">
+                        <div class="st"><b>活动内容 · 版本 v3</b><span class="tg info">送审快照</span></div>
+                        <b>标题</b>：十月新米预订接龙<br>
+                        <b>说明</b>：东北新季大米，十月中旬到货，现接龙预订，按接龙数量统一采购。<br>
+                        <b>交付方式</b>：<span class="tg primary">送货上门</span> ｜ <b>截止时间</b>：2026-10-08 20:00
+                        <div style="display:flex;gap:6px;margin-top:8px"><span class="imgph"></span><span class="imgph"></span><span class="imgph"></span></div>
+                      </div>
+
+                      <table class="utb">
+                        <thead><tr><th style="width:44px">#</th><th class="l">商品（待审）</th><th>单价</th><th>总库存</th><th>每人限购</th><th>文本检测</th><th>图片检测</th></tr></thead>
+                        <tbody>
+                          <tr><td>1</td><td class="l"><b>五常稻花香</b> <span class="tg warning">推荐</span></td><td>￥118.00</td><td>200</td><td>5</td><td><span class="tg success">通过</span></td><td><span class="tg info">检测中</span></td></tr>
+                          <tr><td>2</td><td class="l"><b>盘锦蟹田米</b></td><td>￥96.00</td><td>150</td><td>0 <span class="sm">不限</span></td><td><span class="tg success">通过</span></td><td><span class="tg info">检测中</span></td></tr>
+                          <tr><td>3</td><td class="l"><b>有机糙米</b></td><td>￥88.00</td><td>0 <span class="sm">不限</span></td><td>3</td><td><span class="tg success">通过</span></td><td><span class="tg success">通过</span></td></tr>
+                        </tbody>
+                      </table>
+
+                      <div class="notice green" style="margin:14px 0 0"><i></i><span><b>图片异步检测不阻塞审核放行</b>（D-058）：人工模式下<b>运营审核通过即放行</b>，不等待图片回调。放行后若图片回调命中，由系统将对应商品或整个活动转治理下架并通知团长，<b>不回退业务状态、不删除已有订单</b>。等待回调会让团长长时间卡在审核环节，而回调延迟不可控。</span></div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">审核结论<span class="r">不通过时原因必填且向团长展示</span></div>
+                    <div class="xbody">
+                      <div class="grid2">
+                        <div class="rdgroup">
+                          <div class="rd on"><i></i><div><b>审核通过</b><div class="sm">活动进入<b>进行中</b>，产生唯一分享入口，团长可主动分享至微信会话</div></div></div>
+                          <div class="rd"><i></i><div><b>审核不通过</b><div class="sm"><b>退回草稿</b>并向团长展示原因，团长修改后可重新提交</div></div></div>
+                        </div>
+                        <div>
+                          <div style="font-size:14px;color:#606266;margin-bottom:6px">审核备注 / 不通过原因</div>
+                          <div class="finput ta ph">选择「审核不通过」时必填</div>
+                          <div class="ftips">向团长展示，<b>不得包含内部敏感信息</b>。</div>
+                        </div>
+                      </div>
+                      <div class="notice red" style="margin:14px 0"><i></i><span><b>运营在审核页面不得修改活动或商品的任何业务字段。</b>上方标题、说明、价格、库存、限购、截止时间全部为只读展示——运营只能给出通过或不通过的结论。</span></div>
+                      <div style="display:flex;gap:10px">
+                        <div class="ubtn primary">提交审核结论</div>
+                        <div class="ubtn">返回队列</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="xcard">
+                    <div class="xhead">待审队列（2）<span class="r">提交时间正序</span></div>
+                    <div class="xbody">
+                      <table class="utb">
+                        <thead><tr><th class="l">活动</th><th>版本</th><th>提交时间</th></tr></thead>
+                        <tbody>
+                          <tr class="hover"><td class="l"><b>ACT-9K2M</b><div class="sm">十月新米预订接龙</div></td><td>v3</td><td>08:40</td></tr>
+                          <tr><td class="l"><b>ACT-7QD4</b><div class="sm">周末烘焙材料团</div></td><td>v1</td><td>12:55</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">本活动审核历史</div>
+                    <div class="xbody">
+                      <div class="tl">
+                        <div class="it on"><div class="tm">09-16 08:40 · 团长提交</div>内容版本 <b>v3</b> → <span class="tg warning">审核中</span>（本次）</div>
+                        <div class="it"><div class="tm">09-15 19:12 · ops_wang</div>版本 v2 <span class="tg error">审核不通过</span><div class="sm" style="margin-top:3px">原因：商品说明含「增强免疫力」等功效表述 → 退回草稿</div></div>
+                        <div class="it"><div class="tm">09-15 18:30 · 团长提交</div>内容版本 v2</div>
+                        <div class="it"><div class="tm">09-15 17:05 · 团长撤回</div>版本 v1 <span class="tg info">已撤回</span> → 退回草稿</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="xcard">
+                    <div class="xhead">审核期间的活动可见性</div>
+                    <div class="xbody">
+                      <div class="kv">
+                        <div class="k">团长</div><div class="v">可在「我发起的」查看状态，<b>可撤回至草稿</b>，不能直接修改</div>
+                        <div class="k">外部用户</div><div class="v"><b>不可访问、不可分享、不可下单</b></div>
+                        <div class="k">公开列表</div><div class="v"><span class="tg info">不存在</span> 活动<b>不进入任何公开列表</b>，通过后仅由团长主动分享（D-059）</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-17</span><span class="pill p-key">红线③</span>活动发布审核</b>
+      <small>
+        OPS §4.3、§5.2 / <b>D-043、D-057、D-058、D-059</b>。<em>这是发布前拦截，与 A-08 的事后治理是两条独立流程</em>，页面不合并：A-17 的对象是尚未公开的待审内容、结论是通过或不通过；A-08 的对象是已上线内容、结论是 6 选 1 的处置。<b>审核通过前活动不对外开放、不可分享、不可下单</b>；不通过则<b>退回草稿</b>，审核中团长<b>可撤回但不能直接修改</b>。<em>审核结论绑定提交时固化的内容版本</em>（v3）——<b>运营不得用新版本内容替换正在审核版本的结论</b>。<em>运营不得修改任何业务字段</em>，价格、库存、限购、截止时间全部只读。<b>图片异步检测不阻塞放行</b>（D-058）。队列来源由 A-18 的审核模式决定，模式在提交时固化。活动<b>不进入任何公开列表</b>（D-059）。
+      </small>
+    </figcaption>
+  </figure>
+
+  <!-- ===== A-18 ===== -->
+  <figure class="shot">
+    <div class="reuse r-new">
+      <span class="rtag">○ 新建</span>
+      <span class="rbody">
+        <b>新建。复用组件：</b><code>uni-forms</code> + <code>uni-data-checkbox</code>（模式二选一）、<code>uni-popup</code>（二次确认）。
+        <b>菜单：</b>挂在「系统管理」分组下，<code>permission</code> 为 <code>ops-super</code>，其他角色整块不渲染。
+        <b>数据：</b><code>grouporder-config</code> 表的 <code>review_mode</code> 键。
+      </span>
+    </div>
+    <div class="win">
+      <div class="top">
+        <div class="lw"><div class="logo-img"></div><div class="logo-text">群接龙运营后台</div></div>
+        <div class="mid">平台配置</div>
+        <div class="rw"><div class="ic"></div><div class="ic"></div><div class="uname"><div class="ava">超</div>ops_admin ▾</div></div>
+      </div>
+      <div class="body">
+        <aside class="side">
+          <div class="mi"><i></i>工作台</div>
+          <div class="cap">系统管理</div>
+          <div class="mi sub"><i></i>运营账号</div>
+          <div class="mi sub"><i></i>角色管理</div>
+          <div class="mi sub"><i></i>权限管理</div>
+          <div class="mi sub"><i></i>菜单管理</div>
+          <div class="mi sub on"><i></i>平台配置</div>
+          <div class="note"><b>仅超级管理员可见</b>。其他三个角色的菜单中<b>不出现「系统管理」分组</b>，直接访问也被拒绝并审计。</div>
+        </aside>
+        <div class="wrap">
+          <div class="paper" style="position:relative">
+            <div class="uhead">
+              <div class="crumb">系统管理 <span>/</span> <b>平台配置</b></div>
+              <div class="ugroup"><span style="font-size:12px;color:#909399">首版仅一项：活动发布审核模式</span></div>
+            </div>
+            <div class="ucont">
+              <div class="xcard">
+                <div class="xhead">活动发布审核模式<span class="r">config_key：review_mode</span></div>
+                <div class="xbody">
+                  <div class="grid2">
+                    <div class="rdgroup">
+                      <div class="rd"><i></i><div><b>自动审核</b><div class="sm">内容检测通过的活动由系统<b>直接置为进行中</b>，不进入人工待审队列；检测命中、需人工判断的活动<b>仍进入</b> A-17 队列</div></div></div>
+                      <div class="rd on"><i></i><div><b>人工审核</b> <span class="tg success">当前值</span><div class="sm"><b>全部提交发布的活动</b>进入 A-17 队列，由内容运营逐个处理</div></div></div>
+                    </div>
+                    <div class="kv w130">
+                      <div class="k">当前值</div><div class="v"><b>人工审核</b></div>
+                      <div class="k">最近修改</div><div class="v">2026-09-12 11:30 · ops_admin</div>
+                      <div class="k">前后值</div><div class="v">自动审核 → 人工审核</div>
+                      <div class="k">生效范围</div><div class="v"><b>只影响修改之后新提交的审核</b></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:10px;margin-top:15px">
+                    <div class="ubtn primary">保存配置</div>
+                    <div class="ubtn">取消</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mask">
+              <div class="dlg">
+                <div class="dlg-h"><span class="tg warning">需确认</span>修改活动发布审核模式</div>
+                <div class="dlg-b">
+                  <div class="kv w130" style="margin-bottom:14px">
+                    <div class="k">当前值</div><div class="v"><span class="tg success">人工审核</span></div>
+                    <div class="k">修改为</div><div class="v"><span class="tg primary">自动审核</span></div>
+                  </div>
+                  <div class="notice orange"><i></i><span><b>影响说明</b>：切换为自动审核后，<b>内容检测通过的活动将由系统直接置为进行中</b>，不再进入人工待审队列；仅检测命中、需人工判断的活动进入队列。人工复核的覆盖面相应缩小。</span></div>
+                  <div class="notice blue"><i></i><span><b>本次修改只影响修改之后新提交的审核。</b>当前<b>队列中已在审核的 2 个活动</b>沿用其提交时固化的「人工审核」模式，<b>不因本次配置变更改变处理路径</b>——审核模式在提交审核时写入活动记录，避免审核过程中规则漂移。</span></div>
+                  <div class="notice gray" style="margin-bottom:0"><i></i><span>修改将记录<b>操作人、时间与前后值</b>，写入操作日志（A-14）。</span></div>
+                </div>
+                <div class="dlg-f"><div class="ubtn">取消</div><div class="ubtn primary">确认修改</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption>
+      <b><span class="pill">A-18</span>平台配置 · <span style="color:#7b52d3">仅超管</span></b>
+      <small>
+        OPS §4.11 / <b>D-057</b>。<em>只有超级管理员可以查看和修改</em>，其他角色菜单中不出现「系统管理」分组，直接访问也被拒绝并审计。首版<b>唯一配置项是活动发布审核模式</b>（自动 / 人工），对应 <code>grouporder-config</code> 表的 <code>review_mode</code>。<b>修改前展示当前值与影响说明，并要求二次确认</b>。最关键的一条：<em>配置修改只影响之后新提交的审核</em>——已在审核中的 2 个活动<b>沿用其提交时固化到 <code>activity.review_mode</code> 的模式</b>，不因配置变更改变处理路径，否则审核过程中规则会漂移。修改记录操作人、时间与前后值并写入操作日志。本页<b>没有</b>「推荐活动」「热门活动」「首页配置」这类入口——活动不进入任何公开列表（D-059），平台也不参与商品推荐（D-065）。
+      </small>
+    </figcaption>
+  </figure>
+</section>
+
+<footer class="footnote">
+  <b>17 屏完</b>（A-01 ~ A-18，<b>A-11 已随 D-072 取消，编号留空缺不重排</b>，与 UX_FLOW_SPEC §3.2 一一对应）。<br>
+  本版形态<b>全部取自 <code>grouporder-admin</code> 工程的实测值</b>：色值 <code>uni.scss</code>、骨架 <code>common/uni.css</code>、表格 <code>uni_modules/uni-table</code>、菜单 <code>windows/leftWindow.vue</code> + <code>opendb-admin-menus</code>、按钮与操作列参照 <code>pages/system/*/list.vue</code>。
+  复用定性与改造点见 <b><code>docs/arch/ADMIN_REUSE_MAP.md</code></b>；业务规则的完整论证见 <b><code>admin-mockup-v1.html</code></b>（规则评审稿，其信息架构结论不变，框架形态已被 v2 取代）；<b><code>admin-mockup-v2.html</code></b> 原样保留，是 D-072 之前的决策留痕，本版一切规则层差异以本文件为准。<br>
+  A-01 登录页未画左侧菜单：菜单按权限渲染，登录前无权限可言。其余 16 屏均画出左侧菜单并高亮当前项；A-11 取消后，菜单中<b>不再出现「敏感资料查看」项</b>。<br>
+  <b>待裁定：</b><code>unicloud-db</code> 客户端直连与 19 张业务表 <code>permission: false</code> 的冲突（见页头第三条与 ADMIN_REUSE_MAP §5），影响每个业务页面的取数方式，不影响本图形态。
+</footer>
+
+</main>
+</body>
+</html>
