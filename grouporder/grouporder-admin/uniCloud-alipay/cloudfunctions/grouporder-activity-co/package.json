@@ -1,0 +1,9 @@
+{
+    "name": "grouporder-activity-co",
+    "dependencies": {
+        "grouporder-common": "file:../common/grouporder-common"
+    },
+    "extensions": {
+        "uni-cloud-jql": {}
+    }
+}

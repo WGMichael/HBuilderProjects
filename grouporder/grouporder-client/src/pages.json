@@ -1,85 +1,155 @@
 {
-	"pages": [
-		{
-			"path": "pages/index/index",
-			"style": {
-				"navigationBarTitleText": "grouporder"
-			}
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/register/register",
-			"style": { "navigationBarTitleText": "注册" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/login/login-withoutpwd",
-			"style": { "navigationBarTitleText": "登录" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/login/login-withpwd",
-			"style": { "navigationBarTitleText": "账号密码登录" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/login/login-smscode",
-			"style": { "navigationBarTitleText": "手机验证码登录" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/userinfo/userinfo",
-			"style": { "navigationBarTitleText": "个人资料" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/userinfo/bind-mobile/bind-mobile",
-			"style": { "navigationBarTitleText": "绑定手机号码" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/userinfo/cropImage/cropImage",
-			"style": { "navigationBarTitleText": "" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/register/register-by-email",
-			"style": { "navigationBarTitleText": "邮箱验证码注册" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/retrieve/retrieve",
-			"style": { "navigationBarTitleText": "重置密码" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/retrieve/retrieve-by-email",
-			"style": { "navigationBarTitleText": "通过邮箱重置密码" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/common/webview/webview",
-			"style": { "enablePullDownRefresh": false, "navigationBarTitleText": "" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/userinfo/change_pwd/change_pwd",
-			"style": { "enablePullDownRefresh": false, "navigationBarTitleText": "修改密码" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/register/register-admin",
-			"style": { "enablePullDownRefresh": false, "navigationBarTitleText": "注册管理员账号" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/userinfo/set-pwd/set-pwd",
-			"style": { "enablePullDownRefresh": false, "navigationBarTitleText": "设置密码" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/userinfo/deactivate/deactivate",
-			"style": { "navigationBarTitleText": "注销账号" }
-		}
-		,{
-			"path": "uni_modules/uni-id-pages/pages/userinfo/realname-verify/realname-verify",
-			"style": { "enablePullDownRefresh": false, "navigationBarTitleText": "实名认证" }
-		}
-	],
-	"globalStyle": {
-		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "grouporder",
-		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8"
-	},
-	"uniIdRouter": {
-		"loginPage": "uni_modules/uni-id-pages/pages/login/login-withpwd",
-		"needLogin": [],
-		"resToLogin": true
-	}
+  "pages": [
+    {
+      "path": "pages/hall/jielong",
+      "style": { "navigationBarTitleText": "接龙", "enablePullDownRefresh": true }
+    },
+    {
+      "path": "pages/hall/faqi",
+      "style": { "navigationBarTitleText": "发起接龙" }
+    },
+    {
+      "path": "pages/hall/my",
+      "style": { "navigationBarTitleText": "我的" }
+    },
+    {
+      "path": "pages/activity/edit",
+      "style": { "navigationBarTitleText": "编辑活动" }
+    },
+    {
+      "path": "pages/activity/goods-edit",
+      "style": { "navigationBarTitleText": "商品编辑" }
+    },
+    {
+      "path": "pages/activity/publish",
+      "style": { "navigationBarTitleText": "发布预览" }
+    },
+    {
+      "path": "pages/activity/detail",
+      "style": { "navigationBarTitleText": "活动详情" }
+    },
+    {
+      "path": "pages/activity/manage",
+      "style": { "navigationBarTitleText": "活动管理" }
+    },
+    {
+      "path": "pages/activity/order-stat",
+      "style": { "navigationBarTitleText": "订单与统计" }
+    },
+    {
+      "path": "pages/activity/goods-manage",
+      "style": { "navigationBarTitleText": "商品管理" }
+    },
+    {
+      "path": "pages/activity/close",
+      "style": { "navigationBarTitleText": "截止 / 取消" }
+    },
+    {
+      "path": "pages/activity/export",
+      "style": { "navigationBarTitleText": "清单导出" }
+    },
+    {
+      "path": "pages/order/confirm",
+      "style": { "navigationBarTitleText": "确认订单" }
+    },
+    {
+      "path": "pages/order/result",
+      "style": { "navigationBarTitleText": "提交结果" }
+    },
+    {
+      "path": "pages/order/detail",
+      "style": { "navigationBarTitleText": "订单详情" }
+    },
+    {
+      "path": "pages/address/list",
+      "style": { "navigationBarTitleText": "收货信息" }
+    },
+    {
+      "path": "pages/address/edit",
+      "style": { "navigationBarTitleText": "编辑收货信息" }
+    },
+    {
+      "path": "pages/lib/history-goods",
+      "style": { "navigationBarTitleText": "复用历史商品" }
+    },
+    {
+      "path": "pages/lib/manage",
+      "style": { "navigationBarTitleText": "我的商品库" }
+    },
+    {
+      "path": "pages/lib/category",
+      "style": { "navigationBarTitleText": "分类管理" }
+    },
+    {
+      "path": "pages/lib/history-activity",
+      "style": { "navigationBarTitleText": "复用历史接龙" }
+    },
+    {
+      "path": "pages/account/bind",
+      "style": { "navigationBarTitleText": "账号与微信绑定" }
+    },
+    {
+      "path": "pages/account/appeal",
+      "style": { "navigationBarTitleText": "账号申诉" }
+    },
+    {
+      "path": "pages/report/submit",
+      "style": { "navigationBarTitleText": "举报" }
+    },
+    {
+      "path": "pages/common/result",
+      "style": { "navigationBarTitleText": "" }
+    },
+    {
+      "path": "uni_modules/uni-id-pages/pages/login/login-withpwd",
+      "style": { "navigationBarTitleText": "登录" }
+    },
+    {
+      "path": "uni_modules/uni-id-pages/pages/register/register",
+      "style": { "navigationBarTitleText": "注册" }
+    },
+    {
+      "path": "uni_modules/uni-id-pages/pages/userinfo/userinfo",
+      "style": { "navigationBarTitleText": "个人资料" }
+    },
+    {
+      "path": "uni_modules/uni-id-pages/pages/userinfo/change_pwd/change_pwd",
+      "style": { "enablePullDownRefresh": false, "navigationBarTitleText": "修改密码" }
+    },
+    {
+      "path": "uni_modules/uni-id-pages/pages/userinfo/set-pwd/set-pwd",
+      "style": { "enablePullDownRefresh": false, "navigationBarTitleText": "设置密码" }
+    },
+    {
+      "path": "uni_modules/uni-id-pages/pages/userinfo/deactivate/deactivate",
+      "style": { "navigationBarTitleText": "注销账号" }
+    },
+    {
+      "path": "uni_modules/uni-id-pages/pages/common/webview/webview",
+      "style": { "enablePullDownRefresh": false, "navigationBarTitleText": "" }
+    }
+  ],
+  "tabBar": {
+    "custom": true,
+    "color": "#909399",
+    "selectedColor": "#2979ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/hall/jielong", "text": "接龙" },
+      { "pagePath": "pages/hall/faqi", "text": "发起接龙" },
+      { "pagePath": "pages/hall/my", "text": "我的" }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "群接龙",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F4F5F7"
+  },
+  "uniIdRouter": {
+    "loginPage": "uni_modules/uni-id-pages/pages/login/login-withpwd",
+    "needLogin": [],
+    "resToLogin": true
+  }
 }

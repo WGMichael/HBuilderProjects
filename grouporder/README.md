@@ -34,13 +34,15 @@
 
 - [运营后台实施顺序与投喂规范](docs/arch/ADMIN_BUILD_PLAN.md) —— 从哪一步开始、给写码 Agent 喂什么
 - [uni-admin 复用与改造盘点](docs/arch/ADMIN_REUSE_MAP.md) —— 哪些页面现成、哪些要改、哪些从零写
-- [运营后台已知问题清单](docs/arch/ADMIN_KNOWN_ISSUES.md) —— 41 条待处理问题
+- [运营后台已知问题清单](docs/arch/ADMIN_KNOWN_ISSUES.md) —— uni-admin 模板与项目规则的冲突、缺陷与待验证事项，按严重度分级
 - [UX 评审门](docs/ux/UX_REVIEW_GATE.md) —— 交付前的逐项检查表
+- [云函数与云对象总契约](docs/arch/CLOUD_API.md) —— **全部服务端接口的唯一事实源**（两端 7 个云对象、80 个方法、11 个公共模块、4 个定时函数）：云函数 session 维护，两个前端 session 只读
+- [运营后台前端开发交接书](docs/arch/ADMIN_FRONTEND_BRIEF.md) —— 给 admin 端开发 Agent 的工作材料：分批、依赖、形态规范、五处必改、七条红线
+- [小程序端前端开发交接书](docs/arch/CLIENT_FRONTEND_BRIEF.md) —— 给 client 端开发 Agent 的工作材料：30 个页面的分批与云对象依赖、三 tab 大厅的四个硬约束、八条红线、八条陷阱
 
 ### 四、一次性工作单与评审意见（**不是项目事实**）
 
 - [本轮更新工作单](docs/update.md) —— 批次 A/D 已完成，B/C 未开工
-- [后台效果图 v2→v3 修订任务书](docs/update-admin-mockup.md) —— 待执行
 - [可行性评审](docs/review/FEASIBILITY_REVIEW.md) —— 外部意见，条目经确认后才写入 PRD/DECISIONS
 
 > **文档生命周期规则（2026-09-18 确立）**：评估稿、对齐分析、方案比选这类**过程文档**，结论一旦写入 DECISIONS 或对应规格，即从 `docs/` 删除，不保留在正式目录。原因是过程文档记录的是**当时的判断**，决策推翻它之后原文不会跟着改，留在目录里就成了一个说反话的事实源。需要追溯推理过程时查 git 历史。

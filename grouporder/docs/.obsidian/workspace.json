@@ -13,44 +13,29 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "arch/DATA_MODEL.md",
+                "file": "02-arch/CLOUD_API.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "DATA_MODEL"
+              "title": "CLOUD_API"
             }
           },
           {
-            "id": "91826745efe4a49e",
+            "id": "52f3ea1b7d134e82",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "update-admin-mockup.md",
+                "file": "01-ux/UX_FLOW_SPEC.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "update-admin-mockup"
-            }
-          },
-          {
-            "id": "df9818be93185c85",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "arch/ADMIN_BUILD_PLAN.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "ADMIN_BUILD_PLAN"
+              "title": "UX_FLOW_SPEC"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -128,7 +113,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "update-admin-mockup.md",
+                "file": "02-arch/CLOUD_API.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -147,7 +132,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "update-admin-mockup.md",
+                "file": "02-arch/CLOUD_API.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -190,7 +175,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "update-admin-mockup.md",
+                "file": "02-arch/CLOUD_API.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -217,44 +202,49 @@
       "bases:新建数据库": false
     }
   },
-  "active": "91826745efe4a49e",
+  "active": "41ed46c3930f0004",
   "lastOpenFiles": [
+    "README.md",
+    "01-ux/UX_FLOW_SPEC.md",
+    "product/DECISIONS.md",
+    "99-archive/update.md",
+    "99-archive/FEASIBILITY_REVIEW.md",
+    "99-archive",
+    "90-working/CLIENT_FRONTEND_BRIEF.md",
+    "90-working/ADMIN_REUSE_MAP.md",
+    "90-working/ADMIN_KNOWN_ISSUES.md",
+    "90-working/ADMIN_FRONTEND_BRIEF.md",
+    "90-working/ADMIN_BUILD_PLAN.md",
+    "90-working",
+    "03-compliance/CATEGORY_VERIFICATION.md",
+    "03-compliance/RELEASE_AUDIT_CHECKLIST.md",
+    "03-compliance",
+    "02-arch/schema/uni-id-users.schema.json",
+    "02-arch/schema/grouporder-user-ext.schema.json",
+    "02-arch/schema/grouporder-user-ext.index.json",
+    "02-arch/schema/grouporder-todo-dismiss.schema.json",
+    "02-arch/schema/grouporder-todo-dismiss.index.json",
+    "02-arch/schema/grouporder-restriction.schema.json",
+    "02-arch/schema/grouporder-restriction.index.json",
+    "02-arch/GOODS_LIB_SPEC.md",
+    "02-arch/DATA_MODEL.md",
+    "02-arch/CLOUD_API.md",
+    "01-ux/UX_STATE_MATRIX.md",
+    "01-ux/UX_REVIEW_GATE.md",
+    "00-product/PRD.md",
+    "00-product/OPS_ADMIN_REQUIREMENTS.md",
+    "00-product/DECISIONS.md",
+    "arch/ADMIN_BUILD_PLAN.md",
+    "arch/CLIENT_FRONTEND_BRIEF.md",
+    "arch/CLOUD_API.md",
+    "arch/DATA_MODEL.md",
+    "arch/ADMIN_FRONTEND_BRIEF.md",
+    "arch/ADMIN_KNOWN_ISSUES.md",
     "app-ui/IMG_4873.PNG",
     "app-ui/IMG_4872.PNG",
     "app-ui/IMG_4871 2.PNG",
-    "app-ui",
-    "product/DECISIONS.md",
-    "arch/ADMIN_BUILD_PLAN.md",
-    "product/PRD.md",
-    "update-admin-mockup.md",
-    "arch/ADMIN_REUSE_MAP.md",
-    "arch/ACTIVITY_COPY_SPEC.md",
-    "arch/GOODS_LIB_SPEC.md",
-    "ux/UX_STATE_MATRIX.md",
-    "ux/UX_REVIEW_GATE.md",
-    "ux/UX_FLOW_SPEC.md",
-    "product/OPS_ADMIN_REQUIREMENTS.md",
-    "arch/GOODS_LIB_EXT_ASSESSMENT.md",
-    "arch/ADMIN_KNOWN_ISSUES.md",
-    "arch/DATA_MODEL.md",
-    "update.md",
-    "compliance/RELEASE_AUDIT_CHECKLIST.md",
-    "compliance/CATEGORY_VERIFICATION.md",
-    "arch/schema/grouporder-goods-category.index.json",
-    "arch/schema/grouporder-goods-category.schema.json",
-    "README.md",
-    "arch/schema/grouporder-todo-dismiss.index.json",
-    "arch/schema/grouporder-todo-dismiss.schema.json",
-    "review/NAV_AND_GOODS_ALIGNMENT.md",
-    "review/FEASIBILITY_REVIEW.md",
-    "arch/schema/grouporder-goods-lib.index.json",
-    "arch/schema/grouporder-goods-lib.schema.json",
     "app. ui/IMG_4873.PNG",
     "app. ui/IMG_4872.PNG",
-    "app. ui/IMG_4871 2.PNG",
-    "app. ui",
-    "未命名文件夹",
-    "arch/schema/uni-id-users.schema.json",
-    "ux/afdsf/UX_FLOW_SPEC.md"
+    "app. ui/IMG_4871 2.PNG"
   ]
 }

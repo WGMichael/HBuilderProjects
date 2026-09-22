@@ -42,12 +42,6 @@
     "create_date": 1758067200000
   },
   {
-    "permission_id": "ops-privacy-sensitive",
-    "permission_name": "敏感资料受控查看",
-    "comment": "二次验证后按事项最小范围解敏（A-11、D-068）",
-    "create_date": 1758067200000
-  },
-  {
     "permission_id": "ops-privacy-case",
     "permission_name": "隐私与注销事项",
     "comment": "注销、删除、匿名化登记与三年期跟踪（A-16）",
@@ -189,6 +183,12 @@
     "permission_id": "DELETE_OPENDB_ADMIN_MENUS",
     "permission_name": "删除菜单",
     "comment": "uni-admin 内置权限点，由 schema 的 permission 表达式校验。菜单管理页",
+    "create_date": 1758067200000
+  },
+  {
+    "permission_id": "READ_UNI_ID_LOG",
+    "permission_name": "查看登录日志",
+    "comment": "uni-admin 内置权限点，由 uni-id-log.schema.json 的 permission 表达式 \"'READ_UNI_ID_LOG' in auth.permission\" 校验。A-14 登录日志 tab（pages/system/safety/list.vue）读该表；不补此点则页面恒为空列表。ADM-39 当初补内置权限点时遗漏",
     "create_date": 1758067200000
   }
 ]

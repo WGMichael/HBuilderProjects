@@ -1,0 +1,9 @@
+{
+    "name": "grouporder-check-callback",
+    "dependencies": {
+        "grouporder-common": "file:../common/grouporder-common"
+    },
+    "extensions": {
+        "uni-cloud-jql": {}
+    }
+}

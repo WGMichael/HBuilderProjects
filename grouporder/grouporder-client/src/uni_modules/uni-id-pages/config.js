@@ -20,21 +20,14 @@ export default {
     //   'weixin'  —— 需小程序 appid + appsecret
     //   'smsCode' —— 需开通 uni-sms 短信服务
 
-    // #ifdef APP
-    'univerify',
-    // #endif
+    // ⚠ 小程序端只保留「微信授权 + 用户名密码」两种（D-029、CLIENT_FRONTEND_BRIEF §5）。
+    //   不采集手机号 → 不启用 smsCode；univerify/apple/huawei 属 App 端，小程序不需要。
+    //   微信登录需先在 manifest.json 填 mp-weixin.appid 并在 uni-id 配好 appsecret。
+    //   本文件在 uni-id-pages 模块升级后会被还原，升级后必须重新核对（DATA_MODEL §3）。
     // #ifndef MP-HARMONY
     'weixin',
     // #endif
-    'username',
-    // #ifdef APP
-    'apple',
-    // #endif
-    // 'smsCode',
-    // #ifdef APP-HARMONY || MP-HARMONY
-    'huawei',
-    'huaweiMobile'
-    // #endif
+    'username'
   ],
   // 政策协议
   agreements: {

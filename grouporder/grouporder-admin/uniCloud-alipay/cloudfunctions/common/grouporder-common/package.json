@@ -1,0 +1,9 @@
+{
+  "name": "grouporder-common",
+  "version": "1.0.0",
+  "description": "群接龙业务公共模块：鉴权、错误码、分页、幂等、状态机、库存、快照、审计、清单事件、商品库、平台配置、内容检测、发布限制、审核版本",
+  "main": "index.js",
+  "dependencies": {
+    "uni-id-common": "file:../../../uni_modules/uni-id-common/uniCloud/cloudfunctions/common/uni-id-common"
+  }
+}

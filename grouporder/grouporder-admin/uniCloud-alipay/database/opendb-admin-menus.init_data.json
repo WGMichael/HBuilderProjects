@@ -148,20 +148,6 @@
     "_id": "go_appeal"
   },
   {
-    "menu_id": "go_sensitive",
-    "name": "敏感资料查看",
-    "icon": "admin-icons-help",
-    "url": "/pages/grouporder/sensitive/index",
-    "sort": 520,
-    "parent_id": "go_privacy",
-    "permission": [
-      "ops-privacy-sensitive"
-    ],
-    "enable": true,
-    "create_date": 1758067200000,
-    "_id": "go_sensitive"
-  },
-  {
     "menu_id": "go_privacy_case",
     "name": "隐私与注销事项",
     "icon": "admin-icons-doc",

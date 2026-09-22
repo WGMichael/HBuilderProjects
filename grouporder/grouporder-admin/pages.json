@@ -148,6 +148,107 @@
   ],
   "subPackages": [
     {
+      "root": "pages/grouporder",
+      "pages": [
+        {
+          "path": "result/index",
+          "style": {
+            "navigationBarTitleText": "访问结果"
+          }
+        },
+        {
+          "path": "review/list",
+          "style": {
+            "navigationBarTitleText": "活动发布审核"
+          }
+        },
+        {
+          "path": "review/detail",
+          "style": {
+            "navigationBarTitleText": "审核活动"
+          }
+        },
+        {
+          "path": "report/list",
+          "style": {
+            "navigationBarTitleText": "举报与内容审核"
+          }
+        },
+        {
+          "path": "report/detail",
+          "style": {
+            "navigationBarTitleText": "举报处理"
+          }
+        },
+        {
+          "path": "activity/list",
+          "style": {
+            "navigationBarTitleText": "活动与商品"
+          }
+        },
+        {
+          "path": "activity/detail",
+          "style": {
+            "navigationBarTitleText": "活动与商品详情"
+          }
+        },
+        {
+          "path": "publisher/restrict",
+          "style": {
+            "navigationBarTitleText": "发布者处置"
+          }
+        },
+        {
+          "path": "search/index",
+          "style": {
+            "navigationBarTitleText": "全局检索"
+          }
+        },
+        {
+          "path": "stat/overview",
+          "style": {
+            "navigationBarTitleText": "统计总览"
+          }
+        },
+        {
+          "path": "stat/leader",
+          "style": {
+            "navigationBarTitleText": "团长与活动统计"
+          }
+        },
+        {
+          "path": "appeal/list",
+          "style": {
+            "navigationBarTitleText": "账号绑定申诉"
+          }
+        },
+        {
+          "path": "privacy-case/list",
+          "style": {
+            "navigationBarTitleText": "隐私与注销事项"
+          }
+        },
+        {
+          "path": "export-log/list",
+          "style": {
+            "navigationBarTitleText": "Excel 事件"
+          }
+        },
+        {
+          "path": "oplog/list",
+          "style": {
+            "navigationBarTitleText": "操作日志"
+          }
+        },
+        {
+          "path": "config/index",
+          "style": {
+            "navigationBarTitleText": "平台配置"
+          }
+        }
+      ]
+    },
+    {
       "root": "pages/system",
       "pages": [
         {
@@ -493,7 +594,7 @@
   },
   "uniIdRouter": {
     "loginPage": "uni_modules/uni-id-pages/pages/login/login-withpwd",
-    "needLogin": ["^(?!.*uni-id-pages/pages/(login|register|retrieve)/).*$"],
+    "needLogin": ["^(?!.*(uni-id-pages/pages/(login|register|retrieve)/|pages/grouporder/result/)).*$"],
     "resToLogin": true
   }
 }
