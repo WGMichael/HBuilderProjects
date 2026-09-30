@@ -1,12 +1,12 @@
 # 文档地图
 
-- 更新日期：2026-09-22
+- 更新日期：2026-09-30
 - 本文是 `docs/` 的**唯一索引**，也是**唯一维护版本号的地方**（见 §3）。
 - 新加入的人或 Agent 从这里开始，不要直接翻目录。
 
 ---
 
-## 1. 目录的四种性质
+## 1. 目录的性质
 
 目录前缀的数字只表示阅读顺序，真正要分清的是**性质**——它决定这份文档能不能当依据用。
 
@@ -15,74 +15,129 @@
 | `00-product/` | **产品事实**。范围、规则、决策 | ✅ 必须 | 长期维护 |
 | `01-ux/` | **设计事实**。页面、流程、状态 | ✅ 必须 | 长期维护 |
 | `02-arch/` | **架构事实**。数据模型、接口契约、功能实现规格 | ✅ 必须 | 长期维护 |
-| `03-compliance/` | **合规待办**。核验项与提审清单 | ⚠️ 结论未出，不得当作已确认 | 待填写 |
-| `90-working/` | **过程材料**。实施计划、复用盘点、开发交接书 | ❌ 仅参考，冲突时以上面三层为准 | **任务完成即失效** |
-| `99-archive/` | **归档**。已失效，仅留追溯 | ❌ 不要读 | 已过期 |
+| `03-release/` | **上线关卡**。上线前必须逐项清掉的事 | ✅ 必须 | 清空即失效 |
+| `90-working/` | **在办的过程材料**。**当前为空** | ❌ 仅参考 | 做完即搬走 |
+| `99-archive/` | **已完成使命**。归档 ≠ 作废，可查不可依 | ❌ 不要据此实现 | 已停止维护 |
 
-> 判断口诀：**冲突时永远以 `00`/`01`/`02` 为准。** `90-working/` 里的任何说法与它们不一致，一律按上层文档执行并上报，不要自行裁决。
+> 判断口诀：**冲突时永远以 `00`/`01`/`02` 为准。** 其余三层的任何说法与它们不一致，一律按上层文档执行并上报，不要自行裁决。
 
----
+### 文档的生命周期
+
+这是 2026-09-30 重组要解决的核心问题——过去只有「进」没有「出」，做完的交接书还挂在「开发必读」第一站。
+
+```
+90-working/  ──做完且无遗留──>  99-archive/YYYY-MM/
+     │
+     └──做完但含上线前必须处理的事──>  03-release/
+                                          │
+                                     清空后才归档
+```
+
+**`90-working/` 空着是正常状态，有东西才是例外。**
 
 ## 2. 我该读哪几份
 
 | 你要做的事 | 按顺序读 |
 |---|---|
 | 了解这个产品是什么 | `00-product/PRD.md` → `00-product/DECISIONS.md` |
-| 写小程序端页面 | `90-working/CLIENT_FRONTEND_BRIEF.md`（作业书）→ `01-ux/UX_FLOW_SPEC.md` → `01-ux/UX_STATE_MATRIX.md` → `02-arch/CLOUD_API.md` |
-| 写运营后台 | `90-working/ADMIN_FRONTEND_BRIEF.md` → `00-product/OPS_ADMIN_REQUIREMENTS.md` → `90-working/ADMIN_REUSE_MAP.md` → `90-working/ADMIN_KNOWN_ISSUES.md` |
+| 写小程序端页面 | `01-ux/UX_FLOW_SPEC.md` → `01-ux/UX_STATE_MATRIX.md` → `02-arch/CLOUD_API.md` |
+| 写运营后台 | `00-product/OPS_ADMIN_REQUIREMENTS.md` → `02-arch/CLOUD_API.md` → `03-release/ADMIN_KNOWN_ISSUES.md` |
 | 写云函数 / 云对象 | `02-arch/CLOUD_API.md`（你是它的维护者）→ `02-arch/DATA_MODEL.md` → `00-product/DECISIONS.md` |
 | 改数据库表 | `02-arch/DATA_MODEL.md` → `02-arch/schema/` |
 | 做商品库相关功能 | `02-arch/GOODS_LIB_SPEC.md`（自包含） |
-| 准备提审上线 | `03-compliance/CATEGORY_VERIFICATION.md` → `03-compliance/RELEASE_AUDIT_CHECKLIST.md` |
+| 做分享功能 | `02-arch/SHARE_SPEC.md`（自包含，含 4 个待修缺陷） |
+| **准备上线** | `03-release/` 整个目录，见 §4 |
+| 想知道「当时为什么这么建」 | `99-archive/`（只查不依） |
+
+> 两份 FRONTEND_BRIEF 已于 2026-09-30 归档——两端主体开发均已完成，交接书的使命结束。
+> 需要时在 `99-archive/2026-09/` 查阅，但**不要据此实现**，规格以 `00`/`01`/`02` 三层为准。
 
 **效果图**（不在 `docs/` 下）：小程序端 `prototype/mockup-v3.html`，运营后台 `prototype/admin/admin-mockup-v3.html`。
 
----
-
 ## 3. 版本总表
 
-**版本号只在这张表里维护。** 各文档头部保留自己的「文档版本」行，但**任何文档都不再在正文中写别的文档的版本号**——历史上正是这种互相写版本导致了引用混乱（曾出现被引用版本高于文档自身版本的情况）。需要确认版本时查这张表。
+**版本号只在这张表里维护。** 各文档头部保留自己的「文档版本」行，但**任何文档都不再在正文中写别的文档的版本号**——历史上正是这种互相写版本导致了引用混乱。需要确认版本时查这张表。
+
+### 事实层（必须遵守）
 
 | 文档 | 当前版本 | 维护者 | 说明 |
 |---|---|---|---|
-| `00-product/PRD.md` | v1.3 | 产品负责人 | 产品范围与规则 |
-| `00-product/DECISIONS.md` | v1.12 | 产品负责人 | **决策编号的唯一出处**，D-001 起 |
-| `00-product/OPS_ADMIN_REQUIREMENTS.md` | v0.15 | 产品负责人 | 运营后台需求 |
-| `01-ux/UX_FLOW_SPEC.md` | 无版本号 | UX | 页面编号 M-xx 的唯一出处 |
-| `01-ux/UX_STATE_MATRIX.md` | 无版本号 | UX | |
-| `01-ux/UX_REVIEW_GATE.md` | 无版本号 | UX | |
-| `02-arch/DATA_MODEL.md` | v1.19 | 架构 | 19 张表，schema 已生成未上传 |
-| `02-arch/CLOUD_API.md` | v0.4 | **云函数 session** | 前端 session 只读，发现问题上报不自改 |
-| `02-arch/GOODS_LIB_SPEC.md` | v0.3 | 架构 | 自包含实现规格 |
-| `03-compliance/CATEGORY_VERIFICATION.md` | v0.1 | 产品负责人 | **待核验**，P1-09 |
-| `03-compliance/RELEASE_AUDIT_CHECKLIST.md` | v0.1 | 产品负责人 | 提审前逐项核对 |
-| `90-working/ADMIN_BUILD_PLAN.md` | v0.2 | 架构 | |
-| `90-working/ADMIN_REUSE_MAP.md` | v0.2 | 架构 | |
-| `90-working/ADMIN_KNOWN_ISSUES.md` | v0.1 | 架构 | |
-| `90-working/ADMIN_FRONTEND_BRIEF.md` | 无版本号（2026-09-20） | 架构 | 进行中 |
-| `90-working/CLIENT_FRONTEND_BRIEF.md` | 无版本号（2026-09-20） | 架构 | 进行中 |
-| `99-archive/*` | — | — | 已失效 |
+| `00-product/PRD.md` | v1.7 | 产品负责人 | 产品范围与规则 |
+| `00-product/DECISIONS.md` | v1.20 | 产品负责人 | **决策编号的唯一出处**，D-001 起；D-083 待确认 |
+| `00-product/OPS_ADMIN_REQUIREMENTS.md` | v0.19 | 产品负责人 | 运营后台需求 |
+| `01-ux/UX_FLOW_SPEC.md` | v1.0 | UX | 页面编号 M-xx / A-xx 的唯一出处 |
+| `01-ux/UX_STATE_MATRIX.md` | v1.0 | UX | |
+| `02-arch/DATA_MODEL.md` | v1.25 | 架构 | 18 张表，schema 已生成 |
+| `02-arch/CLOUD_API.md` | v0.10 | 服务端维护者 | 两个前端只读，发现问题上报不自改 |
+| `02-arch/GOODS_LIB_SPEC.md` | v0.6 | 架构 | 自包含实现规格 |
+| `02-arch/SHARE_SPEC.md` | v0.1 | 架构 | 自包含；**分享是唯一的活动入口**（D-059） |
 
-**改动规则**：改了某份文档 → 更新它自己的「文档版本」行 → 同步这张表。**不要**去别的文档里改版本号引用，那些引用已经全部清除了。
+### 上线关卡（清空即失效）
+
+| 文档 | 当前版本 | 维护者 | 状态 |
+|---|---|---|---|
+| `03-release/CATEGORY_VERIFICATION.md` | v0.3 | 产品负责人 | **待核验**，P1-09，唯一单点否决风险 |
+| `03-release/RELEASE_AUDIT_CHECKLIST.md` | v0.3 | 产品负责人 | 提审前逐项核对 |
+| `03-release/UX_REVIEW_GATE.md` | v1.0 | UX | 待评审 |
+| `03-release/ADMIN_KNOWN_ISSUES.md` | v0.6 | 架构 | 含上线前高危项 |
+| `03-release/OPEN_ISSUES.md` | — | 架构 | **活跃待办**，来源 2026-09-22 全面审查 |
+
+### 已归档（不再维护）
+
+| 文档 | 归档时间 | 原用途 |
+|---|---|---|
+| `99-archive/2026-09/ADMIN_BUILD_PLAN.md` | 2026-09-30 | 后台实施顺序 |
+| `99-archive/2026-09/ADMIN_REUSE_MAP.md` | 2026-09-30 | uni-admin 复用盘点 |
+| `99-archive/2026-09/ADMIN_FRONTEND_BRIEF.md` | 2026-09-30 | 后台交接书 |
+| `99-archive/2026-09/CLIENT_FRONTEND_BRIEF.md` | 2026-09-30 | 小程序端交接书 |
+
+**改动规则**：改了某份文档 → 更新它自己的「文档版本」行 → 同步这张表。**不要**去别的文档里改版本号引用。
 
 ---
 
-## 4. 已知缺口
+## 4. 上线前要过的关
+
+上线不是一个动作，是清掉 `03-release/` 这五份。**按下面的顺序**——前两项没结论时，后面做完也没用。
+
+| # | 关卡 | 文档 | 状态 |
+|---|---|---|---|
+| 1 | 服务类目与主体核验 | `CATEGORY_VERIFICATION.md` | ⚠️ **待核验**。唯一的单点否决风险，不过则全盘作废 |
+| 2 | 密钥轮换与敏感文件清理 | `OPEN_ISSUES.md §1.1` | ⚠️ 明文密钥仍在仓库，见 §6 |
+| 3 | 代码阻断项 | `OPEN_ISSUES.md §3` | 服务端并发三项、小程序四项 |
+| 4 | 后台高危项 | `ADMIN_KNOWN_ISSUES.md §1` | |
+| 5 | UX 评审门 | `UX_REVIEW_GATE.md` | 待评审 |
+| 6 | 提审自查 | `RELEASE_AUDIT_CHECKLIST.md` | 逐项实测，不得凭印象打勾 |
+
+## 5. 已知缺口
 
 以下是整理时发现、尚未解决的问题，不要当作已完成。
 
 | # | 缺口 | 影响 |
 |---|---|---|
 | 1 | **D-067（复用历史接龙）没有集中的实现规格。** 原 `ACTIVITY_COPY_SPEC.md` 已被删除，内容散在 PRD、DECISIONS、UX_FLOW_SPEC、DATA_MODEL、CLOUD_API、GOODS_LIB_SPEC、CLIENT_FRONTEND_BRIEF 七份文档中 | 实现该功能时需自行拼装，容易漏掉治理约束（被下架商品必须剔除、被下架活动不可作为源） |
-| 2 | `00-product/USER_RESEARCH.md` 与 `00-product/TRACEABILITY.md` **被引用但从未创建** | 悬空引用。要么补上，要么删掉引用 |
-| 3 | 三份 UX 文档与两份 BRIEF **没有版本号**，只有「文档状态」或日期 | 无法判断新旧。建议补上版本号并纳入 §3 |
 | 4 | **P1-09 服务类目与主体核验仍未出结论** | 全项目唯一的单点否决风险，见 `03-compliance/CATEGORY_VERIFICATION.md` |
-| 5 | **服务空间未关联、云对象为空、业务页面为 0** | 见 `90-working/CLIENT_FRONTEND_BRIEF.md` §0 |
 
 ---
 
-## 5. 项目级注意事项
+## 6. 项目级注意事项
 
-- **本项目没有 git 仓库。** 文档与代码的任何改动都无法 diff、回滚或定位来源。`DECISIONS.md` 的变更记录全靠手写维护。建议尽快 `git init`。
-- **根目录有 `密钥.md`。** 若将来启用 git，必须先写好 `.gitignore`，否则会被提交。
-- 本次整理的备份在项目根目录 `docs.backup-2026-09-22.tar.gz`，确认无误后可删除。
+- **git 仓库在上一层 `HBuilderProjects/`**，本项目是其中的一个子目录；提交与 diff 需在仓库根目录执行。
+
+- **⚠️ `密钥.md` 在项目根目录，内含明文密钥**（`passwordSecret`、`tokenSecret`）。项目内没有任何 `.gitignore` 覆盖它：
+  - `grouporder-client/.gitignore` 只管自己那一层（`node_modules`、`dist` 已覆盖）
+  - `grouporder-admin/` 无 `.gitignore`（该工程也没有 `node_modules`，影响有限）
+  - 根目录与父级的忽略规则需由产品负责人确认
+  
+  **若已被提交过，删文件不解决问题——git 历史里仍在。届时唯一有效的处置是轮换这两个密钥**，并把配置改为从环境变量或未跟踪的本地文件读取。
+
+- 本次整理的备份 `docs.backup-2026-09-22.tar.gz`（1.8M）也在项目根目录，会被 git 跟踪，确认无误后删除。
+
+---
+
+## 7. 变更记录
+
+| 日期 | 变化 |
+|---|---|
+| 2026-09-30 | **按生命周期重组**：`03-compliance/` 扩为 `03-release/` 上线关卡层，收编分散在四处的关卡（UX 评审门自 `01-ux/`、后台已知问题自 `90-working/`）；`REVIEW_REPORT_2026-09-22.md` 经核对仍有未处理的高危待办，故不归档，改名 `OPEN_ISSUES.md` 迁入本层；四份使命已完成的过程材料归档至 `99-archive/2026-09/`；`90-working/` 清空并写明退场规则；新增 §4「上线前要过的关」。活跃文档 19 → 15 份 |
+| 2026-09-29 | 版本总表按各文档头部同步；三份 UX 文档与两份 BRIEF 补 v1.0 版本号；各文档变更记录统一为日期降序，2026-09-22 之前的历史折叠为一行；已知缺口表删除已解决的第 2、3、5 项 |
+| 2026-09-22 | 建立文档地图：六目录性质、阅读路径、版本总表、已知缺口、项目级注意事项 |

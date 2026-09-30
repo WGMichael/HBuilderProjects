@@ -1,7 +1,7 @@
 # 用户商品库 `grouporder-goods-lib` 实现规格
 
-- 文档版本：v0.3
-- 更新日期：2026-09-15
+- 文档版本：v0.6
+- 更新日期：2026-09-30
 - 文档状态：**方案已定，可实施**
 - 对应决策：D-063、D-064、D-065（推荐标识）、D-066（商品库分类），均已写入 `DECISIONS.md`
 - 依据：产品负责人 2026-09-15 确认采用方案 A（原始评审文档 `NAV_AND_GOODS_ALIGNMENT.md` 已于 2026-09-18 删除，结论见 `DECISIONS.md` 变更记录与 D-063～D-066）
@@ -598,6 +598,8 @@ ORDER BY sort ASC, create_date ASC
 
 DATA_MODEL §1 把「便于孤儿文件清理」列为选用 `file` 类型的理由之一，本节是对该清理逻辑的必要补充，请一并写入。
 
+**换图回收（D-084）**：上面的禁令针对「删除记录」。团长编辑活动或商品、**保存成功后**，被替换或移除的旧图由云对象即时回收，但只在 `grouporder-activity`、`grouporder-goods`、`grouporder-goods-lib`（含 `deleted = 1` 的记录）三表均无引用该 fileID 时才删除。商品保存会先沉淀到商品库（§4），所以回收放在沉淀之后执行：同名库记录已换成新图时，旧图才可能真正无人引用。回收失败只记日志，不影响保存。
+
 ---
 
 ## 7. 治理联动（D-064，必须实现）
@@ -643,26 +645,11 @@ DATA_MODEL §1 把「便于孤儿文件清理」列为选用 `file` 类型的理
 
 ---
 
-## 10. 接口契约（建议，待架构确认）
+## 10. 接口契约
 
-项目当前只有 uni-admin 模板自带的云函数，**业务云对象的划分尚未决定**。以下是可直接采用的默认方案，若架构阶段另有划分，只需调整归属，方法语义不变。
+本功能的服务端实现为云对象 `grouporder-goods-co`（商品库与分类，9 个方法）以及 `grouporder-activity-co` 中的 `activityCopySourceList` / `activityCopy`。**入参、出参、错误码与幂等键以 `docs/02-arch/CLOUD_API.md` §14.1、§14.3 为唯一事实源**，本文不再重复定义，避免出现第二份签名。
 
-建议新建云对象 `grouporder-goods-co`：
-
-| 方法 | 入参 | 返回 | 说明 |
-|---|---|---|---|
-| `libList` | `{ keyword?, category_id?, page, pageSize }` | `{ list, total }` | 仅当前用户，`deleted=0`，按 `last_used_time` 倒序。`category_id` 传特定值筛选、传 `"__none__"` 查未分组、不传查全部 |
-| `libCopyToActivity` | `{ activity_id, lib_ids: string[] }` | `{ created: [...], failed: [...], need_recheck: boolean }` | `need_recheck` 表示本次操作会使活动重新进入审核（§5.4） |
-| `libUpdate` | `{ lib_id, ...可编辑字段 }` | `{ success, img_recheck: boolean }` | 见 §5.6。改名撞库、记录被封禁时拒绝 |
-| `libDelete` | `{ lib_id }` | `{ success }` | 软删 |
-| `categoryList` | `{}` | `{ list }` | 仅当前用户，按 `sort` 正序 |
-| `categoryCreate` | `{ name }` | `{ category_id }` | 上限 20 个 |
-| `categoryUpdate` | `{ category_id, name?, sort? }` | `{ success }` | |
-| `categoryDelete` | `{ category_id }` | `{ success, affected }` | 硬删分类，其下 lib 记录 `category_id` 置空 |
-
-沉淀逻辑不单独暴露方法，作为商品保存方法内部调用的私有函数 `_sinkToLib(userId, goodsDoc)` 实现（§4.1）。
-
-治理反写同样不暴露为独立方法，由运营端的商品下架方法内部调用 `_blockLibByGoods(goodsDoc)`（§7）。
+沉淀（`sinkToLib`）与治理反写（`blockLibByGoods` / `unblockLibByGoods`）实现在公共模块 `common/grouporder-common/goodslib.js`，分别由商品保存方法与运营端的商品下架 / 恢复方法内部调用（§4.1、§7），不暴露为独立方法。
 
 ---
 
@@ -717,16 +704,9 @@ DATA_MODEL §1 把「便于孤儿文件清理」列为选用 `file` 类型的理
 
 ---
 
-## 13. 需要同步更新的文档
+## 13. 关联文档
 
-| 文件 | 改动 |
-|---|---|
-| `DECISIONS.md` | 新增 D-063（商品沉淀为用户级商品库，复用按复制语义）、D-064（被下架商品的库记录标记为不可复用） |
-| `arch/DATA_MODEL.md` | §3 表清单第一批由 6 张改 7 张、合计由 16 张改 17 张；新增 §4.7 `grouporder-goods-lib` 表定义；§6 索引补充两条；§1 图片字段说明补充 §6 的文件引用约束 |
-| `arch/schema/` | 新增 `grouporder-goods-lib`、`grouporder-goods-category` 两组 `.schema.json` 与 `.index.json`；`grouporder-goods.schema.json` 增加 `lib_id` 与 `is_recommend`；`grouporder-goods.index.json` 调整 `activity_gov_sort` |
-| `ux/UX_FLOW_SPEC.md` | §3.1 新增 M-28 历史商品选择、M-29 商品库管理、M-30 分类管理；M-29 的入口为 M-08、M-10 文字链接、M-28 右上角三处；M-28 增加分类筛选；F-M03 与 F-M08 补充复用分支 |
-| `product/PRD.md` | §4.1 首版必须具备中增加一条商品库与复用能力 |
-| `product/OPS_ADMIN_REQUIREMENTS.md` | §6.1 商品下架动作补充商品库反写；§12 日志事件补充 `goods_lib_blocked` |
+本规格的决策、表结构、页面与后台规则已分别落入：`docs/00-product/DECISIONS.md`（D-063～D-066）、`docs/02-arch/DATA_MODEL.md` §4.7～§4.9 与 §6、`docs/02-arch/schema/`、`docs/01-ux/UX_FLOW_SPEC.md` §3.1（M-28～M-30）、`docs/00-product/PRD.md` §4.1、`docs/00-product/OPS_ADMIN_REQUIREMENTS.md` §6.1 与 §13。接口以 `docs/02-arch/CLOUD_API.md` 为准（§10）。
 
 ---
 
@@ -750,7 +730,8 @@ DATA_MODEL §1 把「便于孤儿文件清理」列为选用 `file` 类型的理
 
 | 版本 | 变化 | 影响 |
 |---|---|---|
-| v0.1 | 初稿：建表、自动沉淀、复用复制、治理反写、验收标准 | — |
-| v0.2.1 | 修正 §2.1 末尾遗留的「`grouporder-goods` 保持零改动」表述，与 §2.2、§11、§15 的 `lib_id` 新增结论对齐。`activity_id` 必填的结论不变 | 文档订正，不影响已实现内容 |
+| v0.6 | §6 补充换图回收规则（D-084）：保存成功后按三表引用判定回收旧图，删除记录仍不删文件 | activity-co `activityUpdateDraft` / `goodsUpdate` 已实现 |
+| v0.5 | §13 由「需要同步更新的文档」（旧目录路径、已过期的改动清单）改为「关联文档」引用段 | 无实现影响 |
+| v0.4 | §10 由「接口契约（建议，待架构确认）」改为指向 CLOUD_API §14.1 / §14.3 的引用段，删除过期的方法签名草案（与实现出参不一致） | 消除与 CLOUD_API 的第二事实源；实现不受影响 |
 | v0.3 | ① 新增 §3.5 商品库分类表 `grouporder-goods-category`，lib 增 `category_id`，M-28 增分类筛选（仅筛选，不做批量加入）<br>② `goods-lib` 与 `goods` 各增 `is_recommend`；**推荐首版只做视觉角标，不进入排序**，排序规则为 `sort ASC, create_date ASC`（§5.7），推荐上限 5 个<br>③ `grouporder-goods` 新增字段由 1 个变为 2 个；**索引不改**<br>④ 接口新增分类 CRUD 四项，`libList` 增 `category_id` 入参；验收标准由 23 条增至 32 条 | 对应 D-065、D-066 |
-| v0.2 | ① 新增 §2.1：`goods.activity_id` 仍必填的说明与反证<br>② **`price` / `total_stock` / `per_user_limit` 由「不继承、置 0」改为「预填 + 必须逐项确认」**，库表新增 `last_total_stock`、`last_per_user_limit` 并进 `required`，§5.3 整节重写<br>③ **`grouporder-goods` 新增可空字段 `lib_id`**，§11 的「goods 零改动」结论作废；§7 治理反查改为「`lib_id` 精确定位」与「团长 + 商品名」两条匹配取并集，且软删记录同样封禁<br>④ 新增 §2.3：`goods` 必须自带内容字段的五条理由<br>⑤ 新增 §5.6 商品库独立维护、接口 `libUpdate`、页面 M-29；验收标准由 15 条增至 23 条 | 按 v0.1 已产出的代码需按 §15 第 ② ③ ⑤ 项重做 |
+| v0.1～v0.2.1 | 早期演进（3 次修订：建稿、决策同步与 D-072～D-076 改写等），逐条内容见 git 历史 | — |

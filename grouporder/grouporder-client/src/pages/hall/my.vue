@@ -8,9 +8,9 @@
   <view class="page">
     <!-- 账号区 -->
     <view class="hero">
-      <view class="hero__avatar">{{ (bind.nickname || '未').slice(0, 1) }}</view>
+      <view class="hero__avatar">{{ (displayName || '未').slice(0, 1) }}</view>
       <view class="hero__info">
-        <view class="hero__name">{{ loggedIn ? (bind.nickname || '未设置昵称') : '未登录' }}</view>
+        <view class="hero__name">{{ loggedIn ? (displayName || '未设置昵称') : '未登录' }}</view>
         <view class="hero__sub" v-if="loggedIn">
           <text v-if="bind.wechat_bound" class="hero__badge">微信已绑定</text>
           <text v-else class="hero__badge hero__badge--off">微信未绑定</text>
@@ -50,26 +50,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import GoTabbar from '@/components/go-tabbar/go-tabbar.vue';
 // @ts-ignore
 import api, { isLoggedIn, ensureLogin } from '@/common/grouporder/request.js';
+// @ts-ignore
+import { store } from '@/uni_modules/uni-id-pages/common/store.js';
 
 const loggedIn = ref(false);
 const bind = ref<any>({});
 const overview = ref<any>({});
 
+// 显示名：昵称优先，没有再用用户名；store.userInfo 登录成功后异步刷新，响应式跟随
+const displayName = computed(() => {
+  const info = store.userInfo || {};
+  return bind.value.nickname || info.nickname || info.username || '';
+});
+
 const load = async () => {
   loggedIn.value = isLoggedIn();
   if (!loggedIn.value) return;
-  try {
-    const [b, o] = await Promise.all([api.user.bindStatus(), api.user.meOverview()]);
-    bind.value = b || {};
-    overview.value = o || {};
-  } catch (e) {
-    /* 未登录或失败时保持空 */
-  }
+  // 两个请求各自处理成败，概览失败不影响账号区显示
+  await Promise.all([
+    api.user.bindStatus().then((b: any) => { bind.value = b || {}; }).catch(() => {}),
+    api.user.meOverview().then((o: any) => { overview.value = o || {}; }).catch(() => {}),
+  ]);
 };
 
 const login = () => uni.navigateTo({ url: '/uni_modules/uni-id-pages/pages/login/login-withpwd' });

@@ -56,7 +56,7 @@ date: 2026-09-18（第 5 次合并更新）
 
 | 事项 | 状态 |
 |---|---|
-| **A-04 微信服务类目核验** | **唯一硬阻塞**，只能用户在微信后台操作。核验清单与询问话术已备好在 `docs/compliance/CATEGORY_VERIFICATION.md` |
+| **A-04 微信服务类目核验** | **唯一硬阻塞**，只能用户在微信后台操作。核验清单与询问话术已备好在 `docs/03-compliance/CATEGORY_VERIFICATION.md` |
 | 后台效果图 | **v2 已画完**（`prototype/admin/admin-mockup-v2.html`，9-17，18 屏），但画于 D-072 之前。任务书已改写为 **v2→v3 增量修订单**（不重画），待交给执行 session |
 | schema 上传服务空间 | 19 张表已落盘**未上传**；上传前须核对 uni-id 升级三项清单 |
 | `update.md` 批次 B（云对象）/ C（前端页面） | 未开工，按用户安排放最后。批次 C 的前置是三 tab 大厅骨架，`pages.json` 的 `tabBar` 仍未配置 |
@@ -69,10 +69,10 @@ date: 2026-09-18（第 5 次合并更新）
 
 ```
 README.md                            产品定位、两工程职责、文档入口
-docs/product/DECISIONS.md            72 条决策，冲突时以此为准
-docs/arch/DATA_MODEL.md              19 张表
-docs/arch/ADMIN_KNOWN_ISSUES.md      41 条后台待处理问题
-docs/update.md                       小程序侧工作单（批次 A/D 已完成）
+docs/00-product/DECISIONS.md            72 条决策，冲突时以此为准
+docs/02-arch/DATA_MODEL.md              19 张表
+docs/90-working/ADMIN_KNOWN_ISSUES.md      41 条后台待处理问题
+docs/99-archive/update.md                       小程序侧工作单（批次 A/D 已完成）
 docs/update-admin-mockup.md          后台效果图任务书
 memory/MEMORY.md                     会话记忆索引
 .claude/skills/save-session/SKILL.md 会话保存规则

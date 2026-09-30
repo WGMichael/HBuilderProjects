@@ -1,0 +1,10 @@
+{
+    "name": "grouporder-export-co",
+    "dependencies": {
+        "grouporder-common": "file:../common/grouporder-common",
+        "xlsx": "^0.18.5"
+    },
+    "extensions": {
+        "uni-cloud-jql": {}
+    }
+}

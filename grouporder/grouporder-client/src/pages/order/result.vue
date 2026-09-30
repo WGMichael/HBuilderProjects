@@ -20,6 +20,15 @@
       <view class="total">预计合计 <text class="total__amt">￥{{ fen2yuan(order.total_amount) }}</text></view>
     </view>
 
+    <!-- 自提点（D-077）：下单成功当场就要知道去哪取 -->
+    <go-pickup
+      v-if="order.pickup"
+      :address="order.pickup.address"
+      :time-desc="order.pickup.time_desc"
+      :contact-name="order.pickup.contact_name"
+      :contact-mobile="order.pickup.contact_mobile"
+    />
+
     <view class="actions">
       <button class="btn btn--primary" type="primary" @click="again">再下一单</button>
       <button class="btn" @click="viewOrder">查看订单</button>
@@ -35,6 +44,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app';
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { fen2yuan } from '@/common/grouporder/dict.js';
+import GoPickup from '@/components/go-pickup/go-pickup.vue';
 
 const orderId = ref('');
 const activityId = ref('');

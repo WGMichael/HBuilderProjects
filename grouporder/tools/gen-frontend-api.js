@@ -7,7 +7,7 @@
  * 方法名永远与实现一致。
  *
  * 【只生成 index.js（方法名与转发）。参数与出参不在这里定义，
- *   以 docs/arch/CLOUD_API.md §14 为唯一事实源，避免出现第二份签名。】
+ *   以 docs/02-arch/CLOUD_API.md §14 为唯一事实源，避免出现第二份签名。】
  *
  * 用法：node tools/gen-frontend-api.js
  */
@@ -49,7 +49,7 @@ function build () {
   lines.push(' * 【本文件由 tools/gen-frontend-api.js 自动生成，不要手改】')
   lines.push(' * 新增或改名云对象方法后重跑：node tools/gen-frontend-api.js')
   lines.push(' *')
-  lines.push(' * 这里只有方法名与转发。**入参、出参、幂等键一律查 docs/arch/CLOUD_API.md §14**，')
+  lines.push(' * 这里只有方法名与转发。**入参、出参、幂等键一律查 docs/02-arch/CLOUD_API.md §14**，')
   lines.push(' * 本文件刻意不重复定义参数，避免签名出现第二个事实源。')
   lines.push(' *')
   lines.push(' * 用法：')

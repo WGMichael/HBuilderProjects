@@ -4,13 +4,11 @@
 
 ## 当前状态
 
-- 当前阶段：MVP 核心业务规则持续收口，正在同步交互流程与数据模型
+- 当前阶段：服务端云对象、小程序端 25 页与运营后台 16 页均已实装，进入缺陷修复与合规前置阶段；缺陷与待办以 `docs/90-working/REVIEW_REPORT_2026-09-22.md` 为准
 - 首发平台：微信小程序
 - 上线目标：真实上线
-- 当前版本：PRD v1.1，MVP 产品范围及关键边界规则已确认
-- 下一确认点：评审更新后的页面流程、状态矩阵与数据模型
-
-在本轮页面流程和数据模型确认前，不进入正式业务功能开发。
+- 产品事实：以 `docs/00-product/DECISIONS.md` 现行决策与 `docs/00-product/PRD.md` 为准，版本见 `docs/README.md` 版本总表
+- 上线前置：微信服务类目核验（P1-09）、AppID 与服务空间绑定、协议与隐私指引、密钥轮换
 
 ## 文档入口
 
@@ -18,34 +16,41 @@
 
 ### 一、产品事实（冲突时以此为准）
 
-- [产品决策记录](docs/product/DECISIONS.md) —— **最高优先级**，72 条决策，与任何其他文档冲突时以此为准
-- [产品需求文档](docs/product/PRD.md) —— 产品定位、功能范围、核心验收标准
-- [平台运营后台需求](docs/product/OPS_ADMIN_REQUIREMENTS.md) —— 后台主规格，A-01～A-18 页面清单
-- [数据模型设计](docs/arch/DATA_MODEL.md) —— 19 张表的字段、索引、状态机、并发策略与功能级实现规格
-- [UX 流程规范](docs/ux/UX_FLOW_SPEC.md) · [UX 状态矩阵](docs/ux/UX_STATE_MATRIX.md) —— 页面编号、流程分支与状态迁移
-- [用户商品库实现规格](docs/arch/GOODS_LIB_SPEC.md) —— 商品库的完整实现规格（D-063～D-066）
+- [产品决策记录](docs/00-product/DECISIONS.md) —— **最高优先级**，现行决策 D-001～D-082（编号连续，含少量已废止空缺），与任何其他文档冲突时以此为准
+- [产品需求文档](docs/00-product/PRD.md) —— 产品定位、功能范围、核心验收标准
+- [平台运营后台需求](docs/00-product/OPS_ADMIN_REQUIREMENTS.md) —— 后台主规格；页面编号 A-xx 的唯一出处是 `docs/01-ux/UX_FLOW_SPEC.md` §3.2
+- [数据模型设计](docs/02-arch/DATA_MODEL.md) —— 18 张表的字段、索引、状态机、并发策略与功能级实现规格
+- [UX 流程规范](docs/01-ux/UX_FLOW_SPEC.md) · [UX 状态矩阵](docs/01-ux/UX_STATE_MATRIX.md) —— 页面编号、流程分支与状态迁移
+- [用户商品库实现规格](docs/02-arch/GOODS_LIB_SPEC.md) —— 商品库的完整实现规格（D-063～D-066）
+- [微信分享入口实现规格](docs/02-arch/SHARE_SPEC.md) —— 分享是本产品唯一的活动入口（D-059）；含路由与卡片字段约定、落地页状态矩阵、**当前 4 个待修缺陷**与 D-083 待确认项
 
-### 二、合规（上线前必读）
+### 二、上线关卡（清掉这五份才能上线）
 
-- [微信服务类目与主体核验](docs/compliance/CATEGORY_VERIFICATION.md) —— **待核验**，P1-09 / B-01，唯一单点否决风险
-- [小程序提审自查清单](docs/compliance/RELEASE_AUDIT_CHECKLIST.md) —— 提审前逐项核对，46 项
+按顺序，前两项没结论时后面做完也没用：
 
-### 三、实施配套（工程期使用，不是产品事实）
+- [微信服务类目与主体核验](docs/03-release/CATEGORY_VERIFICATION.md) —— ⚠️ **待核验**，P1-09 / B-01，唯一单点否决风险
+- [全项目待处理问题清单](docs/03-release/OPEN_ISSUES.md) —— **活跃待办**：密钥轮换、服务端并发三项、小程序四个阻断项、后台 D-078 落地
+- [运营后台已知问题清单](docs/03-release/ADMIN_KNOWN_ISSUES.md) —— 含「上线前必须处理」的高危项，按严重度分级
+- [UX 评审门](docs/03-release/UX_REVIEW_GATE.md) —— 交付前的逐项检查表
+- [小程序提审自查清单](docs/03-release/RELEASE_AUDIT_CHECKLIST.md) —— 提审前逐项核对，46 项
 
-- [运营后台实施顺序与投喂规范](docs/arch/ADMIN_BUILD_PLAN.md) —— 从哪一步开始、给写码 Agent 喂什么
-- [uni-admin 复用与改造盘点](docs/arch/ADMIN_REUSE_MAP.md) —— 哪些页面现成、哪些要改、哪些从零写
-- [运营后台已知问题清单](docs/arch/ADMIN_KNOWN_ISSUES.md) —— uni-admin 模板与项目规则的冲突、缺陷与待验证事项，按严重度分级
-- [UX 评审门](docs/ux/UX_REVIEW_GATE.md) —— 交付前的逐项检查表
-- [云函数与云对象总契约](docs/arch/CLOUD_API.md) —— **全部服务端接口的唯一事实源**（两端 7 个云对象、80 个方法、11 个公共模块、4 个定时函数）：云函数 session 维护，两个前端 session 只读
-- [运营后台前端开发交接书](docs/arch/ADMIN_FRONTEND_BRIEF.md) —— 给 admin 端开发 Agent 的工作材料：分批、依赖、形态规范、五处必改、七条红线
-- [小程序端前端开发交接书](docs/arch/CLIENT_FRONTEND_BRIEF.md) —— 给 client 端开发 Agent 的工作材料：30 个页面的分批与云对象依赖、三 tab 大厅的四个硬约束、八条红线、八条陷阱
+### 三、接口契约
 
-### 四、一次性工作单与评审意见（**不是项目事实**）
+- [云函数与云对象总契约](docs/02-arch/CLOUD_API.md) —— **全部服务端接口的唯一事实源**（两端共用 7 个云对象、92 个方法、14 个公共模块、4 个定时与回调函数）：由服务端维护者维护，两个前端只读
 
-- [本轮更新工作单](docs/update.md) —— 批次 A/D 已完成，B/C 未开工
-- [可行性评审](docs/review/FEASIBILITY_REVIEW.md) —— 外部意见，条目经确认后才写入 PRD/DECISIONS
+> **实施配套文档已于 2026-09-30 归档**。两端主体开发完成（后台 16/17 页、客户端 26 页）后，
+> 四份交接书与实施盘点移入 [`docs/99-archive/2026-09/`](docs/99-archive/README.md)——可查阅「当时为什么这么建」，
+> 但**不要据此实现**，规格以上面三层为准。
 
-> **文档生命周期规则（2026-09-18 确立）**：评估稿、对齐分析、方案比选这类**过程文档**，结论一旦写入 DECISIONS 或对应规格，即从 `docs/` 删除，不保留在正式目录。原因是过程文档记录的是**当时的判断**，决策推翻它之后原文不会跟着改，留在目录里就成了一个说反话的事实源。需要追溯推理过程时查 git 历史。
+### 四、归档（可查，不可依）
+
+- [`docs/99-archive/`](docs/99-archive/README.md) —— 使命已完成的文档，按批次分子目录
+
+> **文档生命周期规则**（2026-09-18 确立，2026-09-30 修订）：
+>
+> - **评估稿、对齐分析、方案比选**这类过程文档：结论一旦写入 DECISIONS 或对应规格，即从 `docs/` **删除**。原因是它记录的是**当时的判断**，决策推翻它之后原文不会跟着改，留着就成了一个说反话的事实源。需要追溯时查 git 历史。
+> - **实施计划、复用盘点、开发交接书**这类过程文档：任务完成后**归档**而非删除。它们记录的不是判断，是「当时怎么建的」——模板升级、排查历史遗留时仍有价值。归档后不再维护，其中的路径与行号可能已过期。
+> - 两者的区别是：**前者会与现行决策冲突，后者不会。**
 
 ## 项目目录结构
 
@@ -55,6 +60,7 @@ grouporder/
 ├── grouporder-admin/    平台运营后台工程
 ├── docs/                产品、UX、评审及后续架构方案
 ├── prototype/           核心页面交互原型，不是正式业务代码
+├── tools/               工程脚本（gen-frontend-api.js 生成两端 API 调用清单）
 ├── memory/              各次会话的记忆文件，由 save-session 生成，用于 clear 后恢复上下文
 ├── .claude/skills/      项目级 skill，目前有 save-session
 └── README.md            项目总入口与协作说明
@@ -66,7 +72,7 @@ grouporder/
 
 - `grouporder-client/`：面向参与者和团长的微信小程序代码。团长的活动、商品、订单和清单管理也在小程序内完成。
 - `grouporder-admin/`：仅供平台内部人员使用的运营后台代码，承担内容治理、举报处置、账号与权限、受控查询和审计等能力，不是团长经营后台。
-- `docs/`：项目事实和方案的正式来源。产品结论以 `docs/product/PRD.md` 与 `docs/product/DECISIONS.md` 为准；运营后台边界见 `docs/product/OPS_ADMIN_REQUIREMENTS.md`；页面流程和状态见 `docs/ux/`。
+- `docs/`：项目事实和方案的正式来源。产品结论以 `docs/00-product/PRD.md` 与 `docs/00-product/DECISIONS.md` 为准；运营后台边界见 `docs/00-product/OPS_ADMIN_REQUIREMENTS.md`；页面流程和状态见 `docs/01-ux/`。
 - `prototype/`：用于评审页面结构和交互的本地原型，使用模拟数据，不代表正式代码结构或接口设计。
 - `../ai-article/`：位于本项目上一级的通用规则资料。目前与本项目直接相关的是 `../ai-article/uni-admin-uniCloud-开发实践.md`。它用于补充开发经验，不得覆盖本项目正式产品决策。
 
@@ -78,10 +84,11 @@ AI 或新协作者进入项目后，应先识别任务属于产品、UX、小程
 
 0. `memory/MEMORY.md`，若需接续此前会话的工作，先看索引找到对应的会话记忆。**memory 与文档冲突时以文档为准**——memory 记的是当时的判断，文档是确认后的事实。
 1. 根目录 `README.md`，确认产品定位、阶段、目录职责和协作约束。
-2. `docs/product/DECISIONS.md` 与 `docs/product/PRD.md`，确认已经生效的业务事实。
+2. `docs/00-product/DECISIONS.md` 与 `docs/00-product/PRD.md`，确认已经生效的业务事实。
 3. 与任务直接相关的专项文档：
-   - 小程序页面：`docs/ux/UX_FLOW_SPEC.md`、`docs/ux/UX_STATE_MATRIX.md`、`grouporder-client/README.md`。
-   - 运营后台：`docs/product/OPS_ADMIN_REQUIREMENTS.md`、`docs/ux/`、`grouporder-admin/README.md`。
+   - 小程序页面：`docs/01-ux/UX_FLOW_SPEC.md`、`docs/01-ux/UX_STATE_MATRIX.md`、`docs/02-arch/CLOUD_API.md`。
+   - 运营后台：`docs/00-product/OPS_ADMIN_REQUIREMENTS.md`、`docs/02-arch/CLOUD_API.md`、`docs/03-release/ADMIN_KNOWN_ISSUES.md`。
+   - 分享功能：`docs/02-arch/SHARE_SPEC.md`（自包含）。
 4. 需要使用 uni-admin 或 uniCloud 时，再读取 `../ai-article/uni-admin-uniCloud-开发实践.md`。
 5. 实施前检查目标目录现有代码和未提交修改，不以原型、模板默认功能或外部经验替代正式需求。
 

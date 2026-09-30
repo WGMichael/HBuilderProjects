@@ -1,6 +1,7 @@
 {
   "bsonType": "object",
   "required": [
+    "idempotent_key",
     "title",
     "cover_image",
     "short_code",
@@ -40,7 +41,7 @@
     "cover_image": {
       "bsonType": "file",
       "title": "封面图",
-      "description": "活动封面图，必填。用于首页列表与微信分享卡片（D-041）"
+      "description": "活动封面图，必填。用于微信分享卡片与活动详情（D-041）"
     },
     "images": {
       "bsonType": "array",
@@ -48,6 +49,13 @@
       "title": "轮播图",
       "description": "活动详情页顶部轮播图，最多 9 张（D-041）",
       "maxLength": 9
+    },
+    "idempotent_key": {
+      "bsonType": "string",
+      "title": "创建幂等键",
+      "description": "客户端为每次新建草稿 / 复制意图生成一次，唯一索引；重试复用同键时返回已有活动（D-081）",
+      "minLength": 8,
+      "maxLength": 64
     },
     "short_code": {
       "bsonType": "string",
@@ -71,6 +79,30 @@
           "text": "自提"
         }
       ]
+    },
+    "pickup_address": {
+      "bsonType": "string",
+      "title": "自提地址",
+      "maxLength": 200,
+      "description": "自提点地址，如「XX小区北门快递柜旁」。**仅自提活动（delivery_type=2）使用且必填**，送货上门活动留空；条件必填由云对象校验，schema 不进 required。发布后可修改、即时对所有人生效、不进订单快照、不触发重新审核（D-077）"
+    },
+    "pickup_time_desc": {
+      "bsonType": "string",
+      "title": "自提时间说明",
+      "maxLength": 100,
+      "description": "自提时间的文字说明，如「周六 9:00–18:00」。**与接龙截止时间 end_time 是两回事**，指截止后参与者去取货的时段，可为范围或多时段。仅自提活动使用，非必填（D-077）"
+    },
+    "pickup_contact_name": {
+      "bsonType": "string",
+      "title": "自提现场联系人",
+      "maxLength": 20,
+      "description": "自提现场联系人姓名。团长本人是联系人时自行填写。仅自提活动使用，非必填（D-077）"
+    },
+    "pickup_contact_mobile": {
+      "bsonType": "string",
+      "title": "自提现场联系电话",
+      "maxLength": 20,
+      "description": "自提现场联系人电话，供参与者取货时联系。账号体系不采集手机号（D-029），此电话仅存于活动信息中。仅自提活动使用，非必填（D-077）"
     },
     "leader_uid": {
       "bsonType": "string",

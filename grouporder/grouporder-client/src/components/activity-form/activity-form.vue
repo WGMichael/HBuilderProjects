@@ -9,6 +9,8 @@
 
   草稿模型：加商品 / 复用历史商品都需要 activity_id，所以首次执行这类动作前
   先用当前标题创建草稿（activityCreateDraft）拿到 id；之后的商品操作直接落服务端。
+  图片先选后传（common/grouporder/upload.js）：建草稿时不传图，「保存草稿 / 下一步」时才上传。
+  资料齐全性（封面图、商品、自提地址）只在「下一步」时检查，填写过程中不拦（D-041）。
 -->
 <template>
   <view class="af">
@@ -20,6 +22,26 @@
     <view class="af__field">
       <text class="af__label">活动说明（选填）</text>
       <textarea class="af__textarea" v-model="form.description" placeholder="补充说明，所有参与者可见" maxlength="500" />
+    </view>
+
+    <!-- 图片（D-041）：封面必填，轮播图选填最多 9 张 -->
+    <view class="af__field">
+      <text class="af__label">封面图 <text class="req">*</text></text>
+      <view class="af__imgs">
+        <view v-if="cover.length" class="af__img">
+          <image class="af__img-pic" :src="cover[0].preview" mode="aspectFill" @click="chooseCover" />
+          <text class="af__img-del" @click="cover = []">×</text>
+        </view>
+        <view v-else class="af__img-add" @click="chooseCover">＋</view>
+      </view>
+      <text class="af__label af__label--sub">轮播图（选填，最多 {{ MAX_IMAGES }} 张）</text>
+      <view class="af__imgs">
+        <view v-for="(it, i) in images" :key="i" class="af__img">
+          <image class="af__img-pic" :src="it.preview" mode="aspectFill" />
+          <text class="af__img-del" @click="images.splice(i, 1)">×</text>
+        </view>
+        <view v-if="images.length < MAX_IMAGES" class="af__img-add" @click="chooseImages">＋</view>
+      </view>
     </view>
 
     <!-- 商品列表 -->
@@ -63,11 +85,32 @@
         </view>
       </view>
       <view class="af__hint">交付方式发布后不可修改。选「自提」时只收集收货人姓名与电话，不收集地址。</view>
+
+      <!-- 自提点（D-077）：仅自提活动填写，告诉参与者「去哪取、何时取、找谁」 -->
+      <block v-if="isSelfPick">
+        <view class="af__set-row af__set-row--col">
+          <text class="af__set-k">自提地址 <text class="af__req">*</text></text>
+          <input class="af__input" v-model="form.pickup_address" placeholder="如「XX小区北门快递柜旁」" maxlength="200" />
+        </view>
+        <view class="af__set-row af__set-row--col">
+          <text class="af__set-k">自提时间</text>
+          <input class="af__input" v-model="form.pickup_time_desc" placeholder="如「周六 9:00–18:00」" maxlength="100" />
+        </view>
+        <view class="af__set-row af__set-row--col">
+          <text class="af__set-k">现场联系人</text>
+          <input class="af__input" v-model="form.pickup_contact_name" placeholder="取货时找谁（选填）" maxlength="20" />
+        </view>
+        <view class="af__set-row af__set-row--col">
+          <text class="af__set-k">联系电话</text>
+          <input class="af__input" v-model="form.pickup_contact_mobile" placeholder="取货联系电话（选填）" maxlength="20" />
+        </view>
+        <view class="af__hint">自提时间指截止后去取货的时段，与上面的接龙截止时间是两回事。自提点发布后仍可修改，改完即时对所有人生效。</view>
+      </block>
     </view>
 
     <view class="af__footer">
       <button class="af__save" size="default" :loading="saving" @click="saveDraft">保存草稿</button>
-      <button class="af__next" size="default" type="primary" :disabled="!canPublish" @click="goPublish">下一步：确认发布</button>
+      <button class="af__next" size="default" type="primary" :loading="publishing" @click="goPublish">下一步：确认发布</button>
     </view>
   </view>
 </template>
@@ -78,20 +121,39 @@ import { computed, ref } from 'vue';
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { fen2yuan } from '@/common/grouporder/dict.js';
+// @ts-ignore
+import { toItem, pickImages, imageDir, uploadPending } from '@/common/grouporder/upload.js';
+
+const MAX_IMAGES = 9;
 
 const props = defineProps({
   // 有值则为编辑草稿模式；无值为新建
   activityId: { type: String, default: '' },
 });
 
-const form = ref<any>({ title: '', description: '', delivery_type: 1, cover_image: null, images: [] });
+const form = ref<any>({ title: '', description: '', delivery_type: 1, pickup_address: '', pickup_time_desc: '', pickup_contact_name: '', pickup_contact_mobile: '' });
+// 图片 item 见 upload.js；封面最多 1 张
+const cover = ref<any[]>([]);
+const images = ref<any[]>([]);
 const goods = ref<any[]>([]);
 const draftId = ref(props.activityId || '');
+// 活动创建日期，决定图片的云存储目录
+const createDate = ref<number>(0);
 const saving = ref(false);
+const publishing = ref(false);
 const endDate = ref('');
 const endTime = ref('18:00');
 
-const canPublish = computed(() => !!form.value.title.trim() && goods.value.length > 0 && !!draftId.value);
+const isSelfPick = computed(() => form.value.delivery_type === 2);
+
+/** 「下一步」时的齐全性检查，返回第一条缺失提示；服务端 activitySubmitReview 会再拦一次（D-041、D-077） */
+const missingForPublish = () => {
+  if (!form.value.title.trim()) return '请填写接龙标题';
+  if (!cover.value.length) return '请上传封面图';
+  if (!goods.value.length) return '请至少添加一个商品';
+  if (isSelfPick.value && !form.value.pickup_address.trim()) return '请填写自提地址';
+  return '';
+};
 
 // —— 编辑模式：载入已有草稿 ——
 const loadDraft = async () => {
@@ -100,8 +162,13 @@ const loadDraft = async () => {
   form.value.title = data.title || '';
   form.value.description = data.description || '';
   form.value.delivery_type = data.delivery_type || 1;
-  form.value.cover_image = data.cover_image || null;
-  form.value.images = data.images || [];
+  form.value.pickup_address = data.pickup_address || '';
+  form.value.pickup_time_desc = data.pickup_time_desc || '';
+  form.value.pickup_contact_name = data.pickup_contact_name || '';
+  form.value.pickup_contact_mobile = data.pickup_contact_mobile || '';
+  cover.value = data.cover_image ? [toItem(data.cover_image)] : [];
+  images.value = (data.images || []).map(toItem);
+  createDate.value = data.create_date || 0;
   goods.value = data.goods || [];
   if (data.end_time) {
     const d = new Date(data.end_time);
@@ -124,13 +191,17 @@ const setDelivery = (t: number) => {
   form.value.delivery_type = t;
 };
 
+// 文字资料；图片要等上传完才有 fileID，由 persist 单独带上
 const buildPayload = () => ({
   title: form.value.title.trim(),
   description: form.value.description.trim(),
-  cover_image: form.value.cover_image,
-  images: form.value.images,
   delivery_type: form.value.delivery_type,
   end_time: endTimestamp(),
+  // 自提点四字段（D-077）。送货上门时服务端会统一清空，这里照传不做判断
+  pickup_address: form.value.pickup_address.trim(),
+  pickup_time_desc: form.value.pickup_time_desc.trim(),
+  pickup_contact_name: form.value.pickup_contact_name.trim(),
+  pickup_contact_mobile: form.value.pickup_contact_mobile.trim(),
 });
 
 /** 确保草稿已存在，返回 activity_id。加商品 / 复用前调用 */
@@ -140,43 +211,80 @@ const ensureDraft = async () => {
     uni.showToast({ title: '请先填写接龙标题', icon: 'none' });
     return '';
   }
+  // 只建文字草稿，不传图：图片留到保存草稿 / 下一步时再上传
   const data = (await guarded(api.activity.activityCreateDraft(buildPayload()))) || {};
   draftId.value = data.activity_id || '';
+  createDate.value = data.create_date || Date.now();
   return draftId.value;
 };
 
-const saveDraft = async () => {
-  if (!form.value.title.trim()) {
-    uni.showToast({ title: '请先填写接龙标题', icon: 'none' });
-    return;
-  }
-  saving.value = true;
+/** 最终确认：确保草稿存在 → 上传待传图片 → 整体写回。成功返回 true */
+const persist = async () => {
   try {
-    if (draftId.value) {
-      await guarded(api.activity.activityUpdateDraft(Object.assign({ activity_id: draftId.value }, buildPayload())));
-    } else {
-      const data = (await guarded(api.activity.activityCreateDraft(buildPayload()))) || {};
-      draftId.value = data.activity_id || '';
+    const id = await ensureDraft();
+    if (!id) return false;
+    const dir = imageDir(createDate.value, id);
+    uni.showLoading({ title: '上传图片中', mask: true });
+    try {
+      await uploadPending(cover.value, dir, 'cover');
+      await uploadPending(images.value, dir, 'img');
+    } catch (e) {
+      uni.showModal({ content: '图片上传失败，请重试', showCancel: false });
+      return false;
+    } finally {
+      // 要在写回请求之前关：小程序 loading 与 toast 共用一个层，晚关会把接口的错误提示一起关掉
+      uni.hideLoading();
     }
-    uni.showToast({ title: '草稿已保存', icon: 'none' });
+    await guarded(api.activity.activityUpdateDraft(Object.assign({ activity_id: id }, buildPayload(), {
+      cover_image: cover.value.length ? cover.value[0].file : null,
+      images: images.value.map((it) => it.file),
+    })));
+    return true;
   } catch (e) {
     /* 统一提示 */
+    return false;
+  }
+};
+
+const saveDraft = async () => {
+  saving.value = true;
+  try {
+    if (await persist()) uni.showToast({ title: '草稿已保存', icon: 'none' });
   } finally {
     saving.value = false;
   }
+};
+
+// —— 图片：只记本地路径，不上传 ——
+const chooseCover = async () => {
+  const picked = await pickImages(1);
+  if (picked.length) cover.value = picked;
+};
+const chooseImages = async () => {
+  const picked = await pickImages(MAX_IMAGES - images.value.length);
+  images.value = images.value.concat(picked);
+};
+
+// —— 子页跳转 ——
+// faqi tab 的 onShow 在「切 tab 进入」和「从子页返回」时都会触发，只有前者该重置（D-061）。
+// 表单里所有去子页的跳转都走这里打标记，faqi 用 consumeChildReturn 区分两种情况
+let leftForChild = false;
+const toChild = (opts: any) => {
+  leftForChild = true;
+  uni.navigateTo(Object.assign({}, opts, { fail: () => { leftForChild = false; } }));
 };
 
 // —— 商品：M-11 ——
 const addGoods = async () => {
   const id = await ensureDraft();
   if (!id) return;
-  uni.navigateTo({
+  toChild({
     url: '/pages/activity/goods-edit?activity_id=' + id,
     events: { saved: () => reloadGoods() },
   });
 };
 const editGoods = (g: any) => {
-  uni.navigateTo({
+  toChild({
     url: '/pages/activity/goods-edit?activity_id=' + draftId.value + '&goods_id=' + g._id,
     events: { saved: () => reloadGoods() },
   });
@@ -204,7 +312,7 @@ const reloadGoods = async () => {
 const reuseGoods = async () => {
   const id = await ensureDraft();
   if (!id) return;
-  uni.navigateTo({
+  toChild({
     url: '/pages/lib/history-goods?activity_id=' + id,
     events: { added: () => reloadGoods() },
   });
@@ -212,26 +320,59 @@ const reuseGoods = async () => {
 
 // —— 复用历史接龙 M-31：创建全新草稿，不影响当前 ——
 const reuseActivity = () => {
-  uni.navigateTo({ url: '/pages/lib/history-activity' });
+  toChild({ url: '/pages/lib/history-activity' });
 };
 
-const goLibManage = () => uni.navigateTo({ url: '/pages/lib/manage' });
+const goLibManage = () => toChild({ url: '/pages/lib/manage' });
 
-const goPublish = () => {
-  if (!canPublish.value) return;
-  uni.navigateTo({ url: '/pages/activity/publish?id=' + draftId.value });
+const goPublish = async () => {
+  const miss = missingForPublish();
+  if (miss) {
+    uni.showToast({ title: miss, icon: 'none' });
+    return;
+  }
+  publishing.value = true;
+  try {
+    if (await persist()) toChild({ url: '/pages/activity/publish?id=' + draftId.value });
+  } finally {
+    publishing.value = false;
+  }
 };
 
 /** 供父组件（faqi tab）在每次进入时重置为新建态 */
 const reset = () => {
-  form.value = { title: '', description: '', delivery_type: 1, cover_image: null, images: [] };
+  form.value = { title: '', description: '', delivery_type: 1, pickup_address: '', pickup_time_desc: '', pickup_contact_name: '', pickup_contact_mobile: '' };
+  cover.value = [];
+  images.value = [];
+  createDate.value = 0;
   goods.value = [];
   draftId.value = '';
   endDate.value = '';
   endTime.value = '18:00';
 };
 
-defineExpose({ loadDraft, reloadGoods, reset });
+/** 本次 onShow 是否由子页返回触发；读取即清除标记 */
+const consumeChildReturn = () => {
+  const r = leftForChild;
+  leftForChild = false;
+  return r;
+};
+
+/**
+ * faqi 从子页返回时调用：保留表单，只刷新商品列表（商品库里改过的内容也能同步）。
+ * 若草稿已在发布页提交、不再是草稿，就回到新建态，避免继续编辑一场已提交的活动
+ */
+const onChildReturn = async () => {
+  if (!draftId.value) return;
+  const data = (await guarded(api.activity.activityGetDetail({ activity_id: draftId.value }))) || {};
+  if (data.status !== undefined && data.status !== 0) {
+    reset();
+    return;
+  }
+  goods.value = data.goods || [];
+};
+
+defineExpose({ loadDraft, reloadGoods, reset, consumeChildReturn, onChildReturn });
 
 if (props.activityId) loadDraft();
 </script>
@@ -242,6 +383,12 @@ if (props.activityId) loadDraft();
 .af__label { font-size: 26rpx; color: #606266; }
 .req { color: #fa3534; }
 .af__input { margin-top: 12rpx; font-size: 30rpx; color: #303133; }
+.af__label--sub { display: block; margin-top: 24rpx; }
+.af__imgs { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
+.af__img { position: relative; width: 160rpx; height: 160rpx; }
+.af__img-pic { width: 160rpx; height: 160rpx; border-radius: 8rpx; background: #f5f5f5; }
+.af__img-del { position: absolute; top: -12rpx; right: -12rpx; width: 36rpx; height: 36rpx; line-height: 34rpx; text-align: center; font-size: 28rpx; color: #fff; background: rgba(0, 0, 0, 0.55); border-radius: 50%; }
+.af__img-add { width: 160rpx; height: 160rpx; line-height: 160rpx; text-align: center; font-size: 56rpx; color: #c0c4cc; border: 1rpx dashed #dcdfe6; border-radius: 8rpx; }
 .af__textarea { margin-top: 12rpx; width: 100%; height: 140rpx; font-size: 28rpx; color: #303133; }
 .af__block { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .af__block-head { display: flex; align-items: center; justify-content: space-between; }
@@ -258,6 +405,9 @@ if (props.activityId) loadDraft();
 .af__hint { font-size: 22rpx; color: #909399; line-height: 1.7; margin-top: 16rpx; }
 .af__set-row { display: flex; align-items: center; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid #f5f5f5; }
 .af__set-k { font-size: 26rpx; color: #606266; }
+.af__set-row--col { flex-direction: column; align-items: stretch; gap: 12rpx; }
+.af__req { color: #fa3534; }
+.af__input { font-size: 26rpx; color: #303133; background: #f7f8fa; border-radius: 8rpx; padding: 16rpx 20rpx; }
 .af__set-v { font-size: 26rpx; color: #303133; }
 .af__radio-group { display: flex; gap: 16rpx; }
 .af__radio { font-size: 24rpx; color: #606266; padding: 8rpx 24rpx; border: 1rpx solid #dcdfe6; border-radius: 32rpx; }

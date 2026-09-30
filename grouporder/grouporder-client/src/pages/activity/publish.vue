@@ -32,7 +32,8 @@
         <view class="note">审核中，通过后可分享。图片检测不阻塞放行。</view>
       </template>
       <template v-else-if="act.status === 2">
-        <button class="btn btn--primary" type="primary" open-type="share">分享给好友接龙</button>
+        <button v-if="canShare" class="btn btn--primary" type="primary" open-type="share">分享给好友接龙</button>
+        <view v-else class="note">活动已被平台下架，暂不能分享</view>
         <button class="btn" @click="goManage">去管理</button>
       </template>
       <template v-else>
@@ -44,7 +45,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { onLoad, onShow } from '@dcloudio/uni-app';
+import { onLoad, onShow, onShareAppMessage } from '@dcloudio/uni-app';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
@@ -66,6 +67,7 @@ const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-dig
 const load = async () => {
   if (!activityId.value) return;
   act.value = (await guarded(api.activity.activityGetDetail({ activity_id: activityId.value }))) || {};
+  await loadShareEntry();
 };
 
 const submit = async () => {
@@ -84,6 +86,36 @@ const withdraw = async () => {
     await load();
   } catch (e) {} finally { busy.value = false; }
 };
+
+// —— 分享（SHARE_SPEC §4）——
+// onShareAppMessage 的返回值不能是 Promise，微信要同步拿到卡片内容，
+// 因此在活动进入「进行中」后预先取好服务端复核过的卡片数据，回调里同步读。
+const shareEntry = ref<any>(null);
+
+const canShare = computed(() => act.value.status === 2 && act.value.governance_status === 0);
+
+const loadShareEntry = async () => {
+  if (!canShare.value) { shareEntry.value = null; return; }
+  try {
+    shareEntry.value = await guarded(
+      api.activity.activityGetShareEntry({ activity_id: activityId.value }),
+      { silent: true }
+    );
+  } catch (e) {
+    // 取不到就不发卡片，避免把已下架 / 已变更状态的活动转出去
+    shareEntry.value = null;
+  }
+};
+
+onShareAppMessage(() => {
+  const e = shareEntry.value || {};
+  return {
+    title: e.title ? '接龙丨' + e.title : act.value.title || '',
+    path: '/pages/activity/detail?id=' + activityId.value,
+    // 封面为空时留空，由微信截取页面首屏兜底（AC-SH-010）
+    imageUrl: (e.cover_image && e.cover_image.url) || '',
+  };
+});
 
 const goBack = () => uni.navigateBack();
 const goManage = () => uni.redirectTo({ url: '/pages/activity/manage?id=' + activityId.value });

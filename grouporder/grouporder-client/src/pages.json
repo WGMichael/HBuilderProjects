@@ -33,6 +33,10 @@
       "style": { "navigationBarTitleText": "活动管理" }
     },
     {
+      "path": "pages/activity/pickup-edit",
+      "style": { "navigationBarTitleText": "修改自提点" }
+    },
+    {
       "path": "pages/activity/order-stat",
       "style": { "navigationBarTitleText": "订单与统计" }
     },

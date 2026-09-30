@@ -28,6 +28,14 @@
       <!-- 不可接龙提示 -->
       <view v-if="!act.joinable" class="closed-bar">{{ closedReason }}</view>
 
+      <!-- 自提点（D-077）：仅自提活动有值 -->
+      <go-pickup
+        :address="act.pickup_address"
+        :time-desc="act.pickup_time_desc"
+        :contact-name="act.pickup_contact_name"
+        :contact-mobile="act.pickup_contact_mobile"
+      />
+
       <!-- 商品选择 -->
       <view class="goods-list">
         <view v-for="g in act.goods || []" :key="g._id" class="gitem">
@@ -58,6 +66,8 @@
       <!-- 底部结算 -->
       <view class="bar">
         <view class="bar__report" @click="report">举报</view>
+        <!-- 参与者二次转发（SHARE_SPEC §5，M-13）：群接龙的扩散主路径 -->
+        <button v-if="canShare" class="bar__share" open-type="share">转发</button>
         <view class="bar__sum">
           <text>已选 {{ totalQty }} 份</text>
         </view>
@@ -69,11 +79,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { onLoad, onShow } from '@dcloudio/uni-app';
+import { onLoad, onShow, onShareAppMessage } from '@dcloudio/uni-app';
 // @ts-ignore
 import api, { guarded, ensureLogin } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { ACTIVITY_STATUS, DELIVERY_TYPE, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
+import GoPickup from '@/components/go-pickup/go-pickup.vue';
 
 const activityId = ref('');
 const act = ref<any>({});
@@ -103,6 +114,19 @@ const dec = (g: any) => {
   qty.value = { ...qty.value, [g._id]: cur - 1 };
 };
 
+// —— 分享（SHARE_SPEC §5，M-13）——
+// 本页参与者也能转发，而 activityGetShareEntry 是 requireLeader（参与者会被拒），
+// 因此卡片直接用页面已有的 act，不调该接口。状态复核由落地页自己承担：
+// activityGetDetail 对草稿/审核中的活动已向非团长抛 FORBIDDEN，
+// 截止/取消/下架则由 §6.2 的落地页提示覆盖，转发出去也不会让人下成单
+const canShare = computed(() => act.value.status === 2 && act.value.governance_status === 0);
+
+onShareAppMessage(() => ({
+  title: act.value.title ? '接龙丨' + act.value.title : '',
+  path: '/pages/activity/detail?id=' + activityId.value,
+  imageUrl: (act.value.cover_image && act.value.cover_image.url) || '',
+}));
+
 const load = async () => {
   if (!activityId.value) return;
   act.value = (await guarded(api.activity.activityGetDetail({ activity_id: activityId.value }))) || {};
@@ -124,8 +148,10 @@ const report = () => {
 };
 
 onLoad((q: any = {}) => {
-  // 支持分享短码进入
-  activityId.value = q.id || q.activity_id || q.short_code || '';
+  // 分享卡片的 path 只带 activity_id（SHARE_SPEC §4.1、D-083）。
+  // 原先还兜底接 q.short_code，但短码会被当成 ObjectId 去查，必然 NOT_FOUND，
+  // 是一条永远失败的路径，已删除
+  activityId.value = q.id || q.activity_id || '';
 });
 onShow(() => load());
 </script>
@@ -159,6 +185,8 @@ onShow(() => load());
 .tag--warn { background: #fdf6ec; color: #f3a73f; }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; padding: 16rpx 24rpx; padding-bottom: calc(16rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #ececec; }
 .bar__report { font-size: 24rpx; color: #909399; margin-right: 24rpx; }
+.bar__share { font-size: 24rpx; color: #2979ff; background: transparent; margin: 0 24rpx 0 0; padding: 0; line-height: 1.6; }
+.bar__share::after { border: none; }
 .bar__sum { flex: 1; font-size: 26rpx; color: #303133; }
 .bar__go { margin: 0; font-size: 30rpx; }
 </style>

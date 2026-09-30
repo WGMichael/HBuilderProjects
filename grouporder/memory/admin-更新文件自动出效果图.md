@@ -11,7 +11,7 @@ date: 2026-09-18
 - 产出三份架构文档：`ADMIN_REUSE_MAP.md`（复用盘点 + 权限模型）、`ADMIN_KNOWN_ISSUES.md`（41 条）、`ADMIN_BUILD_PLAN.md`（实施顺序 + Agent 投喂规范）
 - 工程改动已落地：菜单/角色/权限点三份初始数据、清空 `admin.config.js` 的 staticMenu、删 demo 页、两工程 uni-id 密钥统一
 
-规格、权限模型、问题清单、实施步骤全部已落 `docs/arch/`，此处不重复。
+规格、权限模型、问题清单、实施步骤全部已落 `docs/02-arch/`，此处不重复。
 
 ## 需要延续的判断与约定
 
@@ -45,8 +45,8 @@ v1 效果图自造了一整套后台外观——自研 CSS 体系、自定义表
 
 | 文档 | 用途 |
 |---|---|
-| `docs/arch/ADMIN_BUILD_PLAN.md` | **从哪一步开始、怎么给写码 Agent 派活**（含 L0 底座与三张任务卡示例） |
-| `docs/arch/ADMIN_KNOWN_ISSUES.md` | 41 条已知问题，实施时逐条核对 |
-| `docs/arch/ADMIN_REUSE_MAP.md` | 复用定性、uni-admin 实测视觉规范、权限模型、初始化六步流程 |
+| `docs/90-working/ADMIN_BUILD_PLAN.md` | **从哪一步开始、怎么给写码 Agent 派活**（含 L0 底座与三张任务卡示例） |
+| `docs/90-working/ADMIN_KNOWN_ISSUES.md` | 41 条已知问题，实施时逐条核对 |
+| `docs/90-working/ADMIN_REUSE_MAP.md` | 复用定性、uni-admin 实测视觉规范、权限模型、初始化六步流程 |
 | `prototype/admin/admin-mockup-v2.html` | 18 屏形态稿（v1 保留为规则论证稿，信息架构结论仍有效） |
 | `memory/admin-init.md` | 同项目前序 session 的记录，含 D-072 的来龙去脉与更多工作方式偏好 |

@@ -4,7 +4,7 @@
  * 【本文件由 tools/gen-frontend-api.js 自动生成，不要手改】
  * 新增或改名云对象方法后重跑：node tools/gen-frontend-api.js
  *
- * 这里只有方法名与转发。**入参、出参、幂等键一律查 docs/arch/CLOUD_API.md §14**，
+ * 这里只有方法名与转发。**入参、出参、幂等键一律查 docs/02-arch/CLOUD_API.md §14**，
  * 本文件刻意不重复定义参数，避免签名出现第二个事实源。
  *
  * 用法：
@@ -14,10 +14,11 @@
  */
 import { call } from './client'
 
-/** 活动与活动内商品（grouporder-activity-co，17 个方法） */
+/** 活动与活动内商品（grouporder-activity-co，18 个方法） */
 export const activity = {
   activityCreateDraft: (params, options) => call('grouporder-activity-co', 'activityCreateDraft', params, options),
   activityUpdateDraft: (params, options) => call('grouporder-activity-co', 'activityUpdateDraft', params, options),
+  activityUpdatePickup: (params, options) => call('grouporder-activity-co', 'activityUpdatePickup', params, options),
   activitySubmitReview: (params, options) => call('grouporder-activity-co', 'activitySubmitReview', params, options),
   activityWithdrawReview: (params, options) => call('grouporder-activity-co', 'activityWithdrawReview', params, options),
   activityGetDetail: (params, options) => call('grouporder-activity-co', 'activityGetDetail', params, options),
@@ -134,5 +135,5 @@ export const ops = {
   roleAssign: (params, options) => call('grouporder-ops-co', 'roleAssign', params, options),
 }
 
-/** 合计 92 个方法 */
+/** 合计 93 个方法 */
 export default { activity, order, goodsLib, user, exportList, report, ops }

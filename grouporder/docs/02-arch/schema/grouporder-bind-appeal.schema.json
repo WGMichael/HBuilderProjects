@@ -106,7 +106,7 @@
       "bsonType": "string",
       "title": "处理人",
       "foreignKey": "uni-id-users._id",
-      "description": "账号与隐私专员"
+      "description": "处理该申诉的运营人员"
     },
     "identity_verify_result": {
       "bsonType": "string",

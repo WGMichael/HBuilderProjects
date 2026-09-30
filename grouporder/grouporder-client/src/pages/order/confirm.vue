@@ -22,6 +22,15 @@
       </view>
     </view>
 
+    <!-- 自提点（D-077）：先让参与者看清去哪取，再填联系人 -->
+    <go-pickup
+      v-if="preview.pickup"
+      :address="preview.pickup.address"
+      :time-desc="preview.pickup.time_desc"
+      :contact-name="preview.pickup.contact_name"
+      :contact-mobile="preview.pickup.contact_mobile"
+    />
+
     <!-- 收货信息 -->
     <view class="sec">
       <view class="sec__title">{{ isSelfPick ? '自提联系人' : '收货信息' }}</view>
@@ -59,6 +68,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app';
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { fen2yuan } from '@/common/grouporder/dict.js';
+import GoPickup from '@/components/go-pickup/go-pickup.vue';
 
 const activityId = ref('');
 const items = ref<any[]>([]);

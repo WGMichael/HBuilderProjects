@@ -1,11 +1,11 @@
 # 云函数与云对象总契约
 
-- 文档版本：v0.4（设计稿 v0.1 → 实现回填 v0.2 → 裁决收口 v0.3 → 登录审计归位 v0.4）
-- 日期：2026-09-20
-- 性质：**全部服务端接口的唯一事实源**。云函数 session 照此实现；admin 端与 client 端两个前端 session 照此调用。
-- 事实来源：`PRD.md`、`OPS_ADMIN_REQUIREMENTS.md`、`DECISIONS.md`、`DATA_MODEL.md`、`UX_FLOW_SPEC.md`、`GOODS_LIB_SPEC.md`、`ADMIN_BUILD_PLAN.md`、效果图 `admin-mockup-v3.html`
+- 文档版本：v0.9（设计稿 v0.1 → 实现回填 v0.2 → 裁决收口 v0.3 → 登录审计归位 v0.4 → 自提点字段 v0.5 → 角色收口 v0.6 → 审核冻结与复用源 v0.7 → 待确认项编号 v0.8 → 强幂等与自动处置 v0.9 → 图片先选后传 v0.10）
+- 日期：2026-09-30
+- 性质：**全部服务端接口的唯一事实源**。服务端按此实现；admin 端与 client 端两个前端按此调用。
+- 事实来源：`docs/00-product/PRD.md`、`docs/00-product/OPS_ADMIN_REQUIREMENTS.md`、`docs/00-product/DECISIONS.md`、`docs/02-arch/DATA_MODEL.md`、`docs/01-ux/UX_FLOW_SPEC.md`、`docs/02-arch/GOODS_LIB_SPEC.md`
 
-> **修改规则**：本文由**云函数 session 维护**（回填入出参、补错误码）。两个前端 session **只读**；发现缺方法或签名不符**上报**，不自行修改。
+> **修改规则**：本文由**服务端维护者维护**（回填入出参、补错误码）。两个前端**只读**；发现缺方法或签名不符**上报**，不自行修改。
 > 与 OPS / DECISIONS / DATA_MODEL 冲突时**一律上报，不自行裁决**。
 
 ---
@@ -26,7 +26,7 @@
 | 8 | `common/grouporder-common` | 公共模块，被上述全部 require | — | 14 个模块 |
 | 9 | 定时与回调云函数（非对象） | 自动截止、清单清理、留存到期、检测回调 | — | 4 |
 
-**合计 92 个方法 + 14 个公共模块 + 4 个云函数。**
+**合计 93 个方法 + 14 个公共模块 + 4 个云函数。**
 
 > v0.1 的「80 个方法 / 11 个模块」与逐节清单对不上，v0.2 已核清：v0.1 的分对象声称数中
 > `goods-co` 9 实列 8、`user-co` 13 实列 12（各漏写一个方法）、`ops-co` 声称 27 实列 33
@@ -40,7 +40,7 @@
 - **商品库单独成对象**：它是**账号级**资产，与任何单个活动无关（`GOODS_LIB_SPEC`）。
 - **后台单独成对象**：权限模型、审计要求与客户端完全不同（D-072、D-075、D-076）。
 
-> **对 `docs/99-archive/update.md` 批次 B 的两处归属调整**（该文明确允许「若架构另有划分则调整归属，方法语义不变」）：
+> **对早期草案（已归档工作单批次 B）的两处云对象归属调整**（草案明确允许「若架构另有划分则调整归属，方法语义不变」）：
 > ① `activityCopySourceList` / `activityCopy` 由 `grouporder-goods-co` 移到 `grouporder-activity-co`——它复制的是活动，不是商品库记录；
 > ② 私有函数 `_sinkToLib` / `_blockLibByGoods` 移到 `common/goodslib.js`——前者被 activity-co 调用、后者被 ops-co 调用，放在 goods-co 里会形成云对象互调。
 
@@ -97,6 +97,7 @@
 | `LIMIT_EXCEEDED` | 超出每人限购 | 按商品分别计算 |
 | `DELIVERY_TYPE_LOCKED` | 交付方式发布后不可改 | D-060 |
 | `PRECONDITION_UNMET` | 前置条件不满足 | 如注销时仍是进行中活动的团长（D-056） |
+| `ACTIVITY_REVIEWING` | 活动审核中，内容冻结 | 需先撤回至草稿再修改（D-079）；`activityUpdateDraft`、`activityUpdatePickup`、`goodsCreate/Update/Delete/Sort`、`goodsSetOnSale`、`goodsAdjustStock`、`libCopyToActivity` 命中 |
 
 **后台业务码**：沿用上表，前缀 `OPS_`（`OPS_FORBIDDEN` 等），另加 `OPS_TARGET_CLOSED`（活动在处置期间截止或被取消）。
 
@@ -157,24 +158,25 @@
 
 | 方法 | 用途 | 页面 | 关键约束 |
 |---|---|---|---|
-| `activityCreateDraft` | 新建草稿 | M-10 | `delivery_type` 必填；草稿不占用任何公开入口 |
-| `activityUpdateDraft` | 编辑草稿 | M-10 | **`delivery_type` 发布后不可改**（D-060 → `DELIVERY_TYPE_LOCKED`） |
-| `activitySubmitReview` | 提交审核 | M-12 | **提交时把平台配置的 `review_mode` 固化到 `activity.review_mode`**（D-057）；自动模式下内容检测通过即置进行中、`review_uid` 为空；人工模式进审核中 |
+| `activityCreateDraft` | 新建草稿 | M-10 | **`idempotent_key` 必填，活动表唯一索引，重试返回已有草稿**（D-081）；`delivery_type` 必填；`pickup_*` 可选（**草稿阶段不卡自提必填，发布时由 `activitySubmitReview` 校验**，D-077）；**`cover_image` 草稿阶段不校验，发布时校验**（D-084）；出参带 `create_date`，供客户端拼图片目录；草稿不占用任何公开入口 |
+| `activityUpdateDraft` | 编辑草稿 | M-10 | **审核中拒绝，返回 `ACTIVITY_REVIEWING`**（D-079）；**`delivery_type` 发布后不可改**（D-060 → `DELIVERY_TYPE_LOCKED`）；草稿/可编辑态可带 `pickup_*`，改 `pickup_*` 不触发重新审核。**发布后改自提点走独立方法 `activityUpdatePickup`**（D-077）；草稿阶段允许 `cover_image` 为空，已发布过的活动不得清空；**保存成功后回收被替换且无人引用的旧图**（D-084） |
+| `activityUpdatePickup` | 改自提点 | M-20 → 自提点编辑页 | **发布后改自提点专用**（D-077）：仅自提活动、不受内容改动限制、即时生效、不触发重新审核；文本送检不阻塞、写 `oplog`；已取消/已下架拒绝 |
+| `activitySubmitReview` | 提交审核 | M-12 | **提交时把平台配置的 `review_mode` 固化到 `activity.review_mode`**（D-057）；自动模式下内容检测通过即置进行中、`review_uid` 为空；人工模式进审核中；**提交时统一校验资料齐全**：活动封面、至少一个商品、每个商品封面、自提活动的自提地址（D-041、D-077、D-084） |
 | `activityWithdrawReview` | 撤回审核 | M-12 | 审核中 → 草稿 |
 | `activityGetDetail` | 活动详情 | M-13 / M-20 | **同一方法按身份返回不同字段**：参与者得非敏感内容 + 各商品已购份数 + 有效总份数；团长另得统计与管理入口。审核中仅团长与获权内容运营可见 |
 | `activityMyList` | 我发起的 | M-09 | 按业务状态与治理状态双维度筛选，两者**分列不合并** |
 | `activityClose` | 手动截止 | M-23 | 不可逆；截止后不可再取消（D-027） |
 | `activityCancel` | 取消活动 | M-23 | **原因必填**；仅允许草稿或进行中；已截止不可取消（D-027）；写入 `retention_expire_date` |
-| `activityGetShareEntry` | 取分享入口参数 | M-12 / M-13 | 入口不可枚举；**入口有效不等于授予敏感数据权限**，服务端逐次鉴权（D-034） |
-| `activityCopySourceList` | 可复制的历史活动 | M-31 | 仅本人发起；**草稿与被平台下架的活动不可作为源**（D-067、AC-AC-006） |
-| `activityCopy` | 复制为新草稿 | M-31 / M-09「再来一次」 | 出参 `{ activity_id, copied_count, excluded: [{name, reason}] }`；**被治理下架的商品不进新草稿并在出参列出**（AC-AC-005）；截止时间按源活动时长节奏预填（D-067）；幂等 |
+| `activityGetShareEntry` | 取分享入口参数 | M-12 / M-13 / M-20 | 入口不可枚举；**入口有效不等于授予敏感数据权限**，服务端逐次鉴权（D-034）。⚠ 分享 path 用 `activity_id`，**不得用 `short_code`**（仅 32⁴ ≈ 105 万，可枚举）。**D-083 已定方案 1**：`activityGetDetail` 的 `short_code` 查询分支已移除，短码仅用于订单号拼装与口头引用，不再是查询入口。客户端接入方式与 `onShareAppMessage` 的同步性约束见 `SHARE_SPEC.md §4` |
+| `activityCopySourceList` | 可复制的历史活动 | M-31 | 仅本人发起；**不按业务状态过滤，仅被平台下架的活动不可作为源**（D-080、AC-AC-006） |
+| `activityCopy` | 复制为新草稿 | M-31 / M-09「再来一次」 | 出参 `{ activity_id, copied_count, excluded: [{name, reason}] }`；**被治理下架的商品不进新草稿并在出参列出**（AC-AC-005）；截止时间按源活动时长节奏预填（D-067）；源范围见 `activityCopySourceList`（D-080）；幂等 |
 
 ### 4.2 活动内商品
 
 | 方法 | 用途 | 页面 | 关键约束 |
 |---|---|---|---|
 | `goodsCreate` | 新增商品 | M-11 | 保存时**自动沉淀到商品库**（`common/goodslib.sinkToLib`）；`0` 表示不限库存/不限购 |
-| `goodsUpdate` | 编辑商品 | M-11 / M-22 | `ever_ordered=1` 时**改价需二次确认并记录前后值**；禁止删除；有限库存不得低于 `sold_qty` |
+| `goodsUpdate` | 编辑商品 | M-11 / M-22 | `ever_ordered=1` 时**改价需二次确认并记录前后值**；禁止删除；有限库存不得低于 `sold_qty`；**保存成功（含商品库沉淀）后回收被替换且无人引用的旧图**（D-084） |
 | `goodsDelete` | 删除商品 | M-22 | 仅 `ever_ordered=0` 可删 |
 | `goodsSetOnSale` | 停售 / 恢复售卖 | M-22 | 停售只阻止新增与扩大，**已有明细保留并进入清单**（D-019、D-050）；活动已截止或已取消时**禁止恢复**（D-028） |
 | `goodsAdjustStock` | 调整库存与限购 | M-22 | 可取消库存上限、增加库存、减少至不低于 `sold_qty` |
@@ -285,7 +287,7 @@
 > 两份实现不会漂移。
 | `reportList` / `reportDetail` | 举报 5 状态，**只读** | `ops-content-report` | — | A-08 |
 | `reportClaim` | 领取举报，写 `handler_uid` 与 `claim_time` | `ops-content-report` | `report_claim` | A-08 |
-| `reportConclude` | 结论 6 选 1、结案 | `ops-content-report` | `report_conclude` / `report_close` | A-08 |
+| `reportConclude` | 结论 6 选 1、结案；**结论为下架 / 限制发布时在同一请求内自动执行处置**（D-082） | `ops-content-report` | `report_conclude` / `report_close` + 对应处置事件 | A-08 |
 | `reportRecheck` | 复核，**不覆盖原结论** | `ops-content-report` | `report_recheck` / `report_result_changed` | A-08 |
 | `checkList` / `checkHandle` | 内容检测复核 4 状态 | `ops-content-report` | `detect_view` / `detect_recheck` / `detect_handle` | A-08 |
 | `publisherRestrict` | 警告 / 临时 / 永久 / 解除 | `ops-content-report` | `publisher_warn` / `publisher_limit_temp` / `publisher_limit_perm` / `publisher_limit_release` | A-10 |
@@ -347,7 +349,7 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 > `uni-id-log`（`lib/utils/login.js` 的 `postLogin` 记成功、`preLoginWithPassword`
 > 的 catch 记失败），**客户端伪造不了**；在云对象里再造一份只会得到一个可伪造的弱副本。
 > A-14 登录日志 tab 直接读 `uni-id-log`（ADM-13 已裁定 A-13 与 A-14 不合并为一页），
-> 读该表需要内置权限点 `READ_UNI_ID_LOG`，已授予 `ops-super` 与 `ops-auditor`。
+> 读该表需要内置权限点 `READ_UNI_ID_LOG`，已授予 `ops-super`（D-078 后为唯一运营角色）。
 
 ---
 
@@ -369,20 +371,20 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 | 登录 / 注册 / 改密 / 微信授权（M-02～M-06） | `uni-id-co`，`uni-id-pages` 现成页面 |
 | 后台 A-01 登录 | 同上，只改 `config.js`（D-069） |
 | 后台 A-02 访问结果页 | 纯前端组件，由任一方法返回 `OPS_FORBIDDEN` / `OPS_UNAUTHENTICATED` 触发 |
-| 后台 A-15 运营账号与权限 | `pages/system/{user,role,permission}/*` + `unicloud-db` 直连 `uni-id-*`；五处必改见 `ADMIN_REUSE_MAP §4` |
+| 后台 A-15 运营账号与权限 | `pages/system/{user,role,permission}/*` + `unicloud-db` 直连 `uni-id-*`；五处必改见 `../99-archive/2026-09/ADMIN_REUSE_MAP.md §4`（已归档，仍可查阅） |
 | 后台 A-14 登录日志 tab | `pages/system/safety/list.vue` 读 `uni-id-log`，**不与 `oplogList` 合并**（ADM-13） |
 
 ---
 
 ## 14. 方法签名（实现回填）
 
-> 本节由云函数 session 在实现时回填，是两个前端 session 的调用依据。
+> 本节由服务端维护者在实现时回填，是两个前端的调用依据。
 >
 > **配套的前端调用层**（不是第二事实源，只有方法名与转发，没有参数定义）：
 >
 > | 文件 | 说明 |
 > |---|---|
-> | `grouporder-client/src/api/index.js`、`grouporder-admin/js_sdk/grouporder-api/index.js` | **自动生成**，92 个方法名与转发。改了云对象方法后重跑 `node tools/gen-frontend-api.js`，方法名不会与实现漂移 |
+> | `grouporder-client/src/api/index.js`、`grouporder-admin/js_sdk/grouporder-api/index.js` | **自动生成**，93 个方法名与转发。改了云对象方法后重跑 `node tools/gen-frontend-api.js`，方法名不会与实现漂移 |
 > | 同目录 `client.js` | 手写。`importObject` 实例缓存、`{errCode, data}` 拆包（成功直接给 `data`）、会话失效跳登录、**`PARTIAL_FAILED` 单独成异常类**以免调用方把部分失败当成功 |
 >
 > 命名空间：`activity` / `order` / `goodsLib` / `user` / `exportList` / `report` / `ops`。
@@ -404,17 +406,18 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 
 | 方法 | 入参 | 出参 `data` | 幂等键 |
 |---|---|---|---|
-| `activityCreateDraft` | `{ title, description?, cover_image, images?, delivery_type, end_time }` | `{ activity_id, short_code }` | — |
-| `activityUpdateDraft` | `{ activity_id, title?, description?, cover_image?, images?, end_time?, delivery_type? }` | `{ activity_id, need_recheck, status }` | — |
+| `activityCreateDraft` | `{ idempotent_key, title, description?, cover_image?, images?, delivery_type, end_time, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（`pickup_*` 均可选，`delivery_type=1` 时忽略并存空串；自提必填与封面必填的校验推迟到 `activitySubmitReview`，D-084） | `{ activity_id, short_code, create_date }` | — |
+| `activityUpdateDraft` | `{ activity_id, title?, description?, cover_image?, images?, end_time?, delivery_type?, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（`pickup_*` 仅草稿/可编辑态用，不进 `need_recheck`；发布后改自提点用下一行的 `activityUpdatePickup`） | `{ activity_id, need_recheck, status }` | — |
+| `activityUpdatePickup` **新增** | `{ activity_id, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（仅 `delivery_type=2`；发布后仍可改，已发布则不许把 `pickup_address` 改空；只取显式传来的键）；文本送检**不阻塞**、写 `oplog`（`ACTIVITY_PICKUP_CHANGED`），已取消或已下架活动拒绝（D-077） | `{ activity_id }` | — |
 | `activitySubmitReview` | `{ activity_id }` | `{ status, review_mode, auto_passed, blocked? }` | 状态机自身（草稿→审核中只能成功一次） |
 | `activityWithdrawReview` | `{ activity_id }` | `{ status }` | 同上 |
-| `activityGetDetail` | `{ activity_id }` 或 `{ short_code }` | 见下方「活动详情出参」 | — |
+| `activityGetDetail` | `{ activity_id }` | 见下方「活动详情出参」 | — |
 | `activityMyList` | `filters: { status?, governance_status? }`；`orderBy` 可取 `create_date` / `end_time` / `publish_date` | `list[]`：`{ _id, title, cover_image, short_code, status, governance_status, review_result, review_reason, delivery_type, end_time, actual_end_time, publish_date, create_date, valid_total_qty }` | — |
 | `activityClose` | `{ activity_id }` | `{ status, actual_end_time, retention_expire_date }` | 状态机自身 |
 | `activityCancel` | `{ activity_id, reason }`（进行中必填） | `{ status, retention_expire_date }` | 状态机自身 |
 | `activityGetShareEntry` | `{ activity_id }` | `{ activity_id, short_code, title, cover_image, end_time, asOf }` | — |
 | `activityCopySourceList` | — | `list[]`：`{ _id, title, cover_image, status, delivery_type, end_time, publish_date, create_date }` | — |
-| `activityCopy` | `{ source_activity_id }` | `{ activity_id, copied_count, excluded: [{name, reason}], end_time, duplicated }` | `(leader_uid, title, 草稿, 60 秒窗口)`，见下方说明 |
+| `activityCopy` | `{ source_activity_id, idempotent_key }` | `{ activity_id, copied_count, excluded: [{name, reason}], end_time, duplicated }` | `idempotent_key`（活动表唯一索引，D-081） |
 | `goodsCreate` | `{ activity_id, name, description?, cover_image, detail_images?, price, unit?, total_stock, per_user_limit, is_recommend?, lib_id? }` | `{ goods_id, lib_id, sort, need_recheck, activity_status }` | — |
 | `goodsUpdate` | `{ goods_id, name?, description?, cover_image?, detail_images?, unit?, price?, is_recommend?, confirm_price_change? }` | `{ goods_id, need_recheck, activity_status }` | — |
 | `goodsDelete` | `{ goods_id }` | `{ deleted, need_recheck, activity_status }` | — |
@@ -430,9 +433,10 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 > 否则返回 `INVALID_PARAM` 且 `detail = { require_confirm: true, prev_price }`。
 
 **活动详情出参**（`activityGetDetail`）：
-所有访问者得 `{ _id, title, description, cover_image, images, short_code, delivery_type, status,
+所有访问者得 `{ _id, title, description, cover_image, images, short_code, delivery_type,
+pickup_address, pickup_time_desc, pickup_contact_name, pickup_contact_mobile, status,
 governance_status, end_time, actual_end_time, create_date, publish_date, valid_total_qty,
-goods[], is_leader, joinable }`，其中 `goods[]` 每项为
+goods[], is_leader, joinable }`（`pickup_*` 仅自提活动有值），其中 `goods[]` 每项为
 `{ _id, name, description, cover_image, detail_images, price, unit, total_stock, sold_qty,
 per_user_limit, on_sale, governance_status, is_recommend, sort, remain_qty }`
 （`remain_qty` 在不限库存时为 `null`）。
@@ -440,10 +444,9 @@ per_user_limit, on_sale, governance_status, is_recommend, sort, remain_qty }`
 ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estimated_amount, asOf } }`。
 草稿与审核中的活动对非团长返回 `FORBIDDEN`。
 
-> **`activityCopy` 的幂等键说明**：`grouporder-activity` 的 schema 已定稿，没有幂等键字段，
-> 实现也不允许为此加字段，因此按「同一团长 + 同一标题 + 60 秒内的草稿」判重。
-> 标题是原样复制的，窗口内出现同名草稿只可能来自同一次请求的重试。
-> 若要做成强幂等，需要给活动表加一列——**待确认**。
+> **`activityCreateDraft` / `activityCopy` 的幂等键**（D-081）：客户端为每一次「新建草稿」或「复制」意图生成一个 `idempotent_key`，
+> 同一意图的网络重试复用同键；服务端按 `grouporder-activity.idempotent_key` 唯一索引判重，命中即返回已有活动并置 `duplicated: true`。
+> 原「同团长 + 同标题 + 60 秒内草稿」的弱判重已废止。
 
 ### 14.2 `grouporder-order-co`（9）
 
@@ -542,7 +545,7 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 | `reportList` | `filters: { status?, report_no?, activity_id?, publisher_uid?, handler_uid?, start_date?, end_date? }` | `list[]` | `ops-content-report` |
 | `reportDetail` | `{ report_id }` | `{ report, related_reports[], reviews[], content_checks[], publisher_restrictions[], asOf }` | `ops-content-report` |
 | `reportClaim` **新增** | `{ report_id }` | `{ report_id, status, handler_uid, changed }` | `ops-content-report` |
-| `reportConclude` | `{ report_id, conclusion: 1–6, conclusion_reason }` | `{ report_id, report_no, status, conclusion, changed, pending_actions[] }` | `ops-content-report` |
+| `reportConclude` | `{ report_id, conclusion: 1–6, conclusion_reason }` | `{ report_id, report_no, status, conclusion, changed, executed_actions: [{ action, object_type, object_id, changed }] }` | `ops-content-report` |
 | `reportRecheck` | 发起：`{ report_id, apply_reason? }`；提交结论：`{ report_id, review_conclusion, review_reason }` | 发起 `{ review_id, review_no, status }`；结论 `{ review_id, review_no, status, result_changed }` | `ops-content-report` |
 | `checkList` | `filters: { status?, object_type?, object_id?, check_result?, start_date?, end_date? }` | `list[]` | `ops-content-report` |
 | `checkHandle` | `{ check_id, status: 2\|3\|4, review_conclusion?, review_reason }` | `{ check_id, status, changed }` | `ops-content-report` |
@@ -576,10 +579,12 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 > **`privacyCaseUpdate` 拒绝任何改期限的入参**：传入 `retention_start` 或 `retention_expire`
 > 一律返回 `OPS_INVALID_PARAM`，而不是静默忽略（OPS §15「不得允许运营任意延长、缩短或绕过」）。
 >
-> **`reportConclude` 不自动执行处置**：结论落库并结案后，`pending_actions[]` 告知还需在
-> A-09／A-10 执行哪个动作。OPS §5.1 只写到「审核成立后才能执行下架」，未规定是否自动联动，
-> 实现不自行裁决——**待确认**。
+> **`reportConclude` 自动执行处置**（D-082）：结论为 3 下架单个商品、4 下架整个活动、5 临时限制发布、6 永久限制发布时，
+> 在结案的同一请求内调用与 `goodsGovernanceOff` / `activityGovernanceOff` / `publisherRestrict` 相同的公共逻辑执行处置，
+> 各自写入审计事件，出参 `executed_actions[]` 列出实际执行的动作；任一动作失败则整个结案回滚并返回该动作的错误码。
+> A-09 / A-10 保留手动入口，用于复核后的恢复、解除限制与追加处置。
 >
+
 > **`accountSetStatus` / `roleAssign` 只收口写操作**：A-15 的**读**仍走 `unicloud-db` 直连
 > `uni-id-*`（那些表 `read: true`），只有写改走云对象。不这样做，OPS §13 要求的
 > `account_disabled` / `role_changed` / `stat_permission_changed` 三类事件架构上无处写入。
@@ -599,7 +604,11 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 
 | 日期 | 版本 | 变化 |
 |---|---|---|
-| 2026-09-20 | v0.4 | **撤回 v0.3 的 `loginAudit`**（ops-co 39 → **38**，总数 93 → **92**）。查证 `uni-id-co/lib/utils/login.js` 后确认：登录成功与失败早已由 uni-id-co 服务端写入 `uni-id-log`，客户端伪造不了；v0.3 加的 `loginAudit` 由登录页调用、可伪造，是在重做一件已做好的事且做得更差。登录事件归 `uni-id-log`，`DATA_MODEL §10.8` 第 1 类同步移除两个取值，`OPS §13` 第一条拆开表述。同批补出内置权限点 `READ_UNI_ID_LOG`（否则 A-14 登录日志页恒为空，ADM-39 遗漏） |
-| 2026-09-20 | v0.3 | 按产品负责人裁决收口五条：① 客户端的商品经营变动**也写 `grouporder-oplog`**，§2.4 的「日志」一行改写，`DATA_MODEL §10.8` 同步新增第 11 类四个取值；② 治理下架与恢复**各拆为活动版与商品版**（§11 批 A、§14.7），方法数 37 → **39**，总数 91 → **93**；③ `activityDetail` 的 `action_type` 由笔误的 `order_detail_view` 改为 `activity_detail_view`，§11 批 C 的「按对象类型」在 §10.8 补出对应枚举（活动 / 商品 / 用户各一组）；④ 清单版本失效确定采用**派生判定**不落库，`DATA_MODEL §10.7` 同步；⑤ `reportConclude` 确定**只记结论并结案、不自动执行处置**，由 `pending_actions[]` 指引运营到 A-09／A-10 执行 |
-| 2026-09-20 | v0.2 | **实现回填**。新增 §14 全部 91 个方法的入参、出参与幂等键。方法数核清：v0.1 的「80 个」与逐节清单对不上（`goods-co`、`user-co` 各漏写一个方法，`ops-co` 声称 27 实列 33），补齐漏写的 `categorySort`、`privacyRequestMyList` 并新增 `goodsSort`、`reportClaim`、`accountSetStatus`、`roleAssign`、`loginAudit` 五个方法后为 **91 个**（新增方法均已经产品负责人确认）。公共模块 11 → **14**，新增 `contentcheck.js`、`restriction.js`、`review.js`，理由见 §3。`retention.js` 并入 `snapshot.js`，`auth.js` 增 `optionalLogin` |
-| 2026-09-18 | v0.1 | 设计稿：7 个云对象（80 个方法）、11 个公共模块、4 个定时与回调云函数的划分与方法清单；通用约定（出参、分页、错误码两级、三项强制声明、服务端时间）；合并原 `OPS_CO_API.md` 的后台契约为 §10～§11；记录对 `update.md` 批次 B 的两处归属调整 |
+| 2026-09-30 | v0.10 | 按 **D-084**：`activityCreateDraft` 的 `cover_image` 改为可选、出参增加 `create_date`；`activityUpdateDraft` 草稿阶段允许封面为空；`activitySubmitReview` 统一校验活动封面、商品数、商品封面、自提地址；`activityUpdateDraft` / `goodsUpdate` 保存成功后按三表引用回收被替换的旧图。**已实现**（activity-co，client 与 admin 两份副本同步） |
+| 2026-09-29 | v0.9 | 按 **D-081** 给 `activityCreateDraft` / `activityCopy` 加必填 `idempotent_key`，废止 60 秒弱判重说明；按 **D-082** `reportConclude` 改为自动执行处置，出参 `pending_actions[]` → `executed_actions[]`。事实来源去掉 90-working 与 99-archive 文档。**实现待跟进**：activity-co 两个创建方法读 `idempotent_key` 并按唯一索引判重；ops-co `reportConclude` 调用治理公共逻辑，原 :627 返回错误方法名的问题随之消失 |
+| 2026-09-29 | v0.8 | §14 两处「待确认」补编号与去向：activityCopy 强幂等 → DATA_MODEL §12 A-05，reportConclude 自动联动 → A-06 |
+| 2026-09-29 | v0.7 | 新增错误码 `ACTIVITY_REVIEWING`（D-079，审核中内容冻结）并标注命中方法；`activityCopySourceList` / `activityCopy` 的源范围按 **D-080** 改为仅排除治理下架。**实现待跟进**：`review.canEditContent` 目前仍放行审核中，需改为拒绝；`activityCopy` 与 `activityCopySourceList` 需去掉 DRAFT/REVIEWING 过滤 |
+| 2026-09-29 | v0.6 | 按 **D-078** 更正 §11 说明：`READ_UNI_ID_LOG` 只授予唯一运营角色 `ops-super`。各方法的权限点列不变，权限点机制保留，只用于入口控制与审计归因 |
+| 2026-09-29 | v0.6 | **对齐 activity-co 的真实实现**（v0.5 的设计与代码有出入）：① 新增独立方法 **`activityUpdatePickup`**（发布后改自提点、送检不阻塞、写 `oplog`），方法数 92 → **93**；② 撤销 v0.5 臆造的错误码 `PICKUP_ADDRESS_REQUIRED`——实际用 `assertParam`（`INVALID_PARAM`）；③ 自提必填的时机由 v0.5 的「createDraft 必填」更正为「**草稿不卡、`activitySubmitReview` 校验**」；④ `activityCopy` 补自提点随复制（`DATA_MODEL §4.10`） |
+| 2026-09-29 | v0.5 | 按 D-077 补自提点字段：`activityCreateDraft`/`activityUpdateDraft` 入参加四个 `pickup_*`，`activityGetDetail` 详情出参补这四字段（本版部分设计已由 v0.6 对齐实现修正） |
+| 2026-09-18～2026-09-20 | v0.1～v0.4 | 早期演进（4 次修订：建稿、决策同步与 D-072～D-076 改写等），逐条内容见 git 历史 |

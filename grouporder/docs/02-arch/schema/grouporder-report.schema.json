@@ -106,7 +106,7 @@
       "bsonType": "string",
       "title": "处理人",
       "foreignKey": "uni-id-users._id",
-      "description": "领取并处理该举报的内容运营"
+      "description": "领取并处理该举报的运营人员"
     },
     "claim_time": {
       "bsonType": "timestamp",

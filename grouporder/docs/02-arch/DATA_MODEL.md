@@ -1,9 +1,9 @@
 # 数据模型设计
 
-- 文档版本：v1.19
-- 文档状态：**已落地**。19 张 `.schema.json` 与 `.index.json` 已生成至 `grouporder-admin/uniCloud-alipay/database/`，尚未上传服务空间
+- 文档版本：v1.25
+- 文档状态：**已落地**。18 张 `.schema.json` 与 `.index.json` 已生成至 `grouporder-admin/uniCloud-alipay/database/`；上传状态由产品负责人在 HBuilderX 确认
 - 适用产品版本：见 `docs/README.md` 版本总表
-- 覆盖范围：核心业务与平台配置 9 张表 + 运营治理 10 张表，共 19 张自建表
+- 覆盖范围：核心业务与平台配置 9 张表 + 运营治理 9 张表，共 18 张自建表
 - 事实来源：`docs/00-product/PRD.md`、`docs/00-product/DECISIONS.md`、`docs/00-product/OPS_ADMIN_REQUIREMENTS.md`
 
 > 本文档只做数据模型设计，不生成 schema 文件。微信服务类目与主体核验（P1-09）仍未出结论，产品形态若因此调整，本文档随之修订的成本远低于已上传的线上表结构。
@@ -19,9 +19,9 @@
 | schema 唯一维护源 | `grouporder-admin` 工程                                                                    | D-038。两个工程共用同一服务空间，schema 只能有一份，否则 HBuilderX 上传互相覆盖                                                                                                                                                                        |
 | **上传约定**     | **schema 只从 `grouporder-admin` 上传；`grouporder-client` 只拉取、永不上传**                         | 两个工程的 `uni-id-pages` 已统一为 1.1.28，但该版本官方 schema 缺少 `status = 4`，需由 admin 项目目录的覆盖版补齐。client 的 `uni_modules` 中是未补齐的原版，一旦从 client 上传会覆盖掉修正                                                                                     |
 | 金额单位         | **一律 int 存「分」**                                                                          | 杜绝浮点误差                                                                                                                                                                                                                     |
-| 图片字段         | uniCloud `file` 类型                                                                       | 可直接绑定 `uni-file-picker`，保留文件名与大小，便于内容检测和孤儿文件清理。**注意：`grouporder-goods-lib` 与 `grouporder-goods` 之间是复制关系，复制的是文件引用而非文件本身，同一 fileID 会被多条记录同时引用——因此删除商品库记录或活动商品时一律不得删除云存储文件**，孤儿文件清理的判定条件是两表中均无记录引用该 fileID（GOODS_LIB_SPEC §6） |
+| 图片字段         | uniCloud `file` 类型                                                                       | 可直接绑定 `uni-file-picker`，保留文件名与大小，便于内容检测和孤儿文件清理。**注意：`grouporder-goods-lib` 与 `grouporder-goods` 之间是复制关系，复制的是文件引用而非文件本身，同一 fileID 会被多条记录同时引用——因此删除商品库记录或活动商品时一律不得删除云存储文件**，孤儿文件清理的判定条件是两表中均无记录引用该 fileID（GOODS_LIB_SPEC §6）。编辑保存时被替换的旧图由云对象即时回收，判定范围为 `grouporder-activity`、`grouporder-goods`、`grouporder-goods-lib` 三表（D-084）；云存储路径为 `{活动创建日期}/{activity_id}/` |
 | 表名前缀         | `grouporder-`                                                                            | 与 uni-id / uni-stat 等模板表区分                                                                                                                                                                                                 |
-| **权限策略**     | **全部 19 张表的 schema `permission` 均为 `read/create/update/delete: false`**，客户端不可直连，所有读写走云函数 | 本业务有发布审核、治理下架、限购、库存原子扣减等规则，若开放客户端直连 JQL，这些规则可被绕过。统一走云函数使业务规则不可旁路。**运营后台的业务页面同样走云对象取数，不使用 `unicloud-db` 客户端直连**（D-075）——D-072 取消脱敏后全量审计是唯一约束手段，客户端直连会使服务端不知道发生过这次读取；`system/*` 九个现成页面读 `uni-id-users` 体系，不受此约束                                                                                                                                                           |
+| **权限策略**     | **全部 18 张表的 schema `permission` 均为 `read/create/update/delete: false`**，客户端不可直连，所有读写走云函数 | 本业务有发布审核、治理下架、限购、库存原子扣减等规则，若开放客户端直连 JQL，这些规则可被绕过。统一走云函数使业务规则不可旁路。**运营后台的业务页面同样走云对象取数，不使用 `unicloud-db` 客户端直连**（D-075）——D-072 取消脱敏后全量审计是唯一约束手段，客户端直连会使服务端不知道发生过这次读取；`system/*` 九个现成页面读 `uni-id-users` 体系，不受此约束                                                                                                                                                           |
 
 ## 2. 术语与层级
 
@@ -61,7 +61,7 @@
 | `grouporder-todo-dismiss` | 待办事项的「用户已关闭」状态，待办本身为派生视图不建表 | |
 | `grouporder-goods-category` | 商品库分类，用户私有，仅用于商品库筛选 | |
 
-**第二批：运营治理（10 张，详见 §10）**
+**第二批：运营治理（9 张，详见 §10）**
 
 | 表名 | 用途 |
 |---|---|
@@ -72,7 +72,7 @@
 | `grouporder-bind-appeal` | 账号绑定申诉 |
 | `grouporder-privacy-case` | 注销、删除与匿名化事项登记 |
 | `grouporder-export-log` | Excel 生成与下载事件 |
-| `grouporder-oplog` | 统一操作日志，9 字段覆盖 11 类事件（含团长客户端的商品经营变动；运营登录事件归 `uni-id-log`） |
+| `grouporder-oplog` | 统一操作日志，15 个字段（9 个必填）覆盖 14 类事件（含团长客户端的商品经营变动；运营登录事件归 `uni-id-log`） |
 | `grouporder-user-ext` | 平台用户业务扩展，存发布限制当前状态 |
 
 **复用不新建且不修改**：`uni-id-users`（含运营账号）、`uni-id-roles`、`uni-id-permissions`。本项目自有的用户级状态一律放入 `grouporder-user-ext`，不改动 uni-id 模块。
@@ -110,7 +110,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 
 > 上传约定：schema 与 `uni-id-co` 云函数一律只从 `grouporder-admin` 上传，`grouporder-client` 只拉取。client 的 `uni_modules` 中是未补齐 `status = 4` 的原版，从 client 上传会覆盖掉该修正。
 
-合计 **19 张自建表**。运营后台按 `OPS_ADMIN_REQUIREMENTS.md` 完整规格实施（D-042）。
+合计 **18 张自建表**（`grouporder-ops-verify` 已随 D-072 废止并删除文件）。运营后台按 `OPS_ADMIN_REQUIREMENTS.md` 完整规格实施（D-042）。
 
 ---
 
@@ -128,10 +128,15 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | `_id` | objectId | - | 自动 | |
 | `title` | string | ✓ | | 活动标题，1–50 字 |
 | `description` | string | | | 活动说明，≤500 字 |
-| `cover_image` | file | ✓ | | 封面图。用于首页列表与微信分享卡片 |
+| `cover_image` | file | ✓ | | 封面图。用于微信分享卡片与活动详情。发布前必填，草稿阶段可为空，由 `activitySubmitReview` 校验（D-084） |
 | `images` | array&lt;file&gt; | | `[]` | 轮播图，用于活动详情页顶部，**maxLength 9** |
 | `short_code` | string | ✓ | 生成 | 4 位大写字母数字，**全局唯一**。用于订单号拼装与口头引用 |
+| `idempotent_key` | string | ✓ | | 创建幂等键，**唯一索引**。客户端为每次「新建草稿 / 复制」意图生成一次，重试复用同键时返回已有活动（D-081） |
 | `delivery_type` | int | ✓ | 1 | **交付方式** 1送货上门 2自提。创建时必选，**发布后不可修改**（D-060） |
+| `pickup_address` | string | | | 自提地址（≤200）。**自提活动必填**（条件必填由云对象校验，不进 `required`）；活动级共享、不进订单快照；**发布后可改、即时生效、不触发重新审核**（D-077） |
+| `pickup_time_desc` | string | | | 自提时间说明（≤100），文本。**与 `end_time` 无关**，指取货时段。仅自提活动，非必填（D-077） |
+| `pickup_contact_name` | string | | | 自提现场联系人（≤20）。仅自提活动，非必填（D-077） |
+| `pickup_contact_mobile` | string | | | 自提现场联系电话（≤20）。账号不采集手机号（D-029），此电话仅存于活动信息。仅自提活动，非必填（D-077） |
 | `leader_uid` | string | ✓ | | 团长，外键 `uni-id-users._id` |
 | `status` | int | ✓ | 0 | **业务状态** 0草稿 1审核中 2进行中 3已截止 4已取消 |
 | `publish_date` | timestamp | | | 首次成功发布时间。未发布的草稿为空 |
@@ -409,6 +414,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | `description` | 复制 | |
 | `cover_image` / `images` | 复制文件引用 | 见下方「图片文件引用」 |
 | `delivery_type` 交付方式 | 复制 | D-060 |
+| `pickup_address` / `pickup_time_desc` / `pickup_contact_name` / `pickup_contact_mobile` 自提点信息 | 复制 | D-077。自提活动的取货点通常沿用，复制后团长可在新草稿里改 |
 | `end_time` 截止时间 | **按源活动时长推算预填** | 见下方「截止时间推算」 |
 | 活动业务状态 | 一律置为**草稿** | |
 | 活动治理状态、审核记录 | 不复制 | |
@@ -423,16 +429,15 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 
 #### 可作为源的活动范围
 
-| 业务状态 | 可否作为源 |
-|---|---|
-| 已截止 | ✓ |
-| 已取消 | ✓ |
-| **进行中** | ✓ |
-| 审核中 | ✗ |
-| 草稿 | ✗（草稿本来就能直接打开编辑，复制它没有意义） |
-| 任意状态 + 治理已下架 | ✗ |
+按 D-080，**不按业务状态过滤**：本人发起的草稿、审核中、进行中、已截止、已取消活动均可作为源；唯一排除条件是治理状态为已下架。
 
-**包含进行中活动的理由**：真实场景是本周的团还在跑，团长提前把下周的排好。**此时 UI 必须明确提示**「将创建一个新的草稿，不影响当前正在进行的活动」，否则团长会误以为是在编辑当前活动——这是包含进行中活动后最可能产生的误解。
+| 条件 | 可否作为源 |
+|---|---|
+| 本人发起，治理状态正常（任一业务状态） | ✓ |
+| 任意状态 + 治理已下架 | ✗ |
+| 非本人发起 | ✗（FORBIDDEN） |
+
+**包含进行中与审核中活动的理由**：真实场景是本周的团还在跑或还在审，团长提前把下周的排好；复制结果是一个全新草稿，本身仍要提交审核，不构成绕过治理的路径。**此时 UI 必须明确提示**「将创建一个新的草稿，不影响当前活动」，否则团长会误以为是在编辑当前活动。草稿作为源没有特别价值（直接打开编辑即可），但也没有风险，不为它单设例外。
 
 #### 截止时间推算
 
@@ -461,7 +466,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 
 #### 图片文件引用
 
-与 §4.7 的商品库复用完全一致：复制的是 fileID 引用，不是文件本身，同一个云存储文件会被源活动与新活动同时引用。**因此删除活动或商品时一律不得删除云存储文件**，孤儿清理的判定条件仍是「`grouporder-goods`、`grouporder-goods-lib`、`grouporder-activity` 中均无任何记录引用该 fileID」。
+与 §4.7 的商品库复用完全一致：复制的是 fileID 引用，不是文件本身，同一个云存储文件会被源活动与新活动同时引用。**因此删除活动或商品时一律不得删除云存储文件**，孤儿清理的判定条件仍是「`grouporder-goods`、`grouporder-goods-lib`、`grouporder-activity` 中均无任何记录引用该 fileID」。编辑活动或商品时被替换的旧图按同一条件在保存成功后即时回收（D-084），与删除记录不删文件的规则并不冲突。
 
 #### 接口
 
@@ -484,7 +489,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | AC-AC-004  | 新草稿中的商品保留源商品的 `lib_id` 与 `sort`；运营下架其中一件商品后，商品库对应记录仍能被正确封禁                |
 | AC-AC-005  | 源活动中已被治理下架的商品不出现在新草稿中，接口返回中列出该商品及原因，界面明确告知                                |
 | AC-AC-006  | 治理状态为已下架的活动不出现在 M-31 列表中，直接调用 `activityCopy` 指定该活动被拒绝                     |
-| AC-AC-007  | 已截止、已取消、进行中的活动均可作为源；审核中与草稿状态的活动不可                                         |
+| AC-AC-007  | 本人任一业务状态（草稿、审核中、进行中、已截止、已取消）的活动均可作为源；治理已下架的不可（D-080）           |
 | AC-AC-008  | 复制进行中的活动后，源活动的业务状态、商品、订单与统计完全不受影响                                         |
 | AC-AC-009  | 复制出的商品价格、总库存、每人限购标记为待确认，全部确认前活动不能提交发布，且使用与商品库复用相同的确认组件                    |
 | AC-AC-010  | 复制不改变商品库任何记录的 `last_used_time` 与 `use_count`                              |
@@ -517,7 +522,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 治理状态的约束（OPS §6）：
 
 - 下架后对普通访问者显示下架状态，禁止新建订单或扩大已有订单数量，但**不改写业务状态，不删除订单、商品或历史快照**
-- 审核中仅团长和获权内容运营可见；审核通过前不进入公开列表、不生成可分享入口、不接单
+- 审核中仅团长和运营人员可见；审核通过前不进入公开列表、不生成可分享入口、不接单
 - **审核模式由平台配置决定（D-057），提交时固化到 `activity.review_mode`**：自动模式下内容检测通过即由系统置为进行中，`review_uid` 为空；人工模式下需内容运营逐个审核，`review_uid` 记录审核人
 - 审核中到达截止时间时直接进入已截止，之后即使审核通过也不得重新开放
 - 活动在下架期间到达截止时间的，按已截止处理，不能通过恢复重新开放
@@ -554,9 +559,10 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | 表              | 索引                                          | 用途                               |
 | -------------- | ------------------------------------------- | -------------------------------- |
 | activity       | `leader_uid + status`                       | 团长「我发起的」列表                       |
-| activity       | `status + governance_status + publish_date` | 首页公开活动列表（仅审核通过后的进行中活动，按发布时间倒序）   |
+| activity       | `status + governance_status + publish_date` | 运营后台按业务状态与治理状态检索活动（活动不进入任何公开列表，D-059） |
 | activity       | `status + end_time`                         | 审核中/进行中活动的定时截止扫描                 |
 | activity       | `short_code`（唯一）                            | 短码解析                             |
+| activity       | `idempotent_key`（唯一）                      | 新建草稿 / 复制的幂等拦截（D-081）        |
 | activity       | `status + review_submit_date`               | 人工模式下的待审队列                       |
 | config         | `config_key`（唯一）                            | 配置读取                             |
 | goods-lib      | `user_id + deleted + last_used_time`        | 商品库列表，按最近使用倒序                    |
@@ -638,7 +644,7 @@ db.collection('grouporder-goods').where({
 - 到期后由定时云函数删除或匿名化 `consignee_name`、`consignee_mobile`、`consignee_address` 及账号关联，置 `anonymized = 1`
 - 活动数量、份数、金额等不可识别个人的汇总数据可长期保留
 - 用户注销时删除或匿名化账号资料与地址簿；仍在三年期内的订单资料转为限制处理，仅用于争议、审计与必要合规
-- Excel 文件与下载链接只临时保存，不随订单保留三年，具体有效期待安全方案确定（P1-07）
+- Excel 文件与下载链接只临时保存，不随订单保留三年：下载链接 30 分钟、文件 60 天（D-071，详见 §10.7）
 
 ---
 
@@ -648,18 +654,15 @@ db.collection('grouporder-goods').where({
 
 ### 10.0 运营账号与角色：复用 uni-id
 
-不新建运营账号表。4 个角色通过 `uni-id-roles` 配置，权限点通过 `uni-id-permissions` 配置：
+不新建运营账号表。运营账号通过 `uni-id-roles` 配置，只有一个业务角色（D-078），权限点通过 `uni-id-permissions` 配置：
 
 | 角色 | role_id |
 |---|---|
-| 超级管理员 | `ops-super` |
-| 内容运营 | `ops-content` |
-| 账号与隐私专员 | `ops-privacy` |
-| 审计查看者 | `ops-auditor` |
+| 运营账号（唯一角色，持有全部 `ops-*` 权限点） | `ops-super` |
 
-- 「运营统计查看」是**独立权限点** `ops-stat-view`，默认关闭，不随任何角色自动获得（OPS §11.4）
-- 运营账号不能自行注册，由超级管理员创建；停用通过 `uni-id-users.status` 实现
-- 同一账号可兼任多个角色（`role` 为数组），撤销其一不影响其余
+- 权限点 `ops-stat-view` 随 `ops-super` 持有，不再独立授权（D-078）；权限点机制保留，只用于菜单入口与审计归因
+- 运营账号不能自行注册，由已有运营账号创建；停用通过 `uni-id-users.status` 实现
+- `role` 为数组，运营账号取值恒为 `["ops-super"]`；内置 `admin` 角色初始化后停用
 - **鉴权一律以操作提交时的最新账号状态与权限为准**，不得依赖进入页面时的结果（OPS §3.1）
 
 **发布限制的当前状态存放在 `grouporder-user-ext`（见 §10.9），不修改 `uni-id-users`。**
@@ -772,7 +775,7 @@ db.collection('grouporder-goods').where({
 | `both_have_data` | int | | 双方是否均有业务数据 0否 1是 |
 | `appeal_type` | int | ✓ | 1解绑 2重新绑定 |
 | `status` | int | ✓ | 1待处理 2处理中 3处理成功 4处理失败 |
-| `handler_uid` | string | | 账号与隐私专员 |
+| `handler_uid` | string | | 处理该申诉的运营人员 |
 | `identity_verify_result` | string | | 身份核验过程与结果 |
 | `handle_reason` | string | | 处理原因 |
 | `fail_reason` | string | | 失败原因摘要，**不含敏感内部信息** |
@@ -835,7 +838,7 @@ OPS §13 要求一种操作日志，含 **9 个必含字段**，覆盖其列举�
 > **客户端伪造不了**，比在本表再造一份可靠。A-14 登录日志 tab 直接读 `uni-id-log`
 > （ADM-13 已裁定 A-13 与 A-14 数据源不同、不合并为一页），因此审计查两处是既定形态。
 > 读该表需要内置权限点 `READ_UNI_ID_LOG`（`uni-id-log.schema.json` 的
-> `permission.read` 表达式校验），已授予 `ops-super` 与 `ops-auditor`。
+> `permission.read` 表达式校验），已授予 `ops-super`（D-078 后为唯一运营角色）。
 
 | 字段 | bsonType | 必填 | 对应 OPS §13 要求 |
 |---|---|---|---|
@@ -855,7 +858,7 @@ OPS §13 要求一种操作日志，含 **9 个必含字段**，覆盖其列举�
 | `next_state` | object | | 操作后状态，**无变化时明确记录** |
 | `request_id` | string | ✓ | 请求唯一标识，识别重复请求 |
 
-**必记事件**（与 OPS §13 逐条对应）：运营账号停用/角色变更（登录成功/失败由 `uni-id-log` 承担）；**活动发布审核通过/不通过/失败尝试**；商品治理下架引发的商品库禁止复用反写；**平台配置修改（含发布审核模式的前后值）**；举报领取/结论/结案/复核/结果变更；内容检测查看/复核/处置；活动与商品下架/恢复/失败尝试；发布者警告/临时限制/永久限制/解除；订单明细查看的成功与拒绝；账号解绑/重新绑定/拒绝/重复请求；Excel 事件查询与运营下载；运营统计查询成功/拒绝与统计权限变更；注销删除匿名化事项登记与状态变化；**团长在客户端对商品的改价、改单位、停售/恢复售卖、库存与限购调整**（§4.2 说明 5）。
+**必记事件**（与 OPS §13 逐条对应）：运营账号停用/角色变更（登录成功/失败由 `uni-id-log` 承担）；**活动发布审核通过/不通过/失败尝试**；商品治理下架引发的商品库禁止复用反写；**平台配置修改（含发布审核模式的前后值）**；举报领取/结论/结案/复核/结果变更；内容检测查看/复核/处置；活动与商品下架/恢复/失败尝试；发布者警告/临时限制/永久限制/解除；订单明细查看的成功与拒绝；账号解绑/重新绑定/拒绝/重复请求；Excel 事件查询与运营下载；运营统计查询成功/拒绝与统计权限变更；注销删除匿名化事项登记与状态变化；**团长在客户端对商品的改价、改单位、停售/恢复售卖、库存与限购调整**（§4.2 说明 5）；**团长发布后修改自提点**（D-077）。
 
 **`action_type` 枚举名**（D-075 配套，避免各执行 session 自行编名）：
 
@@ -874,6 +877,7 @@ OPS §13 要求一种操作日志，含 **9 个必含字段**，覆盖其列举�
 | 9 | 运营统计 | `stat_query` / `stat_denied` / `stat_permission_changed` |
 | 10 | 隐私事项 | `privacy_case_create` / `privacy_case_update` |
 | 11 | **团长在客户端的商品经营变动** | `goods_price_changed` / `goods_unit_changed` / `goods_on_sale_changed` / `goods_stock_changed`（均记前后值） |
+| 12 | **团长发布后改自提点**（D-077） | `activity_pickup_changed`（记前后值；发布后即时生效不重审，留痕是唯一追溯依据） |
 
 **硬性约束**（OPS §13）：
 - 日志**不得记录**密码等凭证或可继续使用的下载链接
@@ -922,7 +926,7 @@ OPS §13 要求一种操作日志，含 **9 个必含字段**，覆盖其列举�
 
 ### 11.1 产物
 
-本设计的全部产物是 **38 个文件**，位于 `grouporder-admin/uniCloud-alipay/database/`：
+本设计的全部产物是 **37 个文件**（18 组 schema + index，另含 `uni-id-users.schema.json` 覆盖版），位于 `grouporder-admin/uniCloud-alipay/database/`：
 
 ```
 grouporder-<表名>.schema.json    19 个   表结构定义
@@ -939,7 +943,7 @@ uni-id-users.schema.json         1 个   覆盖版，补回 status = 4（见 §3
 更换 IDE 版本或重新创建工程后：
 
 1. 在新工程中定位 uniCloud 目录下的 `database` 子目录。注意服务空间供应商不同，目录名可能是 `uniCloud-alipay`（阿里云）或 `uniCloud-tcb`（腾讯云），按实际为准
-2. 将 `docs/02-arch/schema/` 下的 39 个文件整体复制进去（含 `uni-id-users.schema.json` 覆盖版）
+2. 将 `docs/02-arch/schema/` 下的 37 个文件整体复制进去（含 `uni-id-users.schema.json` 覆盖版）
 3. 关联云服务空间后上传 DB Schema
 
 **不需要重新设计或重新生成**——schema 文件与工程创建方式无关，复制即可用。
@@ -955,9 +959,9 @@ uni-id-users.schema.json         1 个   覆盖版，补回 status = 4（见 §3
 | 字段集合 | 文档字段表的字段名与 schema `properties` 的键完全一致 |
 | 必填 | 文档标 ✓ 的字段应在 schema `required` 中，**带 `defaultValue` 或 `forceDefaultValue` 的字段除外**（见 §4 图例） |
 | 枚举 | 枚举字段的取值与决策记录一致（如 `activity.status` 对应 D-043、`goods.total_stock` 的 0 值语义对应 D-044） |
-| 索引 | 唯一索引覆盖 `order_no`、`idempotent_key`、`short_code`、`config_key`、`user_ext.user_id`；限购校验复合索引 `(activity_id, goods_id, user_id, status)` 存在 |
+| 索引 | 唯一索引覆盖 `order_no`、`order.idempotent_key`、`activity.idempotent_key`、`short_code`、`config_key`、`user_ext.user_id`；限购校验复合索引 `(activity_id, goods_id, user_id, status)` 存在 |
 | 外键 | `foreignKey` 指向的表均存在 |
-| 权限 | 16 张表 `permission` 均为客户端全禁 |
+| 权限 | 18 张表 `permission` 均为客户端全禁 |
 
 ---
 
@@ -965,7 +969,7 @@ uni-id-users.schema.json         1 个   覆盖版，补回 status = 4（见 §3
 
 | 编号       | 事项                      | 现状                                                       |
 | -------- | ----------------------- | -------------------------------------------------------- |
-| A-04     | 微信服务类目与主体核验（P1-09、B-01） | 未核验，阻塞 schema 落地                                         |
+| A-04     | 微信服务类目与主体核验（P1-09、B-01） | 未核验，阻塞上传服务空间与提审                                   |
 
 ---
 
@@ -973,32 +977,12 @@ uni-id-users.schema.json         1 个   覆盖版，补回 status = 4（见 §3
 
 | 日期 | 版本 | 变化 |
 |---|---|---|
-| 2026-09-20 | v1.19 | §10.8 第 1 类移除 `admin_login` / `admin_login_failed`：查证 `uni-id-co` 的 `lib/utils/login.js` 后确认登录成功与失败**早已由 `uni-id-co` 服务端写入 `uni-id-log`**，客户端伪造不了；在本表再记一份只会多出一个可伪造的弱副本。登录事件归 `uni-id-log`（A-14 读它，ADM-13 已裁定两页不合并），本表只保留 `account_disabled` / `role_changed`。同批补出内置权限点 **`READ_UNI_ID_LOG`** 并授予 `ops-super` 与 `ops-auditor`——`uni-id-log.schema.json` 的读权限由该表达式校验，不补则 A-14 恒为空列表（ADM-39 当初补内置权限点时遗漏） |
-| 2026-09-20 | v1.18 | 云函数实现阶段的三处落实：① §10.8 枚举表**新增第 11 类「团长在客户端的商品经营变动」**四个取值，并把第 6 类由「订单明细查看」扩为「对象查看」四组八个取值（§11 批 C 原本就要求「按对象类型」，但枚举表只有订单一种）；必记事件段落同步补入。②「日志只记后台操作」的隐含前提取消——客户端的经营变动同样要留痕，§4.2 说明 5 改写并指明 `operator_roles` 为空数组。③ §10.7 的清单版本失效由「落库标记」改为**派生判定**（本表 schema 无该字段，且派生不会留下幽灵状态） |
-| 2026-09-14 | v0.1 | 建立第一批 5 张核心表设计，含字段、索引、状态机、并发与幂等策略 |
-| 2026-09-14 | v0.2 | 按 D-042 完整规格补齐第二批 9 张运营治理表，含运营角色复用方案、敏感资料访问链路与第二批索引；A-01、A-03 已裁定 |
-| 2026-09-14 | v0.3 | A-02 裁定为展示，有效总份数可见范围改为所有访问者 |
-| 2026-09-14 | v0.4 | 新增 `grouporder-config` 平台配置表与 `activity.review_mode`，支持发布审核模式后台可配置（D-057）；登记 A-06 |
-| 2026-09-14 | v0.5 | A-06 裁定：图片异步检测不阻塞审核放行，回调命中转治理下架（D-058） |
-| 2026-09-14 | v0.6 | 15 张 schema 与 index 文件已生成到 `grouporder-admin/uniCloud-alipay/database/`，共 42 条索引、10 个唯一索引；权限策略统一为客户端禁读写、全部走云函数 |
-| 2026-09-14 | v0.7 | 发布限制当前状态改存独立的 `grouporder-user-ext`，不再修改 `uni-id-users`，避免 uni-id 模块升级时手动合并自有字段；表数增至 16 张 |
-| 2026-09-14 | v0.8 | 处理两工程 uni-id 版本差异，确立「只从 admin 上传、client 只拉取」的上传约定 |
-| 2026-09-14 | v0.9 | 删除多余的 `uni-id-users` 覆盖版；保留 `uni-id-device` 覆盖版 |
-| 2026-09-18 | v1.15 | 移除全部已废止内容的留痕：删除 §10.10 `grouporder-ops-verify` 表定义与 §10.11 敏感资料访问链路两节（原 §10.12 第二批表索引前移为 §10.10）、§3 表清单与索引汇总表中的 `ops-verify` 行；§12 待确认项移除 A-01/02/03/05/06/07 六条已裁定项，仅保留未核验的 A-04。改动历史统一在本表记录，正文不再保留删除线 |
-| 2026-09-18 | v1.14 | 吸收已删除的 `ACTIVITY_COPY_SPEC.md`：新增 **§4.10 活动复制语义（D-067）**，含字段级复制规则、可作为源的范围、截止时间推算公式与兜底顺序、四条实现约束、图片文件引用、两个接口契约与 14 条 AC-AC-* 验收标准。不新增任何字段。§4.7 对 `GOODS_LIB_SPEC` 的版本引用由 v0.2 更正为 v0.3 |
-| 2026-09-18 | v1.13 | D-072 补漏：§1 权限策略的表数 15 → **19**；§13 `grouporder-oplog` 必记事件 11 类 → **10 类**（删「二次验证成功/失败/过期」）、硬性约束改「不得记录密码等凭证」；§10.12 索引汇总表的 `ops-verify` 行标记停用；§10.10 的约束段补「仅作存档」标注 |
-| 2026-09-18 | v1.12 | 按 D-072 停用 `grouporder-ops-verify` 表、取消 §10.11 敏感资料访问链路；后台不再脱敏、不设二次验证、导出不受限制 |
-| 2026-09-16 | v1.11 | 按 D-071 补充 `grouporder-export-log` 的链接有效期、文件保留期、每次下载重新鉴权与版本失效约束；A-05 关闭 |
-| 2026-09-16 | v1.10 | §4.8 补充说明 `grouporder-todo-dismiss` 仅服务小程序端，运营后台待办不使用本表也不建表（D-070） |
-| 2026-09-16 | v1.9 | §3 补充 uni-id 模块升级后的三项必检清单（`status` 枚举、`isAdmin`、`loginTypes`），记录 1.1.28 升级实际覆盖项目配置的事实 |
-| 2026-09-16 | v1.8 | 按 D-068 补充 `grouporder-ops-verify` 的验证形式、1 天有效期、免验三条件与失败锁定规则；明确本表不关心验证方式，升级 TOTP 无需改表 |
-| 2026-09-16 | v1.7 | 按 `GOODS_LIB_SPEC` v0.3 落实 D-065、D-066：`goods` 与 `goods-lib` 各增 `is_recommend`（仅视觉强调，**不进入排序**，每活动上限 5 个）；`goods-lib` 增 `category_id` 与 `user_category` 索引；新建 `grouporder-goods-category` 分类表；表清单第一批增至 9 张、合计 19 张。**`grouporder-goods.index.json` 未改**——推荐不参与排序，现有索引已够用 |
-| 2026-09-15 | v1.6 | 按 `NAV_AND_GOODS_ALIGNMENT.md`（评审文档，已于 2026-09-18 删除）落实导航与交付方式方案：新增 `grouporder-todo-dismiss` 表（D-062 待办派生视图的唯一落库状态）；`activity` 新增 `delivery_type`（D-060，发布后不可修改）；`order.consignee_address` 由必填改条件必填（自提活动不采集地址）；表清单第一批增至 8 张、合计 18 张 |
-| 2026-09-15 | v1.5 | 按 `GOODS_LIB_SPEC.md` 重做：商品库新增 `last_total_stock`、`last_per_user_limit` 并进 `required`，复用由「不继承置 0」改为「预填 + 必须逐项确认」；`grouporder-goods` 新增可空字段 `lib_id`（不进 `required`、不声明 `foreignKey`、不加索引），v1.4 的「goods 未做任何改动」结论作废；§4.2 补 `lib_id` 四项禁止用法；治理反写改为「`lib_id` 精确定位」与「团长 + 商品名」两条取并集且软删记录同样封禁；§4.7 补库记录独立维护规则 |
-| 2026-09-15 | v1.4 | 按 `GOODS_LIB_SPEC.md` 新增 `grouporder-goods-lib` 用户商品库表（D-063、D-064）：表清单第一批增至 7 张、合计 17 张；新增 §4.7 表定义；§6 补两条索引；§1 补充 `file` 字段在复制关系下的孤儿文件清理约束 |
-| 2026-09-15 | v1.3 | uni-id-pages 两侧对齐至 1.1.28（由产品负责人经插件市场升级，未手动改动模块）；新增 `uni-id-users` 覆盖版补回 `status = 4`；工程重建导致 32 个产物文件丢失后已照本文档重新生成并通过一致性核对；产物同时备份至 `docs/02-arch/schema/`；A-07 关闭 |
-| 2026-09-14 | v1.1 | 全表 Review：修正 `grouporder-goods` 字段名 `limit_per_user` → `per_user_limit`（PRD、D-044 与本文档均用后者，schema 沿用了设计初期的旧名）；`grouporder-content-check` 的 `required` 补入 `content_snapshot`、`check_time`；为 §10 的 10 张表与 §4.6 的文档字段表补齐 `_id` 行；新增字段表标记图例与 §11 产物清单。两轮机械核对（字段集合／必填／枚举／索引／外键／权限）均无差异 |
-| 2026-09-14 | v1.0 | 查明两工程 uni-id 版本差异的成因（admin 只能由 HBuilderX 创建与管理，uni-admin 不支持 CLI）及其影响（schema 与 `uni-id-co` 云函数双向覆盖）；曾手动替换 admin 模块为 1.1.28，经产品负责人要求已**完整回滚**至 1.1.20 原样，改为由产品负责人通过 HBuilderX 插件市场正式升级。本文档不再记录任何对第三方模块的手动改动 |
-| 2026-09-14 | v0.3 | 版本号不变，同步 D-043～D-056：发布审核状态、无限库存/不限购、商品单位与治理状态、地址默认接替、公开活动、全量改单、整单作废和注销前置条件 |
-| 2026-09-18 | v1.16 | 落地 D-073/074/075：§10.8 `action_type` **补出 10 类事件的枚举名表**（并标注 `activity_review` 在 OPS §13 无对应类别，待确认）、「11 类」表述改 10 类、新增 `export_download`；§1 权限策略补 D-075「后台业务页走云对象、不用 `unicloud-db` 直连」；§8.5 删除最后一处「运营侧默认脱敏」残留；§5 `delivery_type` 条目的「敏感资料面」措辞改写 |
-| 2026-09-18 | v1.17 | §10.7 `grouporder-export-log` 的硬性约束按 **D-073** 改写（原「运营不能通过日志下载、预览或重新生成」是 D-072/073 前的残留，现为「可下载、须换新地址、不可重新生成」）；新增配套文档 `OPS_CO_API.md`，`action_type` 枚举表为其权威来源 |
+| 2026-09-30 | v1.25 | 按 **D-084**：`grouporder-activity.cover_image` 注明草稿阶段可为空、发布前必填；§1 图片字段与活动复制「图片文件引用」补充换图即时回收规则（三表引用判定）与云存储路径 `{活动创建日期}/{activity_id}/`。schema 文件未改（云对象不走 schema 校验，`required` 保持不变） |
+| 2026-09-29 | v1.22 | 清除已废止的 `grouporder-ops-verify` 表物理文件（工程 `database/` 与 `docs/02-arch/schema/` 各 schema+index 共 4 个）。该表自 D-072 停用、v1.12 起已从正文移除，此前只删了正文定义、文件仍在，一旦上传服务空间会建出废止空表（9-22 评审报告 §当天必做）。至此代码、文档、物理文件三处均无残留 |
+| 2026-09-29 | v1.24 | 按 **D-081** 在 `grouporder-activity` 增加 `idempotent_key` 字段与唯一索引（§4.1、§6、§11.3），schema 文档副本与工程副本已同步；§12 结案 A-05、A-06。删除已废止的 `grouporder-ops-verify` schema / index 文件（文档副本与工程副本），表数、文件数、权限表数统一为 18 张 / 37 个；§3 oplog 摘要按 §10.8 实际改为 15 字段 14 类 |
+| 2026-09-29 | v1.23 | §8.5 Excel 期限改为 D-071 已确认值；§12 待确认项补 A-05（activityCopy 强幂等）、A-06（reportConclude 自动联动），A-04 的阻塞对象由「schema 落地」更正为「上传服务空间与提审」 |
+| 2026-09-29 | v1.22 | §4.10「可作为源的活动范围」与 AC-AC-007 按 **D-080** 改写：不按业务状态过滤，仅排除治理下架 |
+| 2026-09-29 | v1.21 | 按 **D-078** 改写 §7 运营账号与角色：四角色表收为唯一角色 `ops-super`，`ops-stat-view` 不再独立授权。清理已废止的 M-01 残留：`cover_image` 用途去掉「首页列表」，activity 复合索引用途由「首页公开活动列表」改为后台按状态检索（D-059） |
+| 2026-09-29 | v1.21 | §10.8 补登记 oplog 事件第 12 类 `activity_pickup_changed`（团长发布后改自提点，D-077），与 `activityUpdatePickup` 实现对应 |
+| 2026-09-29 | v1.20 | 按 D-077 在 `grouporder-activity` 增加四个自提点字段（`pickup_address`/`pickup_time_desc`/`pickup_contact_name`/`pickup_contact_mobile`），活动级、条件必填不进 required、发布后可改不重审不进快照；§4.10 活动复制表补自提点随复制 |
+| 2026-09-14～2026-09-20 | v0.1～v1.19 | 早期演进（29 次修订：建稿、决策同步与 D-072～D-076 改写等），逐条内容见 git 历史 |

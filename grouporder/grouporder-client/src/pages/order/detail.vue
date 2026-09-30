@@ -26,6 +26,15 @@
       <view class="kv" v-if="order.buyer_remark">备注：{{ order.buyer_remark }}</view>
     </view>
 
+    <!-- 自提点（D-077）：跟着活动走，团长改了这里就跟着变，与上面的收货快照不同 -->
+    <go-pickup
+      v-if="order.pickup"
+      :address="order.pickup.address"
+      :time-desc="order.pickup.time_desc"
+      :contact-name="order.pickup.contact_name"
+      :contact-mobile="order.pickup.contact_mobile"
+    />
+
     <view class="card" v-if="order.cancel_reason || order.void_reason">
       <view class="kv" v-if="order.cancel_reason">取消原因：{{ order.cancel_reason }}</view>
       <view class="kv" v-if="order.void_reason">作废原因：{{ order.void_reason }}</view>
@@ -45,6 +54,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app';
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { ORDER_STATUS, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
+import GoPickup from '@/components/go-pickup/go-pickup.vue';
 
 const orderId = ref('');
 const order = ref<any>({});

@@ -1,0 +1,9 @@
+{
+    "name": "grouporder-task-export-cleanup",
+    "dependencies": {
+        "grouporder-common": "file:../common/grouporder-common"
+    },
+    "extensions": {
+        "uni-cloud-jql": {}
+    }
+}
