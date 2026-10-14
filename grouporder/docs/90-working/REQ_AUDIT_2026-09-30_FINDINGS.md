@@ -506,7 +506,8 @@
 
 #### I-02 · 严重 · 发起接龙tab每次onShow重置，子页返回清空草稿
 
-- 主题：活动生命周期；类型：实现偏离；状态：仍成立·已登记；独立发现者：3；已独立复核；登记位置：OPEN_ISSUES 阻断级（第129行）
+- 主题：活动生命周期；类型：实现偏离；状态：**已解决**·已登记；独立发现者：3；已独立复核；登记位置：OPEN_ISSUES 阻断级（第129行）
+- **已解决（2026-10-08）**：按读法 B 落实——`faqi.vue` 仅在从其他 tab 切入时 `reset()`，从 M-11 / M-28 / M-31 / 商品库 / M-12 返回保留表单与草稿并刷新商品；草稿已提交时回到新建态。规格见 DECISIONS D-061 v1.20 释义、UX_FLOW_SPEC F-M03。
 - 事实：D-061 只规定「发起接龙」tab 恒为新建态、编辑草稿走非 tabBar 页。UX_FLOW_SPEC F-M03 的正常路径是 M-10 填资料，再进 M-11 添加商品，回到 M-10，再进 M-12 预览。faqi.vue 在每次 onShow 调 formRef.reset()（line 22-23）。uni-app 中从 navigateTo 的子页 navigateBack 回来同样触发页面 onShow。activity-form 的 addGoods、reuseGoods 先 ensureDraft 创建服务端草稿再 navigateTo。子页返回后 reset() 清空 form、goods、endDate，并把 draftId 置空（line 264-270）。此后 reloadGoods 因 draftId 为空直接 return（line 236），goPublish 也拿空 id 跳转 publish?id=（line 260）。首次创建含商品的活动的主流程必然走到这一步，用户看到空白表单，服务端遗留孤立草稿，只能从我发起的里找回。规格未区分「切入 tab」与「子页返回」。
   - `grouporder-client/src/pages/hall/faqi.vue:23` 「formRef.value && formRef.value.reset();」
   - `docs/03-release/OPEN_ISSUES.md:129` 「`onShow` 无条件 `reset()`，从商品编辑 / 复用历史商品 / 商品库返回时」
@@ -517,7 +518,8 @@
 
 #### I-12 · 高 · 封面图必填但客户端无图片上传入口
 
-- 主题：活动生命周期；类型：实现偏离；状态：仍成立·已登记；独立发现者：5；登记位置：OPEN_ISSUES.md:143
+- 主题：活动生命周期；类型：实现偏离；状态：**已解决**·已登记；独立发现者：5；登记位置：OPEN_ISSUES.md:143
+- **已解决（2026-10-08）**：M-10 补封面（必填）与轮播图（≤9）、M-11 补商品封面（必填）与详情图（≤9）、M-29 补库记录换图；图片先选后传，路径为 `{活动创建日期}/{activity_id}/`（商品库为 `lib/{上传日期}/{user_id}/`）；活动封面改为发布时校验，换图后按三表引用回收旧图。规格见 DECISIONS D-084、CLOUD_API v0.10。
 - 事实：D-041：活动必须有封面图、商品必须有封面图，轮播图和详情图可选。服务端 activityCreateDraft 与 goodsCreate 用 assertParam 强校验封面。客户端 activity-form.vue 里 form.cover_image 初值为 null，payload 原样上传，页面上没有选图、上传控件；goods-edit.vue 同样以 cover_image:null 调 goodsCreate。全客户端 grep chooseImage / chooseMedia / uploadFile 无任何命中（uni_modules 除外）。轮播图 images、详情图 detail_images 同样没有入口。
   - `grouporder-admin/uniCloud-alipay/cloudfunctions/grouporder-activity-co/index.obj.js:153` 「assertParam(params.cover_image, '活动必须包含封面图')」
   - `docs/03-release/OPEN_ISSUES.md:143` 「`cover_image` / `images` / `detail_images` 无任何 `chooseImage`」
@@ -526,6 +528,8 @@
 - 建议：以 D-041 为准，在 M-10/M-11 补封面、轮播图、详情图的选择与上传（uniCloud 云存储），并在 UX_FLOW_SPEC 补充图片规格：格式、大小、压缩、上传失败提示、9 张上限提示。
 
 #### I-23 · 高 · 团长端缺撤回入口、取消草稿入口与草稿提示条
+
+- **部分解决（2026-10-12）**：草稿改为「删除草稿」入口（M-09 卡片与 M-20，D-090），取代「取消草稿」；审核中的撤回入口与 faqi 草稿提示条仍未处理。
 
 - 主题：活动生命周期；类型：实现偏离；状态：仍成立·未登记；独立发现者：3
 - 事实：UX_STATE_MATRIX 规定草稿可“编辑、预览、提交审核、取消草稿”，审核中团长可“查看、撤回至草稿”；PRD 规定进行中活动允许编辑活动资料、调整截止时间；UX §6 规定点“发起接龙”tab 时若有未提交草稿，顶部显示“你有 N 个未完成的接龙草稿，继续编辑 / 忽略”提示条。客户端 manage.vue：“发布/审核状态”入口仅在草稿或进行中显示，审核中（状态 1）没有入口，而撤回按钮只在 publish.vue 的状态 1 分支，因此审核中的活动无法从管理页到达撤回；“截止/取消活动”仅在进行中显示，草稿无取消入口（activityCancel 服务端支持草稿）；“继续编辑草稿”仅草稿显示，进行中没有编辑活动资料或调整截止时间的入口；faqi.vue 未实现草稿提示条。

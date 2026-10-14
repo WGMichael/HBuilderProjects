@@ -30,7 +30,8 @@
         </view>
         <view class="kv-grid">
           <view class="kv"><text class="kv-k">团长</text><view class="kv-v">{{ activity.leader_uid || '—' }}</view></view>
-          <view class="kv"><text class="kv-k">交付方式</text><view class="kv-v">{{ labelOf(DELIVERY_TYPE, activity.delivery_type) }}</view></view>
+          <view class="kv"><text class="kv-k">交付方式</text><view class="kv-v">{{ deliveryText(activity.delivery_types) }}</view></view>
+          <view class="kv"><text class="kv-k">起始时间</text><view class="kv-v"><uni-dateformat v-if="activity.start_time" :threshold="[0, 0]" :date="activity.start_time"></uni-dateformat><text v-else>发布即开始</text></view></view>
           <view class="kv"><text class="kv-k">截止时间</text><view class="kv-v"><uni-dateformat :threshold="[0, 0]" :date="activity.end_time"></uni-dateformat></view></view>
           <view class="kv"><text class="kv-k">提交时间</text><view class="kv-v"><uni-dateformat :threshold="[0, 0]" :date="activity.review_submit_date"></uni-dateformat></view></view>
           <view class="kv">
@@ -143,7 +144,7 @@
   import { computed, reactive, ref } from 'vue';
   import { onLoad, onReady } from '@dcloudio/uni-app';
   import { callOps } from '@/common/grouporder/ops-co.js';
-  import { REVIEW_MODE, REVIEW_RESULT, CHECK_STATUS, CHECK_RESULT, DELIVERY_TYPE, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
+  import { REVIEW_MODE, REVIEW_RESULT, CHECK_STATUS, CHECK_RESULT, deliveryText, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
 
   const activityId = ref('');
   const activity = ref({});

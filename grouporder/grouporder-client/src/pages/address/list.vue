@@ -60,15 +60,15 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; padding-bottom: 140rpx; }
-.empty { text-align: center; color: #909399; font-size: 26rpx; padding: 120rpx 0; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; padding-bottom: 140rpx; }
+.empty { text-align: center; color: $go-muted; font-size: 26rpx; padding: 120rpx 0; }
 .item { display: flex; align-items: center; background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .item__main { flex: 1; min-width: 0; }
-.item__line1 { font-size: 30rpx; color: #303133; }
-.item__mobile { color: #606266; margin-left: 12rpx; }
-.item__def { font-size: 20rpx; color: #2979ff; background: #e8f3ff; padding: 2rpx 12rpx; border-radius: 8rpx; margin-left: 12rpx; }
-.item__line2 { font-size: 26rpx; color: #909399; margin-top: 10rpx; }
-.item__edit { font-size: 26rpx; color: #2979ff; padding-left: 16rpx; }
-.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #ececec; }
+.item__line1 { font-size: 30rpx; color: $go-ink; }
+.item__mobile { color: $go-text; margin-left: 12rpx; }
+.item__def { font-size: 20rpx; color: $go-primary; background: $go-primary-soft; padding: 2rpx 12rpx; border-radius: 8rpx; margin-left: 12rpx; }
+.item__line2 { font-size: 26rpx; color: $go-muted; margin-top: 10rpx; }
+.item__edit { font-size: 26rpx; color: $go-primary; padding-left: 16rpx; }
+.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $go-line; }
 .add { margin: 0; font-size: 30rpx; }
 </style>

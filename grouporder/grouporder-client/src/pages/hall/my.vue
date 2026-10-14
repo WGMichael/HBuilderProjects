@@ -21,10 +21,11 @@
 
     <!-- 数据概览 -->
     <view class="stat" v-if="loggedIn">
-      <view class="stat__item"><text class="stat__n">{{ overview.lead_activity_count || 0 }}</text><text class="stat__l">发起的</text></view>
-      <view class="stat__item"><text class="stat__n">{{ overview.joined_order_count || 0 }}</text><text class="stat__l">参与订单</text></view>
-      <view class="stat__item"><text class="stat__n">{{ overview.goods_lib_count || 0 }}</text><text class="stat__l">商品库</text></view>
-      <view class="stat__item"><text class="stat__n">{{ overview.todo_count || 0 }}</text><text class="stat__l">待办</text></view>
+      <!-- 可点击：属于「接龙」tab 的切到对应子页，商品库进管理页 -->
+      <view class="stat__item" hover-class="stat__item--hover" @click="openHallSub('lead')"><text class="stat__n">{{ overview.lead_activity_count || 0 }}</text><text class="stat__l">发起的</text></view>
+      <view class="stat__item" hover-class="stat__item--hover" @click="openHallSub('join')"><text class="stat__n">{{ overview.joined_order_count || 0 }}</text><text class="stat__l">参与订单</text></view>
+      <view class="stat__item" hover-class="stat__item--hover" @click="go('/pages/lib/manage')"><text class="stat__n">{{ overview.goods_lib_count || 0 }}</text><text class="stat__l">商品库</text></view>
+      <view class="stat__item" hover-class="stat__item--hover" @click="openHallSub('todo')"><text class="stat__n">{{ overview.todo_count || 0 }}</text><text class="stat__l">待办</text></view>
     </view>
 
     <!-- 功能组 -->
@@ -55,6 +56,8 @@ import { onShow } from '@dcloudio/uni-app';
 import GoTabbar from '@/components/go-tabbar/go-tabbar.vue';
 // @ts-ignore
 import api, { isLoggedIn, ensureLogin } from '@/common/grouporder/request.js';
+// @ts-ignore
+import { openHallSub } from '@/common/grouporder/hall.js';
 // @ts-ignore
 import { store } from '@/uni_modules/uni-id-pages/common/store.js';
 
@@ -105,19 +108,21 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; padding-bottom: 140rpx; background: #f4f5f7; }
+/* 底部留白避开 fixed 的 go-tabbar，含安全区 */
+.page { min-height: 100vh; padding-bottom: calc(140rpx + env(safe-area-inset-bottom)); background: $go-canvas; }
 .hero { display: flex; align-items: center; padding: 48rpx 32rpx; background: #fff; }
-.hero__avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: #2979ff; color: #fff; font-size: 40rpx; display: flex; align-items: center; justify-content: center; margin-right: 24rpx; }
-.hero__name { font-size: 34rpx; color: #303133; }
-.hero__sub { font-size: 24rpx; color: #909399; margin-top: 8rpx; }
-.hero__badge { font-size: 20rpx; color: #18bc37; background: #e7faec; padding: 2rpx 12rpx; border-radius: 8rpx; }
-.hero__badge--off { color: #909399; background: #f0f0f0; }
+.hero__avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: $go-primary; color: #fff; font-size: 40rpx; display: flex; align-items: center; justify-content: center; margin-right: 24rpx; }
+.hero__name { font-size: 34rpx; color: $go-ink; }
+.hero__sub { font-size: 24rpx; color: $go-muted; margin-top: 8rpx; }
+.hero__badge { font-size: 20rpx; color: $go-primary; background: $go-primary-soft; padding: 2rpx 12rpx; border-radius: 8rpx; }
+.hero__badge--off { color: $go-muted; background: $go-line; }
 .stat { display: flex; background: #fff; margin-top: 16rpx; padding: 28rpx 0; }
 .stat__item { flex: 1; display: flex; flex-direction: column; align-items: center; }
-.stat__n { font-size: 36rpx; color: #2979ff; }
-.stat__l { font-size: 22rpx; color: #909399; margin-top: 6rpx; }
+.stat__n { font-size: 36rpx; color: $go-primary; }
+.stat__item--hover { background: $go-soft; }
+.stat__l { font-size: 22rpx; color: $go-muted; margin-top: 6rpx; }
 .group { background: #fff; margin-top: 16rpx; }
-.cell { display: flex; align-items: center; justify-content: space-between; padding: 30rpx 32rpx; border-bottom: 1rpx solid #f5f5f5; }
-.cell__t { font-size: 28rpx; color: #303133; }
-.cell__a { font-size: 28rpx; color: #c0c4cc; }
+.cell { display: flex; align-items: center; justify-content: space-between; padding: 30rpx 32rpx; border-bottom: 1rpx solid $go-soft; }
+.cell__t { font-size: 28rpx; color: $go-ink; }
+.cell__a { font-size: 28rpx; color: $go-placeholder; }
 </style>

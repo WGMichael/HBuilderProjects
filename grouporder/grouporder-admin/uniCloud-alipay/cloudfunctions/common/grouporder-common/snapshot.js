@@ -11,14 +11,14 @@ const THREE_YEARS_MS = 3 * 365 * 24 * 60 * 60 * 1000
 
 /**
  * 构造订单的收货快照。
- * 自提活动（delivery_type=2）只采集姓名与电话，不采集完整地址（D-060）。
+ * 按【订单自己的】交付方式决定口径（D-086）：自提只采集姓名与电话，不采集完整地址（D-060）。
  *
- * @param {object} activity 活动（提供 delivery_type）
+ * @param {number} deliveryType 本单交付方式 1送货上门 2自提
  * @param {object} input { address_id, consignee_name, consignee_mobile, consignee_address }
  * @param {object} addressDoc 地址簿记录，按 address_id 取得时传入
  */
-function buildConsignee (activity, input, addressDoc) {
-  const selfPick = activity.delivery_type === DELIVERY.SELF_PICK
+function buildConsignee (deliveryType, input, addressDoc) {
+  const selfPick = deliveryType === DELIVERY.SELF_PICK
 
   const name = (addressDoc && addressDoc.name) || input.consignee_name
   const mobile = (addressDoc && addressDoc.mobile) || input.consignee_mobile
@@ -37,7 +37,7 @@ function buildConsignee (activity, input, addressDoc) {
     snapshot.address_id = ''
   } else {
     const address = (addressDoc && addressDoc.address) || input.consignee_address
-    assertParam(address && String(address).trim(), '送货上门活动必须填写完整收货地址')
+    assertParam(address && String(address).trim(), '送货上门必须填写完整收货地址')
     snapshot.consignee_address = String(address).trim()
     snapshot.address_id = (addressDoc && addressDoc._id) || input.address_id || ''
   }

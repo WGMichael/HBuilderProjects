@@ -29,12 +29,12 @@ const props = defineProps({
 const emit = defineEmits(['retry']);
 
 const MAP = {
-  not_found: { symbol: '∅', color: '#909399', title: '内容不存在', desc: '该活动或订单不存在，或已被删除。' },
-  forbidden: { symbol: '⊘', color: '#fa3534', title: '无权访问', desc: '你没有查看该内容的权限。敏感数据仅对相关方可见。' },
-  closed: { symbol: '⏱', color: '#f3a73f', title: '活动已截止', desc: '该活动已截止，不能再新建或扩大订单，但仍可查看。' },
-  cancelled: { symbol: '⊗', color: '#f3a73f', title: '活动已取消', desc: '该活动已被团长取消。' },
-  offline: { symbol: '⚠', color: '#fa3534', title: '已被平台下架', desc: '该活动或商品已被平台下架，不能继续接龙。' },
-  unknown: { symbol: '↻', color: '#909399', title: '网络异常或结果未知', desc: '没能确认操作结果。请勿重复提交，稍后重试以确认状态。' },
+  not_found: { symbol: '∅', color: '#6f7974', title: '内容不存在', desc: '该活动或订单不存在，或已被删除。' },
+  forbidden: { symbol: '⊘', color: '#c7463f', title: '无权访问', desc: '你没有查看该内容的权限。敏感数据仅对相关方可见。' },
+  closed: { symbol: '⏱', color: '#d96a28', title: '活动已截止', desc: '该活动已截止，不能再新建或扩大订单，但仍可查看。' },
+  cancelled: { symbol: '⊗', color: '#d96a28', title: '活动已取消', desc: '该活动已被团长取消。' },
+  offline: { symbol: '⚠', color: '#c7463f', title: '已被平台下架', desc: '该活动或商品已被平台下架，不能继续接龙。' },
+  unknown: { symbol: '↻', color: '#6f7974', title: '网络异常或结果未知', desc: '没能确认操作结果。请勿重复提交，稍后重试以确认状态。' },
 };
 
 const current = computed(() => MAP[props.type] || MAP.unknown);
@@ -61,12 +61,12 @@ const home = () => uni.switchTab({ url: '/pages/hall/jielong' });
   }
   &__title {
     font-size: 36rpx;
-    color: #303133;
+    color: $go-ink;
     margin-bottom: 16rpx;
   }
   &__desc {
     font-size: 26rpx;
-    color: #909399;
+    color: $go-muted;
     line-height: 1.8;
     text-align: center;
     max-width: 560rpx;
@@ -81,11 +81,11 @@ const home = () => uni.switchTab({ url: '/pages/hall/jielong' });
   &__btn {
     margin: 0;
     font-size: 26rpx;
-    color: #606266;
-    background: #f5f5f5;
+    color: $go-text;
+    background: $go-soft;
     &--primary {
       color: #fff;
-      background: #2979ff;
+      background: $go-primary;
     }
   }
 }

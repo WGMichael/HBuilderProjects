@@ -40,6 +40,8 @@
             <view class="kv-v">
               <uni-tag :type="activity.status === 2 ? 'success' : 'primary'" inverted size="small" :text="labelOf(ACTIVITY_STATUS, activity.status)"></uni-tag>
               <text class="kv-note">
+                <!-- 起始时间（D-087）；旧活动无此字段，视为发布即开始 -->
+                <template v-if="activity.start_time"><uni-dateformat :threshold="[0, 0]" :date="activity.start_time"></uni-dateformat> 开始 ～ </template>
                 <uni-dateformat :threshold="[0, 0]" :date="activity.end_time"></uni-dateformat>
                 · {{ labelOf(END_TYPE, activity.end_type, '') }}
               </text>
@@ -62,7 +64,7 @@
           <view class="kv">
             <text class="kv-k">交付方式</text>
             <view class="kv-v">
-              <text>{{ labelOf(DELIVERY_TYPE, activity.delivery_type) }}</text>
+              <text>{{ deliveryText(activity.delivery_types) }}</text>
               <text class="kv-note">发布后不可修改（D-060）</text>
             </view>
           </view>
@@ -228,7 +230,7 @@
   import {
     ACTIVITY_STATUS,
     GOVERNANCE_STATUS,
-    DELIVERY_TYPE,
+    deliveryText,
     REVIEW_MODE,
     REVIEW_RESULT,
     END_TYPE,

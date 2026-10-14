@@ -79,19 +79,19 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; padding-bottom: 160rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; padding-bottom: 160rpx; }
 .head { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
-.head__title { font-size: 32rpx; color: #303133; }
-.head__status { font-size: 24rpx; color: #909399; margin-top: 8rpx; }
+.head__title { font-size: 32rpx; color: $go-ink; }
+.head__status { font-size: 24rpx; color: $go-muted; margin-top: 8rpx; }
 .opt { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; border: 2rpx solid transparent; }
-.opt--on { border-color: #2979ff; }
-.opt__t { font-size: 30rpx; color: #303133; }
-.opt__d { font-size: 24rpx; color: #909399; margin-top: 8rpx; line-height: 1.6; }
+.opt--on { border-color: $go-primary; }
+.opt__t { font-size: 30rpx; color: $go-ink; }
+.opt__d { font-size: 24rpx; color: $go-muted; margin-top: 8rpx; line-height: 1.6; }
 .field { background: #fff; border-radius: 16rpx; padding: 24rpx; }
-.k { font-size: 26rpx; color: #606266; }
-.req { color: #fa3534; }
+.k { font-size: 26rpx; color: $go-text; }
+.req { color: $go-red; }
 .v { margin-top: 12rpx; width: 100%; height: 140rpx; font-size: 28rpx; }
-.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #ececec; }
+.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $go-line; }
 .btn { margin: 0; font-size: 30rpx; }
-.btn--primary { background: #2979ff; color: #fff; }
+.btn--primary { background: $go-primary; color: #fff; }
 </style>

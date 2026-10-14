@@ -5,18 +5,24 @@
  * blockLibByGoods 被 ops-co 调用，放在 goods-co 会形成云对象互调。
  */
 const oplog = require('./oplog')
+const { throwBiz } = require('./errors')
 
 /**
  * 商品保存时自动沉淀（§4.2）。
  *
  * 判定键：user_id（活动的团长，不是当前操作者）+ name（trim 后精确匹配）+ deleted = 0
- * - 未命中 → 新建；use_count = 0，category_id 留空（沉淀不猜测分类）
- * - 命中   → 更新内容与三个 last_* 值；use_count 与 category_id 不变
+ * - 未命中 → 新建；use_count = 0，category_id 取团长显式选择的分类，未选则留空（沉淀不猜测分类）
+ * - 命中   → 更新内容与三个 last_* 值；use_count 不变，category_id 仅在团长显式选择时改写（D-088）
  * - governance_blocked = 1 的记录跳过更新，不因团长重新编辑而解除封禁
  *
  * §4.4：沉淀失败【不得导致商品保存失败】。商品保存是主动作，沉淀是附属动作。
+ *
+ * opts.categoryId（D-088）：团长在 M-11 显式选择的商品库分类。undefined 表示不指定——
+ * 新建记录归入未分组、已有记录保持原分类（沉淀不猜测分类）；'' 表示归入未分组。
+ * 调用方须先用 assertOwnCategory 校验归属，这里不再校验（沉淀失败不能反噬商品保存）。
  */
-async function sinkToLib (ctx, goodsDoc, leaderUid) {
+async function sinkToLib (ctx, goodsDoc, leaderUid, opts = {}) {
+  const categoryId = opts.categoryId
   try {
     const name = String(goodsDoc.name || '').trim()
     if (!name) return null
@@ -38,7 +44,8 @@ async function sinkToLib (ctx, goodsDoc, leaderUid) {
       await coll.doc(existing._id).update({
         name,
         description: goodsDoc.description || '',
-        cover_image: goodsDoc.cover_image,
+        // 整体替换：update() 对对象值默认按子字段合并，会残留旧图的子字段
+        cover_image: goodsDoc.cover_image ? ctx.db.command.set(goodsDoc.cover_image) : goodsDoc.cover_image,
         detail_images: goodsDoc.detail_images || [],
         unit: goodsDoc.unit || '份',
         last_price: goodsDoc.price,
@@ -47,7 +54,8 @@ async function sinkToLib (ctx, goodsDoc, leaderUid) {
         is_recommend: goodsDoc.is_recommend || 0,
         img_check_status: goodsDoc.img_check_status || 0,
         last_used_time: ctx.now,
-        update_date: ctx.now
+        update_date: ctx.now,
+        ...(categoryId !== undefined ? { category_id: categoryId || '' } : {})
       })
       return existing._id
     }
@@ -65,7 +73,7 @@ async function sinkToLib (ctx, goodsDoc, leaderUid) {
       last_used_time: ctx.now,
       use_count: 0,
       is_recommend: goodsDoc.is_recommend || 0,
-      category_id: '',
+      category_id: categoryId || '',
       img_check_status: goodsDoc.img_check_status || 0,
       governance_blocked: 0,
       deleted: 0,
@@ -164,4 +172,38 @@ async function unblockLibByGoods (ctx, goodsDoc, leaderUid, caseNo) {
   return released
 }
 
-module.exports = { sinkToLib, blockLibByGoods, unblockLibByGoods }
+/**
+ * 活动里单独调整库存 / 限购（goodsAdjustStock）后，同步到同名库记录的默认值。
+ *
+ * 只改 last_total_stock / last_per_user_limit：调库存不是一次完整的保存，
+ * 不新建库记录、不刷新 last_used_time、不动其他内容字段；封禁记录跳过（D-064）。
+ * 与 sinkToLib 同一判定键（团长 + 名称 + 未删除），同样不得反噬主操作。
+ */
+async function syncStockToLib (ctx, goodsDoc, leaderUid) {
+  try {
+    const name = String(goodsDoc.name || '').trim()
+    if (!name) return
+    await ctx.db.collection('grouporder-goods-lib')
+      .where({ user_id: leaderUid, name, deleted: 0, governance_blocked: ctx.db.command.neq(1) })
+      .update({
+        last_total_stock: goodsDoc.total_stock || 0,
+        last_per_user_limit: goodsDoc.per_user_limit || 0,
+        update_date: ctx.now
+      })
+  } catch (e) {
+    console.error('[goodslib] 库存默认值同步失败，调整本身不受影响：', e)
+  }
+}
+
+/**
+ * 校验商品库分类属于该用户（D-088）。空串 / undefined 表示未分组或不指定，直接通过
+ */
+async function assertOwnCategory (ctx, uid, categoryId) {
+  if (!categoryId) return
+  const { data } = await ctx.db.collection('grouporder-goods-category').doc(categoryId).get()
+  const cat = data && data[0]
+  if (!cat) throwBiz('NOT_FOUND', '分类不存在')
+  if (cat.user_id !== uid) throwBiz('FORBIDDEN', '无权使用他人的分类')
+}
+
+module.exports = { sinkToLib, syncStockToLib, blockLibByGoods, unblockLibByGoods, assertOwnCategory }

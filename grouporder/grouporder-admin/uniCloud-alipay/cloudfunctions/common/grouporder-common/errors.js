@@ -17,6 +17,7 @@ const COMMON = {
 // 客户端业务码
 const CLIENT = {
   ACTIVITY_CLOSED: '活动已截止',
+  ACTIVITY_NOT_STARTED: '活动尚未开始，到开始时间后才能下单',
   ACTIVITY_CANCELLED: '活动已被团长取消',
   ACTIVITY_OFFLINE: '活动已被平台下架',
   GOODS_OFF_SALE: '商品已停售',

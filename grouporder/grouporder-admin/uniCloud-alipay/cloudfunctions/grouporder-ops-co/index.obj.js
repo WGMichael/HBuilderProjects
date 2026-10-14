@@ -9,6 +9,9 @@
  * ③ 超管按权限点判断即可，无超管特例分支（D-076）；
  * ④ 运营不得代替团长经营（OPS §2.2）——本对象没有任何创建/修改活动、
  *    商品、订单、库存、价格、统计的方法。
+ *    唯一例外：devWipe（运营禁区·测试数据清理），经产品负责人 2026-10-12 授权，
+ *    鉴权 ops-sys-config + 全程审计，仅供受训运营在测试环境重置数据，上线前应移除
+ *    （见 docs/03-release/OPEN_ISSUES.md）。
  *
  * ⚠ 依赖 xlsx（SheetJS），用于检索结果与统计导出。部署前需 npm install。
  */
@@ -25,6 +28,14 @@ const ACTION = oplog.ACTION
 const REPORT_STATUS = { PENDING: 1, HANDLING: 2, CLOSED: 3, RECHECKING: 4, RECHECKED: 5 }
 const APPEAL_STATUS = { PENDING: 1, HANDLING: 2, SUCCESS: 3, FAILED: 4 }
 const PRIVACY_STATUS = { REGISTERED: 1, RESTRICTED: 2, EXPIRED: 3, DONE: 4, FAILED: 5 }
+
+// 运营禁区清理分组（经产品负责人 2026-10-12 授权的测试数据重置能力，详见 devWipe）
+const DEV_WIPE_GROUPS = {
+  activity: ['grouporder-activity', 'grouporder-goods'],
+  order: ['grouporder-order', 'grouporder-order-item'],
+  goodslib: ['grouporder-goods-lib', 'grouporder-goods-category'],
+  governance: ['grouporder-report', 'grouporder-report-review', 'grouporder-content-check', 'grouporder-restriction']
+}
 
 module.exports = {
   async _before () {
@@ -66,6 +77,57 @@ module.exports = {
     }
   },
 
+  /**
+   * 【运营禁区 · 开发测试数据清理】物理清空选定业务表，不可恢复。
+   *
+   * ⚠ 本方法违反 OPS §2.2「运营不得代替团长经营」与 D-035 留存——是产品负责人
+   *   2026-10-12 明确授权、仅供受训运营在测试环境重置数据的禁区能力。
+   *   鉴权：要求 ops-sys-config 权限（挡匿名 / 非运营调用）；每次清理写审计。
+   *   正式上线前应移除本方法、禁区页面与菜单（见 OPEN_ISSUES）。
+   *
+   * 入参：{ confirm: 'WIPE-ALL', scopes?: ['activity','order','goodslib','governance'] }
+   * 出参：{ scopes, deleted: { 集合名: 条数 } }
+   */
+  async devWipe (params = {}) {
+    await this._perm('ops-sys-config', { deniedAction: 'dev_data_wipe', objectType: 'dev_cleanup' })
+    assertParam(params.confirm === 'WIPE-ALL', '需要传 confirm:"WIPE-ALL" 才会执行这项不可恢复的清库操作')
+
+    const scopes = Array.isArray(params.scopes) && params.scopes.length
+      ? params.scopes.filter(s => DEV_WIPE_GROUPS[s])
+      : Object.keys(DEV_WIPE_GROUPS)
+    assertParam(scopes.length, '没有匹配的清理分组')
+
+    const collections = [...new Set(scopes.reduce((a, s) => a.concat(DEV_WIPE_GROUPS[s]), []))]
+    const deleted = {}
+    for (const name of collections) {
+      deleted[name] = await this._wipeCollection(name)
+    }
+
+    await oplog.success(this.ctx, {
+      action_type: 'dev_data_wipe',
+      object_type: 'dev_cleanup',
+      object_id: scopes.join(','),
+      reason: '运营禁区：清空测试数据',
+      prev_state: null,
+      next_state: deleted
+    })
+    return ok({ scopes, deleted })
+  },
+
+  /** 分批清空一张集合，返回删除条数。_id 恒非空，neq('') 匹配全部 */
+  async _wipeCollection (name) {
+    const dbCmd = this.dbCmd
+    let total = 0
+    for (;;) {
+      const { data } = await this.db.collection(name).where({ _id: dbCmd.neq('') }).field({ _id: true }).limit(500).get()
+      if (!data || !data.length) break
+      const res = await this.db.collection(name).where({ _id: dbCmd.in(data.map(d => d._id)) }).remove()
+      total += (res.deleted || data.length)
+      if (data.length < 500) break
+    }
+    return total
+  },
+
   async _mustGet (collection, id, label) {
     assertParam(id, `缺少${label}标识`)
     const { data } = await this.db.collection(collection).doc(id).get()
@@ -82,6 +144,17 @@ module.exports = {
       coll.count()
     ])
     return { list: listRes.data || [], total: countRes.total || 0 }
+  },
+
+  /** 按用户 _id 批量取 username，返回 Map<uid, username>；只取 username，不取凭证字段 */
+  async _userNameMap (uids) {
+    const ids = [...new Set((uids || []).filter(Boolean))]
+    if (!ids.length) return new Map()
+    const { data } = await this.db.collection('uni-id-users')
+      .where({ _id: this.dbCmd.in(ids) })
+      .field({ _id: true, username: true })
+      .limit(ids.length).get()
+    return new Map((data || []).map(u => [u._id, u.username || '']))
   },
 
   /** 把时间范围筛选转成 where 片段；起止非法时阻止查询并指出问题（OPS §12.2） */
@@ -168,11 +241,12 @@ module.exports = {
         cover_image: activity.cover_image,
         images: activity.images || [],
         short_code: activity.short_code,
-        delivery_type: activity.delivery_type,
+        delivery_types: state.deliveryTypesOf(activity),
         leader_uid: activity.leader_uid,
         // 业务状态
         status: activity.status,
         publish_date: activity.publish_date || null,
+        start_time: activity.start_time || null,
         end_time: activity.end_time,
         actual_end_time: activity.actual_end_time || null,
         cancel_reason: activity.cancel_reason || '',
@@ -917,11 +991,12 @@ module.exports = {
         cover_image: activity.cover_image,
         images: activity.images || [],
         leader_uid: activity.leader_uid,
-        delivery_type: activity.delivery_type,
+        delivery_types: state.deliveryTypesOf(activity),
         status: activity.status,
         review_mode: activity.review_mode || null,
         review_submit_date: activity.review_submit_date || null,
         content_version: activity.content_version,
+        start_time: activity.start_time || null,
         end_time: activity.end_time
       },
       goods: goodsRes.data || [],
@@ -1087,6 +1162,8 @@ module.exports = {
     if (p.filters.user_id) where.user_id = p.filters.user_id
     if (p.filters.status) where.status = p.filters.status
     if (p.filters.consignee_mobile) where.consignee_mobile = String(p.filters.consignee_mobile)
+    // 按订单自身的交付方式筛选（D-086）。D-086 之前的旧订单没有该字段，不在筛选命中范围内
+    if (p.filters.delivery_type) where.delivery_type = Number(p.filters.delivery_type)
     const range = this._dateRange(p.filters, 'create_date')
     if (range) Object.assign(where, range)
 
@@ -1097,7 +1174,7 @@ module.exports = {
       const ids = [...new Set(list.map(o => o.activity_id))]
       const { data } = await this.db.collection('grouporder-activity')
         .where({ _id: this.dbCmd.in(ids) })
-        .field({ _id: true, title: true, delivery_type: true, leader_uid: true, short_code: true })
+        .field({ _id: true, title: true, delivery_type: true, delivery_types: true, leader_uid: true, short_code: true })
         .limit(ids.length).get()
       actMap = new Map((data || []).map(a => [a._id, a]))
     }
@@ -1120,7 +1197,8 @@ module.exports = {
         activity_title: a ? a.title : '',
         activity_short_code: a ? a.short_code : '',
         leader_uid: a ? a.leader_uid : '',
-        delivery_type: a ? a.delivery_type : null,
+        // 本单交付方式（D-086）；旧订单取所属活动当时的单一方式
+        delivery_type: state.orderDeliveryTypeOf(o, a),
         user_id: o.user_id,
         status: o.status,
         // 完整明文，不脱敏（D-072）
@@ -1163,7 +1241,13 @@ module.exports = {
     const range = this._dateRange(p.filters, p.filters.date_field === 'publish_date' ? 'publish_date' : 'create_date')
     if (range) Object.assign(where, range)
 
-    const { list, total } = await this._query('grouporder-activity', where, p)
+    // 交付方式筛选：支持的方式里包含所选项（D-086）；旧活动只有单值 delivery_type，一并命中
+    let query = where
+    if (p.filters.delivery_type) {
+      const t = Number(p.filters.delivery_type)
+      query = this.dbCmd.and([where, this.dbCmd.or([{ delivery_types: t }, { delivery_type: t }])])
+    }
+    const { list, total } = await this._query('grouporder-activity', query, p)
 
     await oplog.success(ctx, {
       action_type: ACTION.ACTIVITY_DETAIL_VIEW,
@@ -1179,13 +1263,14 @@ module.exports = {
       title: a.title,
       short_code: a.short_code,
       leader_uid: a.leader_uid,
-      delivery_type: a.delivery_type,
+      delivery_types: state.deliveryTypesOf(a),
       // 业务状态与治理状态分列，不合并
       status: a.status,
       governance_status: a.governance_status,
       ever_governed: a.ever_governed || 0,
       review_result: a.review_result || 0,
       publish_date: a.publish_date || null,
+      start_time: a.start_time || null,
       end_time: a.end_time,
       actual_end_time: a.actual_end_time || null,
       create_date: a.create_date
@@ -1451,6 +1536,9 @@ module.exports = {
     const rows = [...byLeader.values()].map(r => { delete r._activity_ids; return r })
     rows.sort((a, b) => (b.last_publish_date || 0) - (a.last_publish_date || 0))
     const pageRows = rows.slice(p.skip, p.skip + p.pageSize)
+    // 补团长 username，只查本页团长，方便运营辨认
+    const userMap = await this._userNameMap(pageRows.map(r => r.leader_uid))
+    for (const r of pageRows) r.username = userMap.get(r.leader_uid) || ''
 
     await oplog.success(ctx, {
       action_type: ACTION.STAT_QUERY,
@@ -1522,13 +1610,13 @@ module.exports = {
       })
     }
 
-    // 未指定活动时，按团长列出其活动
-    assertParam(params.leader_uid, '请指定团长或活动')
+    // 未指定活动时，按团长列出其活动；未指定团长则列出全部团长的活动（菜单直达）
     const p = paging.normalize(params, {
       defaultOrderBy: { field: 'publish_date', direction: 'desc' },
       allowOrderFields: ['publish_date', 'create_date', 'end_time']
     })
-    const where = { leader_uid: params.leader_uid }
+    const where = {}
+    if (params.leader_uid) where.leader_uid = params.leader_uid
     const range = this._dateRange(p.filters, 'publish_date')
     if (range) Object.assign(where, range)
     const { list, total } = await this._query('grouporder-activity', where, p)
@@ -1548,11 +1636,12 @@ module.exports = {
       orderMap = new Map((oa.data || []).map(r => [r._id, r.cnt]))
       itemMap = new Map((ia.data || []).map(r => [r._id, r]))
     }
+    const userMap = await this._userNameMap(list.map(a => a.leader_uid))
 
     await oplog.success(ctx, {
       action_type: ACTION.STAT_QUERY,
       object_type: 'user',
-      object_id: params.leader_uid,
+      object_id: params.leader_uid || '(全部团长)',
       reason: '团长活动列表统计',
       prev_state: null,
       next_state: null
@@ -1562,7 +1651,9 @@ module.exports = {
       const it = itemMap.get(a._id)
       return {
         _id: a._id, title: a.title, short_code: a.short_code,
+        leader_uid: a.leader_uid, username: userMap.get(a.leader_uid) || '',
         status: a.status, governance_status: a.governance_status,
+        ever_governed: a.ever_governed || 0,
         publish_date: a.publish_date || null, end_time: a.end_time,
         valid_order_count: orderMap.get(a._id) || 0,
         valid_total_qty: it ? it.qty : 0,

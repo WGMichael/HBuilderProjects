@@ -114,11 +114,14 @@ module.exports = {
     // 参与者明细：每条商品明细一行，同一订单的订单号与收货信息在多行重复（D-053）
     const detail = items.map(it => {
       const o = orderMap.get(it.order_id) || {}
+      // 交付方式按订单自身（D-086）；自提单不输出地址
+      const deliveryType = state.orderDeliveryTypeOf(o, activity)
       return {
         order_no: o.order_no || '',
+        delivery_type: deliveryType,
         consignee_name: o.consignee_name || '',
         consignee_mobile: o.consignee_mobile || '',
-        consignee_address: o.consignee_address || '',
+        consignee_address: deliveryType === DELIVERY.SELF_PICK ? '' : (o.consignee_address || ''),
         buyer_remark: o.buyer_remark || '',
         goods_name: it.goods_name,
         unit: it.unit_snapshot,
@@ -162,9 +165,9 @@ module.exports = {
       activity_id: activity._id,
       title: activity.title,
       short_code: activity.short_code,
-      delivery_type: activity.delivery_type,
-      // 自提活动的清单不输出地址列（D-060）
-      has_address_column: activity.delivery_type === DELIVERY.HOME,
+      delivery_types: state.deliveryTypesOf(activity),
+      // 只支持自提的活动清单不输出地址列（D-060）；两种都支持时保留地址列，自提单留空（D-086）
+      has_address_column: state.supportsDelivery(activity, DELIVERY.HOME),
       actual_end_time: activity.actual_end_time || activity.end_time,
       goods_summary: collected.goodsSummary,
       detail: collected.detail,
@@ -205,7 +208,7 @@ module.exports = {
 
     try {
       const collected = await this._collect(activity)
-      const withAddress = activity.delivery_type === DELIVERY.HOME
+      const withAddress = state.supportsDelivery(activity, DELIVERY.HOME)
 
       // Sheet 1 商品汇总：每个商品一行（D-053）
       const sheet1 = [
@@ -231,14 +234,16 @@ module.exports = {
         this._cell('')
       ])
 
-      // Sheet 2 参与者明细：每条商品明细一行
-      const header2 = ['订单号', '收货人', '联系电话']
+      // Sheet 2 参与者明细：每条商品明细一行；「交付方式」列按订单自身（D-086）
+      const DELIVERY_TEXT = { [DELIVERY.HOME]: '送货上门', [DELIVERY.SELF_PICK]: '自提' }
+      const header2 = ['订单号', '交付方式', '收货人', '联系电话']
       if (withAddress) header2.push('收货地址')
       header2.push('商品名称', '单位', '单价(元)', '数量', '小计(元)', '买家备注')
       const sheet2 = [header2.map(h => this._cell(h))]
       for (const d of collected.detail) {
         const row = [
           this._cell(d.order_no),
+          this._cell(DELIVERY_TEXT[d.delivery_type] || ''),
           this._cell(d.consignee_name),
           this._cell(d.consignee_mobile)
         ]

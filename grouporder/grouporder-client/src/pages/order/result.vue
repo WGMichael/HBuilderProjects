@@ -64,17 +64,17 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; }
 .ok { display: flex; flex-direction: column; align-items: center; padding: 80rpx 0 40rpx; }
-.ok__icon { width: 110rpx; height: 110rpx; line-height: 110rpx; text-align: center; border-radius: 50%; background: #18bc37; color: #fff; font-size: 60rpx; }
-.ok__title { font-size: 34rpx; color: #303133; margin-top: 24rpx; }
-.ok__no { font-size: 24rpx; color: #909399; margin-top: 8rpx; }
+.ok__icon { width: 110rpx; height: 110rpx; line-height: 110rpx; text-align: center; border-radius: 50%; background: $go-primary; color: #fff; font-size: 60rpx; }
+.ok__title { font-size: 34rpx; color: $go-ink; margin-top: 24rpx; }
+.ok__no { font-size: 24rpx; color: $go-muted; margin-top: 8rpx; }
 .card { background: #fff; border-radius: 16rpx; padding: 24rpx; }
-.line { display: flex; justify-content: space-between; padding: 12rpx 0; font-size: 28rpx; color: #303133; }
-.line__amt { color: #fa3534; }
-.total { text-align: right; margin-top: 12rpx; padding-top: 12rpx; border-top: 1rpx solid #f5f5f5; font-size: 26rpx; color: #606266; }
-.total__amt { color: #fa3534; font-size: 32rpx; }
+.line { display: flex; justify-content: space-between; padding: 12rpx 0; font-size: 28rpx; color: $go-ink; }
+.line__amt { color: $go-red; }
+.total { text-align: right; margin-top: 12rpx; padding-top: 12rpx; border-top: 1rpx solid $go-soft; font-size: 26rpx; color: $go-text; }
+.total__amt { color: $go-red; font-size: 32rpx; }
 .actions { margin-top: 32rpx; display: flex; flex-direction: column; gap: 16rpx; }
-.btn { margin: 0; font-size: 30rpx; background: #fff; color: #606266; }
-.btn--primary { background: #2979ff; color: #fff; }
+.btn { margin: 0; font-size: 30rpx; background: #fff; color: $go-text; }
+.btn--primary { background: $go-primary; color: #fff; }
 </style>

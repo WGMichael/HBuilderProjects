@@ -35,7 +35,7 @@
 
       <uni-table border stripe :loading="loading" :emptyText="errMessage || '没有更多数据'">
         <uni-tr>
-          <uni-th align="center" filter-type="search" @filter-change="onFilterChange($event, 'leader_uid')">团长标识</uni-th>
+          <uni-th align="center">username</uni-th>
           <uni-th align="center">发布权限</uni-th>
           <uni-th align="center">微信绑定</uni-th>
           <uni-th align="center">已发布活动数</uni-th>
@@ -48,7 +48,7 @@
           <uni-th align="center">操作</uni-th>
         </uni-tr>
         <uni-tr v-for="item in list" :key="item.leader_uid">
-          <uni-td align="center">{{ item.leader_uid }}</uni-td>
+          <uni-td align="center">{{ item.username || '—' }}</uni-td>
           <uni-td align="center">
             <uni-tag :type="item.publish_restriction ? 'error' : 'success'" inverted size="small" :text="labelOf(PUBLISH_RESTRICTION, item.publish_restriction, '正常')"></uni-tag>
           </uni-td>
@@ -162,7 +162,7 @@
   };
 
   const drill = (item) => {
-    uni.navigateTo({ url: './leader?uid=' + item.leader_uid });
+    uni.navigateTo({ url: './leader?uid=' + item.leader_uid + '&username=' + encodeURIComponent(item.username || '') });
   };
 
   onReady(() => reload());

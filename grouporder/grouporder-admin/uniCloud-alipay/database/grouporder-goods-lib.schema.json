@@ -65,21 +65,21 @@
     },
     "last_price": {
       "bsonType": "int",
-      "title": "上次使用单价",
-      "description": "上次使用的单价，单位为分，非负整数。复用时作为预填值，团长必须逐项确认（§5.3）",
+      "title": "默认价格",
+      "description": "默认价格，单位为分，非负整数。复用到活动时的预填值，不强制确认（D-092）；活动里保存商品时写回。读写规则见 GOODS_LIB_SPEC §2.4（D-089）",
       "minimum": 0
     },
     "last_total_stock": {
       "bsonType": "int",
-      "title": "上次使用总库存",
-      "description": "语义与 grouporder-goods.total_stock 完全一致：0 表示不设上限，正整数为有限总库存（D-044）。记录团长当次设定的总量，不是剩余量。复用时作为预填值，必须逐项确认",
+      "title": "默认库存",
+      "description": "默认库存，语义与 grouporder-goods.total_stock 一致：0 表示不设上限（D-044），记录设定的总量而非剩余量。活动里保存商品或单独调整库存时写回（D-089）",
       "defaultValue": 0,
       "minimum": 0
     },
     "last_per_user_limit": {
       "bsonType": "int",
-      "title": "上次使用每人限购",
-      "description": "语义与 grouporder-goods.per_user_limit 完全一致：0 表示不限购（D-044）。复用时作为预填值，必须逐项确认",
+      "title": "默认限购",
+      "description": "默认每人限购，语义与 grouporder-goods.per_user_limit 一致：0 表示不限购（D-044）。活动里保存商品或单独调整限购时写回（D-089）",
       "defaultValue": 0,
       "minimum": 0
     },

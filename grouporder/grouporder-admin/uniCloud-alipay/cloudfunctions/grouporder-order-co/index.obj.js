@@ -9,7 +9,7 @@
  * - 订单状态变更必须同步更新其全部明细的冗余 status
  */
 const {
-  auth, errors, paging, idempotent, state, stock, snapshot, bindMethods
+  auth, errors, paging, idempotent, state, stock, snapshot, deliverystat, bindMethods
 } = require('grouporder-common')
 
 const { throwBiz, assertParam, ok } = errors
@@ -31,6 +31,30 @@ module.exports = {
   // ==========================================================================
   // 内部工具
   // ==========================================================================
+
+  /**
+   * 确定本单交付方式（D-086）：活动只支持一种时可不传；支持两种时必须由参与者选定，
+   * 且只能是活动支持的方式
+   */
+  _resolveDeliveryType (activity, input) {
+    const types = state.deliveryTypesOf(activity)
+    if (input === undefined || input === null || input === '') {
+      assertParam(types.length === 1, '请选择交付方式（送货上门 / 自提）')
+      return types[0]
+    }
+    assertParam(types.includes(input), '该活动不支持所选的交付方式')
+    return input
+  },
+
+  /** 自提点：活动级共享信息，【不进订单快照】，每次读活动最新值（D-077） */
+  _pickupOf (activity) {
+    return {
+      address: activity.pickup_address || '',
+      time_desc: activity.pickup_time_desc || '',
+      contact_name: activity.pickup_contact_name || '',
+      contact_mobile: activity.pickup_contact_mobile || ''
+    }
+  },
 
   async _getActivity (activityId) {
     assertParam(activityId, '缺少活动标识')
@@ -107,6 +131,7 @@ module.exports = {
    * 确认订单页试算（M-14）
    * 校验库存、限购、活动状态，返回预计金额，【不落库】。
    * 试算不占用库存，因此提交时仍可能失败——这是有意的，占用只在 orderCreate 发生。
+   * 改单时传 order_id：库存与限购排除本单已有明细，否则自己的份数会被算两遍（与 orderUpdate 口径一致）。
    */
   async orderPreview (params = {}) {
     const ctx = this.ctx
@@ -116,6 +141,15 @@ module.exports = {
 
     const items = this._normalizeItems(params.items)
     const goodsMap = await this._loadGoods(activity._id, items.map(i => i.goods_id))
+
+    let excludeOrderId
+    let ownQty = new Map()
+    if (params.order_id) {
+      const own = await this._getOwnOrder(uid, params.order_id)
+      assertParam(own.activity_id === activity._id, '订单与活动不匹配')
+      excludeOrderId = own._id
+      ownQty = new Map((await this._getItems(own._id)).map(it => [it.goods_id, it.qty]))
+    }
 
     const lines = []
     const unavailable = []
@@ -133,16 +167,17 @@ module.exports = {
         unavailable.push({ goods_id: goods._id, name: goods.name, errCode: 'GOODS_OFF_SALE' })
         continue
       }
-      if (goods.total_stock > 0 && (goods.sold_qty || 0) + it.qty > goods.total_stock) {
+      const othersSold = (goods.sold_qty || 0) - (ownQty.get(goods._id) || 0)
+      if (goods.total_stock > 0 && othersSold + it.qty > goods.total_stock) {
         unavailable.push({
           goods_id: goods._id, name: goods.name, errCode: 'STOCK_NOT_ENOUGH',
-          remain_qty: Math.max(0, goods.total_stock - (goods.sold_qty || 0))
+          remain_qty: Math.max(0, goods.total_stock - othersSold)
         })
         continue
       }
       try {
         await stock.checkUserLimit(ctx, {
-          activityId: activity._id, goods, userId: uid, addQty: it.qty
+          activityId: activity._id, goods, userId: uid, addQty: it.qty, excludeOrderId
         })
       } catch (e) {
         unavailable.push({
@@ -166,16 +201,10 @@ module.exports = {
 
     return ok({
       activity_id: activity._id,
-      delivery_type: activity.delivery_type,
-      // 自提活动不采集完整地址（D-060）
-      need_address: activity.delivery_type === DELIVERY.HOME,
-      // 自提点：活动级共享信息，【不进订单快照】，每次读活动最新值（D-077）
-      pickup: activity.delivery_type === DELIVERY.SELF_PICK ? {
-        address: activity.pickup_address || '',
-        time_desc: activity.pickup_time_desc || '',
-        contact_name: activity.pickup_contact_name || '',
-        contact_mobile: activity.pickup_contact_mobile || ''
-      } : null,
+      // 可选的交付方式（D-086）：只有一种时下单无需选择；自提不采集完整地址（D-060）
+      delivery_types: state.deliveryTypesOf(activity),
+      // 支持自提时带上自提点，供参与者选择前了解去哪取（D-077）
+      pickup: state.supportsDelivery(activity, DELIVERY.SELF_PICK) ? this._pickupOf(activity) : null,
       items: lines,
       unavailable,
       total_qty: totalQty,
@@ -187,7 +216,7 @@ module.exports = {
   /**
    * 提交订单（M-14）
    * 幂等键必传；库存带条件原子自增；限购按商品分别计算；
-   * 固化价格与收货快照；自提活动不采集地址。
+   * 固化价格与收货快照；交付方式由参与者选定并落在订单上，自提不采集地址（D-086）。
    */
   async orderCreate (params = {}) {
     const ctx = this.ctx
@@ -219,9 +248,10 @@ module.exports = {
       })
     }
 
-    // 2) 收货快照：自提只要姓名电话，送货上门必须有完整地址
-    const addressDoc = await this._loadAddress(uid, params.address_id)
-    const consignee = snapshot.buildConsignee(activity, params, addressDoc)
+    // 2) 交付方式与收货快照：自提只要姓名电话，送货上门必须有完整地址
+    const deliveryType = this._resolveDeliveryType(activity, params.delivery_type)
+    const addressDoc = deliveryType === DELIVERY.HOME ? await this._loadAddress(uid, params.address_id) : null
+    const consignee = snapshot.buildConsignee(deliveryType, params, addressDoc)
 
     const remark = String(params.buyer_remark || '')
     assertParam(remark.length <= 200, '买家备注不超过 200 字')
@@ -250,6 +280,7 @@ module.exports = {
         activity_id: activity._id,
         user_id: uid,
         status: ORDER.VALID,
+        delivery_type: deliveryType,
         buyer_remark: remark,
         total_qty: sum.total_qty,
         total_amount: sum.total_amount,
@@ -342,7 +373,7 @@ module.exports = {
           cover_image: a ? a.cover_image : null,
           activity_status: a ? a.status : null,
           governance_status: a ? a.governance_status : null,
-          delivery_type: a ? a.delivery_type : null,
+          delivery_types: a ? state.deliveryTypesOf(a) : [],
           end_time: a ? a.end_time : null,
           orders: []
         })
@@ -351,6 +382,7 @@ module.exports = {
         _id: o._id,
         order_no: o.order_no,
         status: o.status,
+        delivery_type: state.orderDeliveryTypeOf(o, a),
         total_qty: o.total_qty,
         total_amount: o.total_amount,
         create_date: o.create_date,
@@ -367,26 +399,24 @@ module.exports = {
     const order = await this._getOwnOrder(uid, params.order_id)
     const items = await this._getItems(order._id)
     const activity = await this._getActivity(order.activity_id)
+    const deliveryType = state.orderDeliveryTypeOf(order, activity)
 
     return ok({
       _id: order._id,
       order_no: order.order_no,
       status: order.status,
+      // 本单交付方式（D-086）；活动支持的全部方式供改单时切换
+      delivery_type: deliveryType,
       activity: {
         _id: activity._id,
         title: activity.title,
         status: activity.status,
         governance_status: activity.governance_status,
-        delivery_type: activity.delivery_type,
+        delivery_types: state.deliveryTypesOf(activity),
         end_time: activity.end_time
       },
       // 自提点不随订单快照固化：团长改了地址，已下单的人看到的也要是新地址（D-077）
-      pickup: activity.delivery_type === DELIVERY.SELF_PICK ? {
-        address: activity.pickup_address || '',
-        time_desc: activity.pickup_time_desc || '',
-        contact_name: activity.pickup_contact_name || '',
-        contact_mobile: activity.pickup_contact_mobile || ''
-      } : null,
+      pickup: deliveryType === DELIVERY.SELF_PICK ? this._pickupOf(activity) : null,
       // 收货快照：改地址簿不影响历史订单
       consignee_name: order.consignee_name,
       consignee_mobile: order.consignee_mobile,
@@ -417,7 +447,7 @@ module.exports = {
 
   /**
    * 改单（M-19）
-   * 截止前允许改数量、移除商品、换收货信息、改备注（D-049）。
+   * 截止前允许改数量、移除商品、换收货信息、换交付方式（D-086）、改备注（D-049）。
    * 扩大数量要重新走库存与限购校验；移除全部明细时不保存空订单。
    */
   async orderUpdate (params = {}) {
@@ -494,10 +524,19 @@ module.exports = {
       patch.total_amount = sum.total_amount
     }
 
-    if (params.address_id !== undefined || params.consignee_name !== undefined ||
+    // 换交付方式（D-086）：只能在活动支持的方式之间切换；换了就必须按新口径重建收货快照
+    const prevDelivery = state.orderDeliveryTypeOf(order, activity)
+    let nextDelivery = prevDelivery
+    if (params.delivery_type !== undefined && params.delivery_type !== prevDelivery) {
+      nextDelivery = this._resolveDeliveryType(activity, params.delivery_type)
+      patch.delivery_type = nextDelivery
+    }
+
+    if (nextDelivery !== prevDelivery ||
+        params.address_id !== undefined || params.consignee_name !== undefined ||
         params.consignee_mobile !== undefined || params.consignee_address !== undefined) {
-      const addressDoc = await this._loadAddress(uid, params.address_id)
-      Object.assign(patch, snapshot.buildConsignee(activity, {
+      const addressDoc = nextDelivery === DELIVERY.HOME ? await this._loadAddress(uid, params.address_id) : null
+      Object.assign(patch, snapshot.buildConsignee(nextDelivery, {
         consignee_name: params.consignee_name !== undefined ? params.consignee_name : order.consignee_name,
         consignee_mobile: params.consignee_mobile !== undefined ? params.consignee_mobile : order.consignee_mobile,
         consignee_address: params.consignee_address !== undefined ? params.consignee_address : order.consignee_address,
@@ -606,7 +645,7 @@ module.exports = {
     const ctx = this.ctx
     const activity = await auth.requireLeader(ctx, params.activity_id)
 
-    const [orderCount, cancelCount, voidCount, itemAgg, goodsAgg] = await Promise.all([
+    const [orderCount, cancelCount, voidCount, itemAgg, goodsAgg, byDelivery] = await Promise.all([
       this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VALID }).count(),
       this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.CANCELLED }).count(),
       this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VOIDED }).count(),
@@ -623,7 +662,8 @@ module.exports = {
           qty: { $sum: '$qty' },
           amount: { $sum: '$amount' }
         })
-        .end()
+        .end(),
+      deliverystat.breakdown(ctx, activity)
     ])
 
     const total = (itemAgg.data && itemAgg.data[0]) || { qty: 0, amount: 0 }
@@ -643,6 +683,9 @@ module.exports = {
       voided_order_count: voidCount.total || 0,
       valid_total_qty: total.qty || 0,
       estimated_amount: total.amount || 0,
+      // 按交付方式拆分的有效单数与份数（D-086）
+      delivery_types: state.deliveryTypesOf(activity),
+      by_delivery: byDelivery,
       goods_summary: (goodsList.data || []).map(g => {
         const r = aggMap.get(g._id)
         return {
@@ -694,22 +737,25 @@ module.exports = {
       }
     }
 
-    const selfPick = activity.delivery_type === DELIVERY.SELF_PICK
-    const list = orders.map(o => ({
-      _id: o._id,
-      order_no: o.order_no,
-      status: o.status,
-      consignee_name: o.consignee_name,
-      consignee_mobile: o.consignee_mobile,
-      // 自提活动没有地址列，不返回空串以外的内容
-      consignee_address: selfPick ? '' : (o.consignee_address || ''),
-      buyer_remark: o.buyer_remark || '',
-      total_qty: o.total_qty,
-      total_amount: o.total_amount,
-      create_date: o.create_date,
-      void_reason: o.void_reason || '',
-      items: itemMap.get(o._id) || []
-    }))
+    const list = orders.map(o => {
+      const deliveryType = state.orderDeliveryTypeOf(o, activity)
+      return {
+        _id: o._id,
+        order_no: o.order_no,
+        status: o.status,
+        delivery_type: deliveryType,
+        consignee_name: o.consignee_name,
+        consignee_mobile: o.consignee_mobile,
+        // 自提单没有地址，不返回空串以外的内容
+        consignee_address: deliveryType === DELIVERY.SELF_PICK ? '' : (o.consignee_address || ''),
+        buyer_remark: o.buyer_remark || '',
+        total_qty: o.total_qty,
+        total_amount: o.total_amount,
+        create_date: o.create_date,
+        void_reason: o.void_reason || '',
+        items: itemMap.get(o._id) || []
+      }
+    })
 
     return ok(paging.wrap(list, countRes.total, ctx.now))
   }

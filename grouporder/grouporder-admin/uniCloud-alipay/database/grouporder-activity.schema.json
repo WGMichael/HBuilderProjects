@@ -10,7 +10,7 @@
     "end_time",
     "governance_status",
     "content_version",
-    "delivery_type"
+    "delivery_types"
   ],
   "permission": {
     "read": false,
@@ -66,9 +66,26 @@
     },
     "delivery_type": {
       "bsonType": "int",
-      "title": "交付方式",
-      "description": "1送货上门（订单需完整收货地址）2自提（仅需收货人姓名与电话）。创建活动时必选，默认送货上门，**发布后不可修改**，以保证已有订单的收货快照口径稳定（D-060）",
-      "defaultValue": 1,
+      "title": "交付方式（已废弃）",
+      "description": "D-086 起不再写入，由 delivery_types 取代。仅 D-086 之前创建的活动带有此单值字段：1送货上门 2自提；读取时按 [delivery_type] 兼容（common/state.deliveryTypesOf），不做数据迁移",
+      "enum": [
+        {
+          "value": 1,
+          "text": "送货上门"
+        },
+        {
+          "value": 2,
+          "text": "自提"
+        }
+      ]
+    },
+    "delivery_types": {
+      "bsonType": "array",
+      "arrayType": "int",
+      "title": "支持的交付方式",
+      "description": "本活动支持的交付方式集合，取值 [1]、[2] 或 [1, 2]：1送货上门（订单需完整收货地址）2自提（仅需收货人姓名与电话）。创建活动时至少选一种；**发布后不可修改**，因为已有参与者按当时可选的方式下了单（D-060、D-086）。支持自提时自提地址必填（D-077）",
+      "minLength": 1,
+      "maxLength": 2,
       "enum": [
         {
           "value": 1,
@@ -209,6 +226,11 @@
       "title": "内容版本",
       "description": "待审内容版本，内容编辑后递增，审核与快照均关联此版本（D-048）",
       "defaultValue": 1
+    },
+    "start_time": {
+      "bsonType": "timestamp",
+      "title": "起始时间",
+      "description": "接龙起始时间，创建时默认当前时间，须早于 end_time。已发布但未到起始时间时能看不能下单（不新增业务状态）；发布后未开始可改（不早于当前、不触发重新审核），已开始不可改。旧活动无此字段，视为发布即开始（D-087）"
     },
     "end_time": {
       "bsonType": "timestamp",

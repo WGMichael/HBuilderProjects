@@ -81,21 +81,21 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; padding-bottom: 140rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; padding-bottom: 140rpx; }
 .g { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .g__head { display: flex; align-items: center; justify-content: space-between; }
-.g__name { font-size: 30rpx; color: #303133; }
-.g__rec { font-size: 20rpx; color: #f3a73f; margin-left: 8rpx; }
-.g__meta { font-size: 24rpx; color: #909399; margin: 12rpx 0; }
+.g__name { font-size: 30rpx; color: $go-ink; }
+.g__rec { font-size: 20rpx; color: $go-orange; margin-left: 8rpx; }
+.g__meta { font-size: 24rpx; color: $go-muted; margin: 12rpx 0; }
 .g__act { display: flex; flex-wrap: wrap; gap: 24rpx; }
-.op { font-size: 26rpx; color: #2979ff; }
-.op--del { color: #fa3534; }
-.g__gov { font-size: 24rpx; color: #fa3534; }
-.empty { text-align: center; color: #909399; font-size: 26rpx; padding: 120rpx 0; }
+.op { font-size: 26rpx; color: $go-primary; }
+.op--del { color: $go-red; }
+.g__gov { font-size: 24rpx; color: $go-red; }
+.empty { text-align: center; color: $go-muted; font-size: 26rpx; padding: 120rpx 0; }
 .tag { font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 8rpx; margin-left: 8rpx; }
-.tag--on { background: #e7faec; color: #18bc37; }
-.tag--off { background: #f0f0f0; color: #909399; }
-.tag--gov { background: #fef0f0; color: #fa3534; }
-.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #ececec; }
+.tag--on { background: $go-primary-soft; color: $go-primary; }
+.tag--off { background: $go-line; color: $go-muted; }
+.tag--gov { background: $go-red-soft; color: $go-red; }
+.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $go-line; }
 .add { margin: 0; font-size: 30rpx; }
 </style>

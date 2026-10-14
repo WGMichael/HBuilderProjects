@@ -43,6 +43,11 @@ export const DELIVERY_TYPE = toMap([
   { value: 2, text: '自提' },
 ]);
 
+/** 活动支持的交付方式集合 → 展示文字，如「送货上门 / 自提」（D-086） */
+export function deliveryText(types) {
+  return (types || []).map((t) => DELIVERY_TYPE[t]).filter(Boolean).join(' / ') || '—';
+}
+
 /** 商品售卖状态（团长经营动作）*/
 export const ON_SALE = toMap([
   { value: 0, text: '停售' },
@@ -122,6 +127,20 @@ export const PRIVACY_CASE_STATUS = toMap([
 ]);
 
 /** 待办分档（grouporder-user-co 的 TODO，共 4 档；档 1 最紧迫）*/
+/** 待办条目标签：按事项类型显示（效果图 v3「今日待办」），颜色按优先级档位 */
+export const TODO_TYPE_LABEL = {
+  activity_offline: '已下架',
+  review_rejected: '审核未通过',
+  joined_cancelled: '活动已取消',
+  joined_offline: '已下架',
+  activity_closed_export: '待生成清单',
+  ending_soon_leader: '即将截止',
+  ending_soon_joiner: '即将截止',
+  draft_stale: '草稿未发布',
+  report_result: '举报结果',
+  appeal_result: '申诉结果',
+};
+
 export const TODO_LEVEL_LABEL = {
   1: '需尽快处理',
   2: '待跟进',

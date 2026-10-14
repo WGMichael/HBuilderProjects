@@ -39,14 +39,14 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; }
 .card { background: #fff; border-radius: 16rpx; padding: 8rpx 28rpx; }
-.row { display: flex; align-items: center; justify-content: space-between; padding: 28rpx 0; border-bottom: 1rpx solid #f5f5f5; }
-.k { font-size: 28rpx; color: #606266; }
-.v { font-size: 28rpx; color: #303133; }
-.v--ok { color: #18bc37; }
-.v--off { color: #909399; }
-.tips { font-size: 24rpx; color: #909399; line-height: 1.7; padding: 24rpx 8rpx; }
+.row { display: flex; align-items: center; justify-content: space-between; padding: 28rpx 0; border-bottom: 1rpx solid $go-soft; }
+.k { font-size: 28rpx; color: $go-text; }
+.v { font-size: 28rpx; color: $go-ink; }
+.v--ok { color: $go-primary; }
+.v--off { color: $go-muted; }
+.tips { font-size: 24rpx; color: $go-muted; line-height: 1.7; padding: 24rpx 8rpx; }
 .actions { display: flex; flex-direction: column; gap: 16rpx; margin-top: 8rpx; }
-.btn { margin: 0; font-size: 30rpx; background: #fff; color: #2979ff; }
+.btn { margin: 0; font-size: 30rpx; background: #fff; color: $go-primary; }
 </style>

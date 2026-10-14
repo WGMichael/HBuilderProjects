@@ -4,7 +4,7 @@
   与「编辑草稿」分开的理由：自提点是活动级共享信息、不进订单快照，
   发布后允许随时改、即时对所有人生效、不触发重新审核，
   因此走独立的 activityUpdatePickup，而不是 activityUpdateDraft。
-  仅自提活动（delivery_type=2）可进入，由 M-20 控制入口。
+  仅支持自提的活动（delivery_types 含 2，D-086）可进入，由 M-20 控制入口。
 -->
 <template>
   <view class="page" v-if="loaded">
@@ -80,14 +80,14 @@ onLoad((q: any = {}) => { activityId.value = q.id || ''; load(); });
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; }
-.tip { font-size: 24rpx; color: #8a6d3b; background: #fffbe8; border-radius: 12rpx; padding: 20rpx; line-height: 1.7; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; }
+.tip { font-size: 24rpx; color: $go-orange-text; background: $go-orange-soft; border-radius: 12rpx; padding: 20rpx; line-height: 1.7; }
 .card { background: #fff; border-radius: 16rpx; padding: 8rpx 24rpx; margin-top: 20rpx; }
-.field { display: flex; flex-direction: column; gap: 12rpx; padding: 24rpx 0; border-bottom: 1rpx solid #f5f5f5; }
+.field { display: flex; flex-direction: column; gap: 12rpx; padding: 24rpx 0; border-bottom: 1rpx solid $go-soft; }
 .field:last-child { border-bottom: none; }
-.field__k { font-size: 26rpx; color: #606266; }
-.field__v { font-size: 28rpx; color: #303133; background: #f7f8fa; border-radius: 8rpx; padding: 16rpx 20rpx; }
-.req { color: #fa3534; }
-.hint { font-size: 22rpx; color: #909399; line-height: 1.7; margin: 16rpx 8rpx; }
+.field__k { font-size: 26rpx; color: $go-text; }
+.field__v { font-size: 28rpx; color: $go-ink; background: $go-soft; border-radius: 8rpx; padding: 16rpx 20rpx; }
+.req { color: $go-red; }
+.hint { font-size: 22rpx; color: $go-muted; line-height: 1.7; margin: 16rpx 8rpx; }
 .save { margin-top: 32rpx; font-size: 30rpx; }
 </style>

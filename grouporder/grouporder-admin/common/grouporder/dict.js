@@ -45,6 +45,11 @@ export const DELIVERY_TYPE_OPTIONS = [
 ];
 export const DELIVERY_TYPE = toMap(DELIVERY_TYPE_OPTIONS);
 
+/** 活动支持的交付方式集合 → 展示文字，如「送货上门 / 自提」（D-086） */
+export function deliveryText(types) {
+  return (types || []).map((t) => DELIVERY_TYPE[t]).filter(Boolean).join(' / ') || '—';
+}
+
 export const REVIEW_MODE_OPTIONS = [
   { value: 1, text: '自动审核' },
   { value: 2, text: '人工审核' },
@@ -236,6 +241,7 @@ export default {
   ACTIVITY_STATUS,
   GOVERNANCE_STATUS,
   DELIVERY_TYPE,
+  deliveryText,
   REVIEW_MODE,
   REVIEW_RESULT,
   END_TYPE,

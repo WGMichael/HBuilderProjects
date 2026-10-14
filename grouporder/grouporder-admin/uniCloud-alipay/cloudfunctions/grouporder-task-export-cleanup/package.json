@@ -5,5 +5,15 @@
     },
     "extensions": {
         "uni-cloud-jql": {}
+    },
+    "cloudfunction-config": {
+        "timeout": 60,
+        "triggers": [
+            {
+                "name": "exportCleanupDaily",
+                "type": "timer",
+                "config": "0 0 3 * * *"
+            }
+        ]
     }
 }

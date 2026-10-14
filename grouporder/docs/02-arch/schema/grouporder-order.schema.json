@@ -68,6 +68,21 @@
         }
       ]
     },
+    "delivery_type": {
+      "bsonType": "int",
+      "title": "交付方式",
+      "description": "本单交付方式，下单时由参与者在活动支持的方式中选定（活动只支持一种时自动取该种）；活动截止前改单可切换，切换时按新方式重建收货快照（D-086）。1送货上门：consignee_address 必填；2自提：不采集地址。D-086 之前的旧订单无此字段，读取时取所属活动当时的单一方式",
+      "enum": [
+        {
+          "value": 1,
+          "text": "送货上门"
+        },
+        {
+          "value": 2,
+          "text": "自提"
+        }
+      ]
+    },
     "consignee_name": {
       "bsonType": "string",
       "title": "收货人姓名",
@@ -87,7 +102,7 @@
     "consignee_address": {
       "bsonType": "string",
       "title": "收货地址",
-      "description": "敏感字段。下单时的完整收货地址快照。**条件必填**：`delivery_type=1`（送货上门）时必填，`delivery_type=2`（自提）时不采集、留空。由服务端按活动交付方式校验，schema 层不设 required（D-060）",
+      "description": "敏感字段。下单时的完整收货地址快照。**条件必填**：本单 `delivery_type=1`（送货上门）时必填，`delivery_type=2`（自提）时不采集、留空。由服务端按订单自身的交付方式校验（D-086），schema 层不设 required（D-060）",
       "minLength": 1,
       "maxLength": 200,
       "trim": "both"

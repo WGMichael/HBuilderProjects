@@ -72,24 +72,24 @@ onShow(() => loadMine());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; }
 .card { background: #fff; border-radius: 16rpx; padding: 28rpx; margin-bottom: 16rpx; }
-.card__title { font-size: 30rpx; color: #303133; margin-bottom: 20rpx; }
+.card__title { font-size: 30rpx; color: $go-ink; margin-bottom: 20rpx; }
 .seg { display: flex; gap: 16rpx; margin-bottom: 20rpx; }
-.seg__i { flex: 1; text-align: center; font-size: 26rpx; color: #606266; padding: 16rpx 0; border: 1rpx solid #dcdfe6; border-radius: 12rpx; }
-.seg__i--on { color: #2979ff; border-color: #2979ff; background: #e8f3ff; }
+.seg__i { flex: 1; text-align: center; font-size: 26rpx; color: $go-text; padding: 16rpx 0; border: 1rpx solid $go-border; border-radius: 12rpx; }
+.seg__i--on { color: $go-primary; border-color: $go-primary; background: $go-primary-soft; }
 .field { margin-bottom: 20rpx; }
-.k { font-size: 26rpx; color: #606266; }
-.v { margin-top: 12rpx; font-size: 28rpx; color: #303133; border-bottom: 1rpx solid #f0f0f0; padding-bottom: 8rpx; }
+.k { font-size: 26rpx; color: $go-text; }
+.v { margin-top: 12rpx; font-size: 28rpx; color: $go-ink; border-bottom: 1rpx solid $go-line; padding-bottom: 8rpx; }
 .submit { margin: 0; font-size: 30rpx; }
-.note { font-size: 22rpx; color: #909399; line-height: 1.7; margin-top: 16rpx; }
-.ap { padding: 20rpx 0; border-bottom: 1rpx solid #f5f5f5; }
-.ap__l1 { display: flex; justify-content: space-between; font-size: 28rpx; color: #303133; }
-.ap__l2 { font-size: 24rpx; color: #909399; margin-top: 6rpx; }
-.ap__fail { font-size: 24rpx; color: #fa3534; margin-top: 6rpx; }
-.empty { text-align: center; color: #909399; font-size: 26rpx; padding: 40rpx 0; }
+.note { font-size: 22rpx; color: $go-muted; line-height: 1.7; margin-top: 16rpx; }
+.ap { padding: 20rpx 0; border-bottom: 1rpx solid $go-soft; }
+.ap__l1 { display: flex; justify-content: space-between; font-size: 28rpx; color: $go-ink; }
+.ap__l2 { font-size: 24rpx; color: $go-muted; margin-top: 6rpx; }
+.ap__fail { font-size: 24rpx; color: $go-red; margin-top: 6rpx; }
+.empty { text-align: center; color: $go-muted; font-size: 26rpx; padding: 40rpx 0; }
 .tag { font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 8rpx; }
-.tag--ok { background: #e7faec; color: #18bc37; }
-.tag--bad { background: #fef0f0; color: #fa3534; }
-.tag--wait { background: #fdf6ec; color: #f3a73f; }
+.tag--ok { background: $go-primary-soft; color: $go-primary; }
+.tag--bad { background: $go-red-soft; color: $go-red; }
+.tag--wait { background: $go-orange-soft; color: $go-orange; }
 </style>

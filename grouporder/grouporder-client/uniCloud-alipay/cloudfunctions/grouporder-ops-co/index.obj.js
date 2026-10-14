@@ -168,11 +168,12 @@ module.exports = {
         cover_image: activity.cover_image,
         images: activity.images || [],
         short_code: activity.short_code,
-        delivery_type: activity.delivery_type,
+        delivery_types: state.deliveryTypesOf(activity),
         leader_uid: activity.leader_uid,
         // 业务状态
         status: activity.status,
         publish_date: activity.publish_date || null,
+        start_time: activity.start_time || null,
         end_time: activity.end_time,
         actual_end_time: activity.actual_end_time || null,
         cancel_reason: activity.cancel_reason || '',
@@ -917,11 +918,12 @@ module.exports = {
         cover_image: activity.cover_image,
         images: activity.images || [],
         leader_uid: activity.leader_uid,
-        delivery_type: activity.delivery_type,
+        delivery_types: state.deliveryTypesOf(activity),
         status: activity.status,
         review_mode: activity.review_mode || null,
         review_submit_date: activity.review_submit_date || null,
         content_version: activity.content_version,
+        start_time: activity.start_time || null,
         end_time: activity.end_time
       },
       goods: goodsRes.data || [],
@@ -1087,6 +1089,8 @@ module.exports = {
     if (p.filters.user_id) where.user_id = p.filters.user_id
     if (p.filters.status) where.status = p.filters.status
     if (p.filters.consignee_mobile) where.consignee_mobile = String(p.filters.consignee_mobile)
+    // 按订单自身的交付方式筛选（D-086）。D-086 之前的旧订单没有该字段，不在筛选命中范围内
+    if (p.filters.delivery_type) where.delivery_type = Number(p.filters.delivery_type)
     const range = this._dateRange(p.filters, 'create_date')
     if (range) Object.assign(where, range)
 
@@ -1097,7 +1101,7 @@ module.exports = {
       const ids = [...new Set(list.map(o => o.activity_id))]
       const { data } = await this.db.collection('grouporder-activity')
         .where({ _id: this.dbCmd.in(ids) })
-        .field({ _id: true, title: true, delivery_type: true, leader_uid: true, short_code: true })
+        .field({ _id: true, title: true, delivery_type: true, delivery_types: true, leader_uid: true, short_code: true })
         .limit(ids.length).get()
       actMap = new Map((data || []).map(a => [a._id, a]))
     }
@@ -1120,7 +1124,8 @@ module.exports = {
         activity_title: a ? a.title : '',
         activity_short_code: a ? a.short_code : '',
         leader_uid: a ? a.leader_uid : '',
-        delivery_type: a ? a.delivery_type : null,
+        // 本单交付方式（D-086）；旧订单取所属活动当时的单一方式
+        delivery_type: state.orderDeliveryTypeOf(o, a),
         user_id: o.user_id,
         status: o.status,
         // 完整明文，不脱敏（D-072）
@@ -1163,7 +1168,13 @@ module.exports = {
     const range = this._dateRange(p.filters, p.filters.date_field === 'publish_date' ? 'publish_date' : 'create_date')
     if (range) Object.assign(where, range)
 
-    const { list, total } = await this._query('grouporder-activity', where, p)
+    // 交付方式筛选：支持的方式里包含所选项（D-086）；旧活动只有单值 delivery_type，一并命中
+    let query = where
+    if (p.filters.delivery_type) {
+      const t = Number(p.filters.delivery_type)
+      query = this.dbCmd.and([where, this.dbCmd.or([{ delivery_types: t }, { delivery_type: t }])])
+    }
+    const { list, total } = await this._query('grouporder-activity', query, p)
 
     await oplog.success(ctx, {
       action_type: ACTION.ACTIVITY_DETAIL_VIEW,
@@ -1179,13 +1190,14 @@ module.exports = {
       title: a.title,
       short_code: a.short_code,
       leader_uid: a.leader_uid,
-      delivery_type: a.delivery_type,
+      delivery_types: state.deliveryTypesOf(a),
       // 业务状态与治理状态分列，不合并
       status: a.status,
       governance_status: a.governance_status,
       ever_governed: a.ever_governed || 0,
       review_result: a.review_result || 0,
       publish_date: a.publish_date || null,
+      start_time: a.start_time || null,
       end_time: a.end_time,
       actual_end_time: a.actual_end_time || null,
       create_date: a.create_date

@@ -14,7 +14,7 @@
  */
 import { call } from './client'
 
-/** 活动与活动内商品（grouporder-activity-co，18 个方法） */
+/** 活动与活动内商品（grouporder-activity-co，19 个方法） */
 export const activity = {
   activityCreateDraft: (params, options) => call('grouporder-activity-co', 'activityCreateDraft', params, options),
   activityUpdateDraft: (params, options) => call('grouporder-activity-co', 'activityUpdateDraft', params, options),
@@ -25,6 +25,7 @@ export const activity = {
   activityMyList: (params, options) => call('grouporder-activity-co', 'activityMyList', params, options),
   activityClose: (params, options) => call('grouporder-activity-co', 'activityClose', params, options),
   activityCancel: (params, options) => call('grouporder-activity-co', 'activityCancel', params, options),
+  activityDeleteDraft: (params, options) => call('grouporder-activity-co', 'activityDeleteDraft', params, options),
   activityGetShareEntry: (params, options) => call('grouporder-activity-co', 'activityGetShareEntry', params, options),
   activityCopySourceList: (params, options) => call('grouporder-activity-co', 'activityCopySourceList', params, options),
   activityCopy: (params, options) => call('grouporder-activity-co', 'activityCopy', params, options),
@@ -49,10 +50,11 @@ export const order = {
   orderLeaderList: (params, options) => call('grouporder-order-co', 'orderLeaderList', params, options),
 }
 
-/** 商品库与分类（账号级）（grouporder-goods-co，9 个方法） */
+/** 商品库与分类（账号级）（grouporder-goods-co，10 个方法） */
 export const goodsLib = {
   libList: (params, options) => call('grouporder-goods-co', 'libList', params, options),
   libUpdate: (params, options) => call('grouporder-goods-co', 'libUpdate', params, options),
+  libCreate: (params, options) => call('grouporder-goods-co', 'libCreate', params, options),
   libDelete: (params, options) => call('grouporder-goods-co', 'libDelete', params, options),
   libCopyToActivity: (params, options) => call('grouporder-goods-co', 'libCopyToActivity', params, options),
   categoryList: (params, options) => call('grouporder-goods-co', 'categoryList', params, options),
@@ -133,7 +135,9 @@ export const ops = {
   workbenchTodo: (params, options) => call('grouporder-ops-co', 'workbenchTodo', params, options),
   accountSetStatus: (params, options) => call('grouporder-ops-co', 'accountSetStatus', params, options),
   roleAssign: (params, options) => call('grouporder-ops-co', 'roleAssign', params, options),
+  // 运营禁区·测试数据清理（产品负责人 2026-10-12 授权，鉴权 ops-sys-config + 审计，上线前移除）
+  devWipe: (params, options) => call('grouporder-ops-co', 'devWipe', params, options),
 }
 
-/** 合计 93 个方法 */
+/** 合计 95 个方法 */
 export default { activity, order, goodsLib, user, exportList, report, ops }

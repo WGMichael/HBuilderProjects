@@ -5,5 +5,15 @@
     },
     "extensions": {
         "uni-cloud-jql": {}
+    },
+    "cloudfunction-config": {
+        "timeout": 60,
+        "triggers": [
+            {
+                "name": "activityAutoClose",
+                "type": "timer",
+                "config": "0 * * * * *"
+            }
+        ]
     }
 }

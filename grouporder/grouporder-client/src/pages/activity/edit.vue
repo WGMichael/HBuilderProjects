@@ -19,5 +19,5 @@ onLoad((q: any = {}) => { activityId.value = q.id || q.activity_id || ''; });
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; }
+.page { min-height: 100vh; background: $go-canvas; }
 </style>

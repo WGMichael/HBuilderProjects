@@ -82,7 +82,7 @@
     },
     {
       "path": "pages/lib/category",
-      "style": { "navigationBarTitleText": "分类管理" }
+      "style": { "navigationBarTitleText": "管理分类" }
     },
     {
       "path": "pages/lib/history-activity",
@@ -135,8 +135,8 @@
   ],
   "tabBar": {
     "custom": true,
-    "color": "#909399",
-    "selectedColor": "#2979ff",
+    "color": "#6f7974",
+    "selectedColor": "#168a55",
     "backgroundColor": "#ffffff",
     "borderStyle": "white",
     "list": [
@@ -148,8 +148,8 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "群接龙",
-    "navigationBarBackgroundColor": "#F8F8F8",
-    "backgroundColor": "#F4F5F7"
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#eef2ef"
   },
   "uniIdRouter": {
     "loginPage": "uni_modules/uni-id-pages/pages/login/login-withpwd",

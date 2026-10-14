@@ -37,7 +37,7 @@
           <uni-td align="center">{{ item.short_code || '—' }}</uni-td>
           <uni-td align="center">{{ item.title }}</uni-td>
           <uni-td align="center">{{ item.leader_uid || '—' }}</uni-td>
-          <uni-td align="center">{{ labelOf(DELIVERY_TYPE, item.delivery_type) }}</uni-td>
+          <uni-td align="center">{{ deliveryText(item.delivery_types) }}</uni-td>
           <uni-td align="center">
             <uni-tag :type="statusTagType(item.status)" inverted size="small" :text="labelOf(ACTIVITY_STATUS, item.status)"></uni-tag>
           </uni-td>
@@ -70,7 +70,7 @@
   import { computed, ref } from 'vue';
   import { onReady } from '@dcloudio/uni-app';
   import { useOpsTable } from '@/common/grouporder/ops-table.js';
-  import { ACTIVITY_STATUS, ACTIVITY_STATUS_OPTIONS, GOVERNANCE_STATUS, GOVERNANCE_STATUS_OPTIONS, DELIVERY_TYPE, DELIVERY_TYPE_OPTIONS, labelOf } from '@/common/grouporder/dict.js';
+  import { ACTIVITY_STATUS, ACTIVITY_STATUS_OPTIONS, GOVERNANCE_STATUS, GOVERNANCE_STATUS_OPTIONS, DELIVERY_TYPE_OPTIONS, deliveryText, labelOf } from '@/common/grouporder/dict.js';
 
   const keyword = ref('');
 

@@ -10,7 +10,8 @@
  *   - 待上传：  file = null，localPath 为本地临时路径
  * 上传成功后 item 就地改为「已在云端」，保存失败重试时不会重复上传。
  *
- * 云存储路径：{创建日期}/{活动ID}/{文件名}，同一场活动的图集中在一个目录。
+ * 云存储路径：活动与活动商品为 {活动创建日期}/{活动ID}/{文件名}，同一场活动的图集中在一个目录；
+ * 商品库记录不属于任何活动，为 lib/{上传日期}/{用户ID}/{文件名}。
  * 被替换掉的旧图由云对象在保存成功后按引用情况回收，客户端不删文件。
  */
 
@@ -31,11 +32,20 @@ export function pickImages(count) {
   });
 }
 
+function dayOf(ts) {
+  const d = new Date(ts || Date.now());
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /** 活动图片目录：YYYY-MM-DD/活动ID/ */
 export function imageDir(createDate, activityId) {
-  const d = new Date(createDate || Date.now());
-  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  return `${day}/${activityId}/`;
+  return `${dayOf(createDate)}/${activityId}/`;
+}
+
+/** 商品库图片目录：lib/上传日期/用户ID/ */
+export function libImageDir() {
+  const info = uniCloud.getCurrentUserInfo() || {};
+  return `lib/${dayOf()}/${info.uid || 'anonymous'}/`;
 }
 
 async function uploadOne(localPath, cloudPath) {

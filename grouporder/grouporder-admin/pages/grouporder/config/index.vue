@@ -118,9 +118,9 @@
   const load = async () => {
     try {
       const data = (await callOps('configGet', { config_key: CONFIG_KEY })) || {};
-      // config_value 是 object；首版审核模式存在它的 value 字段里
+      // config_value 是 object；审核模式存在它的 mode 字段里（与云对象 config_value.mode 对齐）
       const raw = data.config_value;
-      const value = raw && typeof raw === 'object' ? raw.value : raw;
+      const value = raw && typeof raw === 'object' ? raw.mode : raw;
       currentMode.value = typeof value === 'number' ? value : null;
       selectedMode.value = currentMode.value;
       configDesc.value = data.description || '';
@@ -153,7 +153,7 @@
         'configSet',
         {
           config_key: CONFIG_KEY,
-          config_value: { value: selectedMode.value },
+          config_value: { mode: selectedMode.value },
           description: configDesc.value || '活动发布审核模式',
           // 操作原因写入日志的 reason 字段
           reason: '将活动发布审核模式由「' + labelOf(REVIEW_MODE, currentMode.value) + '」改为「' + labelOf(REVIEW_MODE, selectedMode.value) + '」',

@@ -11,7 +11,7 @@
     <view class="field"><text class="k">地址 <text class="req">*</text></text><textarea class="v v--area" v-model="form.address" placeholder="完整收货地址" maxlength="200" /></view>
     <view class="field field--row">
       <text class="k">设为默认</text>
-      <switch :checked="form.is_default === 1" @change="onDefault" color="#2979ff" />
+      <switch :checked="form.is_default === 1" @change="onDefault" color="#168a55" />
     </view>
 
     <view class="footer">
@@ -73,14 +73,14 @@ onLoad((q: any = {}) => {
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; padding-bottom: 160rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; padding-bottom: 160rpx; }
 .field { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .field--row { display: flex; align-items: center; justify-content: space-between; }
-.k { font-size: 26rpx; color: #606266; }
-.req { color: #fa3534; }
-.v { margin-top: 12rpx; font-size: 30rpx; color: #303133; }
+.k { font-size: 26rpx; color: $go-text; }
+.req { color: $go-red; }
+.v { margin-top: 12rpx; font-size: 30rpx; color: $go-ink; }
 .v--area { width: 100%; height: 140rpx; }
-.footer { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 16rpx; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #ececec; }
-.del { margin: 0; font-size: 30rpx; background: #fff; color: #fa3534; }
+.footer { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 16rpx; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $go-line; }
+.del { margin: 0; font-size: 30rpx; background: #fff; color: $go-red; }
 .save { flex: 1; margin: 0; font-size: 30rpx; }
 </style>

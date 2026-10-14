@@ -126,25 +126,25 @@
 
 **阻断级**
 
-- [严重] `pages/hall/faqi.vue:23` `onShow` 无条件 `reset()`，从商品编辑 / 复用历史商品 / 商品库返回时表单、商品列表、草稿 id 全部清空，草稿留在服务端。违反 CLIENT_BRIEF §4「草稿表单状态不得丢失」
+- **已解决（2026-10-08）** [严重] `pages/hall/faqi.vue:23` `onShow` 无条件 `reset()`，从商品编辑 / 复用历史商品 / 商品库返回时表单、商品列表、草稿 id 全部清空，草稿留在服务端。违反 CLIENT_BRIEF §4「草稿表单状态不得丢失」
 - [严重] 全工程无 `onShareAppMessage`；`pages/activity/publish.vue:35` `open-type="share"` 会分享团长自己的发布页；`activityGetShareEntry` 与 `short_code` 从未调用；`pages/activity/detail.vue:128` 把 `short_code` 当 `activity_id` 传，必然 NOT_FOUND。D-059 下分享是唯一传播入口
 - [严重] `pages/hall/jielong.vue:140` 把服务端已分组的 `orderMyList` 结果再当订单分组一次，订单号 / 份数 / 金额全空，点订单 id 为 undefined
-- [严重] `pages/order/detail.vue:13` `order.title || order.activity` 渲染出 `[object Object]`；`:61` `order.activity_id` 不存在，「修改订单」跳转参数为空
+- **已解决（2026-10-08）** [严重] `pages/order/detail.vue:13` `order.title || order.activity` 渲染出 `[object Object]`；`:61` `order.activity_id` 不存在，「修改订单」跳转参数为空
 - [严重] `src/manifest.json:53` `mp-weixin.appid` 为空；无 `uniCloud` 字段；client 工程 `cloudfunctions/` 为空目录，全部云对象在 admin 工程，两工程是否绑同一空间仓库内无证据
 
 **功能缺陷**
 
-- [中] 「修改订单」实际是重新下单，`orderUpdate` 从未调用，语义与 D-025 不符
+- **已解决（2026-10-08，随 D-086 补齐改单流程：活动详情预填 → 确认页改单模式 → `orderUpdate`）** [中] 「修改订单」实际是重新下单，`orderUpdate` 从未调用，语义与 D-025 不符
 - [中] `pages/activity/export.vue:313` 读 `file_version`，服务端返回 `versions[]`；下载只复制链接到剪贴板，微信内打不开 xlsx（应 `downloadFile` + `openDocument`）
 - [中] `api/client.js:101` 网络错误无 errCode 被归一为 INVALID_PARAM，下单超时不进 M-26「结果未知」
 - [中] `common/grouporder/request.js:52` `onUnauthenticated` 无去重、不清 token；`my.vue` 并发两请求会连续压入两个登录页
 - [中] `jielong.vue` 开了 `enablePullDownRefresh` 但内容在固定高 `scroll-view` 里手势被吃掉；`loadCurrent()` 不返回 Promise，`stopPullDownRefresh` 立即执行
 - [中] 所有列表 `pageSize` 硬编码 50/100，无分页与加载更多
-- [中] `cover_image` / `images` / `detail_images` 无任何 `chooseImage` / `uploadFile` 入口，D-058 图片检测与提审 4.7 封面图无输入源
+- **已解决（2026-10-08）** [中] `cover_image` / `images` / `detail_images` 无任何 `chooseImage` / `uploadFile` 入口，D-058 图片检测与提审 4.7 封面图无输入源
 - [中] 「注销账号」走 uni-id-pages `closeAccount()`，`privacyRequestSubmit` 无页面触发，D-035/D-056 留存规则未接入
-- [中] `activity-form.vue:54` 截止时间只选日期、时间固定 18:00 不可改；不选日期时静默默认 +3 天
+- **已解决（2026-10-08，D-087 起止时间均可选到分钟）** [中] `activity-form.vue:54` 截止时间只选日期、时间固定 18:00 不可改；不选日期时静默默认 +3 天
 - [中] `goods-manage.vue:184`「调库存/限购」只能改库存
-- [中] `detail.vue` 不显示交付方式（`DELIVERY_TYPE` 已 import 未用）；步进器不校验每人限购；无分享按钮
+- [中] ~~`detail.vue` 不显示交付方式~~（**已解决 2026-10-08，D-086**）；步进器不校验每人限购；无分享按钮
 - [低] `api/index.js` 把 38 个 ops 方法打进小程序包；所有业务 import 用 `@ts-ignore` + `any`；各页各写 `toLocaleString`；tab 图标是 Unicode 字符；`uni-id-pages/config.js:34-35` 协议地址仍为 `https://xxx`；无首次使用协议弹窗；无 `__usePrivacyCheck__`
 - [低] `my.vue`「修改密码」对无用户名账号也显示；「隐私说明」只是 modal 文字；`appeal.vue` 要求用户手输「目标平台账号标识」
 
@@ -176,12 +176,13 @@
 - `activity-co:117-125, 139, 179-182` `end_time` 未校验整数（字符串可落库，autoclose 查不到）；图片数组元素未校验
 - `order-co:297-298, 660` / `activity-co:392-397` / `report-co:134` `filters.*` 原样进 where 无白名单
 - `grouporder-check-callback/index.js:19-37` HTTP 回调无签名校验，凭 trace_id 即可触发治理下架
+- 内容检测服务未接入：`common/grouporder-common/contentcheck.js` 的 `invokeProvider` 为占位桩，文本/图片一律按「通过」返回（`PRD`/`DECISIONS`/`DATA_MODEL` 均未指定检测服务商）。后果：**自动审核模式当前名不副实**——文本检测恒通过，自动模式下活动一律直接进入「进行中」，无任何机器拦截（人工审核模式、举报与治理下架不受影响）。**当前接受：暂按恒通过处理**（2026-10-12 产品负责人确认）。已按选项 2 落地（2026-10-12）：`contentcheck.js` 新增开关 `IMAGE_CHECK_ASYNC=false`，服务未接入时图片检测记录直接写「已放行」而非「待复核」、并把对象 `img_check_status` 置「通过」，消除工作台「内容检测复核」永不回填的幽灵待办堆积；文本本就恒通过放行。**注意**：此改动只影响改后新提交的活动，改前已生成的 `grouporder-content-check`（`content_type=image && status=1`）历史记录仍在库，需一次性清理或重建测试数据才会从工作台消退。上线前仍需决策：① 用哪个内容安全服务（小程序场景微信 `msgSecCheck` / `mediaCheckAsync` 最对口，文本同步、图片异步，正好匹配现有分工）；② 文本/图片各自的判定口径（通过 / 命中转人工 / 直接拦截）。接入时把 `IMAGE_CHECK_ASYNC` 翻为 `true` 并实现 `invokeProvider` + `grouporder-check-callback`，其余送检链路与 `grouporder-content-check` 表结构不动
 - `order-co:534, 575` 终态后逐条 restore 抛错即库存永久虚占
-- `activity-co:563-574` `activityCopy` 幂等以「同团长 + 同标题 + 60 秒」判定，会误判有意复制
+- **已解决（2026-10-08，按 D-081 改为 `idempotent_key` 判重）** `activity-co:563-574` `activityCopy` 幂等以「同团长 + 同标题 + 60 秒」判定，会误判有意复制
 - `grouporder-report/bind-appeal/privacy-case.index.json` 缺 `reporter_uid` / `applicant_uid` / `target_uid` 索引，多个方法全表扫描
 - `order-co:97, 313-314, 671-672` 明细 `limit(500)` 静默截断
 - D-079 落地：`common/grouporder-common/review.js` `canEditContent` 目前放行审核中，需对 `status === REVIEWING` 返回 false，并让 `_assertEditable` 抛新错误码 `ACTIVITY_REVIEWING`（errors.js 补码）；`activityUpdatePickup` 同样要拒绝审核中；`onContentChanged` 的 REVIEWING 分支随之成为不可达，可删
-- D-080 落地：`activity-co` `activityCopySourceList` 去掉 `status in [ONGOING, CLOSED, CANCELLED]` 过滤，`activityCopy` 去掉 DRAFT/REVIEWING 拒绝分支，只保留治理下架与非本人两项校验；客户端 `pages/lib/history-activity.vue` 对进行中与审核中的源都要提示「将创建新草稿」
+- **已作废（2026-10-08，D-080 已被 D-085 取代，按 D-085 落地完成）** D-080 落地：`activity-co` `activityCopySourceList` 去掉 `status in [ONGOING, CLOSED, CANCELLED]` 过滤，`activityCopy` 去掉 DRAFT/REVIEWING 拒绝分支，只保留治理下架与非本人两项校验；客户端 `pages/lib/history-activity.vue` 对进行中与审核中的源都要提示「将创建新草稿」
 
 **低**
 
@@ -206,6 +207,10 @@
 - [低] `uniCloud-alipay/database/` 下 `grouporder-activity` / `grouporder-bind-appeal` / `grouporder-report` 三份 schema 的字段描述与 `docs/02-arch/schema/` 副本同步（去掉「首页列表」、角色名改「运营人员」）
 
 ---
+
+## 3.4 禁区 / 开发工具 —— 上线前必须移除
+
+- **[严重] 运营禁区·测试数据清理（2026-10-12 产品负责人授权加入，上线前必须移除）**：为开发/测试期重置数据加了一套物理清库能力，违反 OPS §2.2「运营不得代替团长经营」与 D-035 留存，属**临时禁区**，正式上线前需整套删除：① 云对象方法 `grouporder-ops-co.devWipe` / `_wipeCollection` 与常量 `DEV_WIPE_GROUPS`；② 前端 `pages/system/devzone/index.vue`、`pages.json` 的 `pages/system/devzone/index` 路由、`js_sdk/grouporder-api/index.js` 的 `ops.devWipe`；③ 菜单 `opendb-admin-menus.init_data.json` 的 `system_devzone`（权限点 `ops-sys-config`）；④ 独立开发函数 `cloudfunctions/grouporder-dev-cleanup/`（无鉴权，仅 HBuilderX 本地用，严禁上生产）。现有防护：devWipe 要求 `ops-sys-config` 鉴权 + 逐字输入 `WIPE` + 二次确认 + 全程审计（`action_type=dev_data_wipe`，该取值未登记 DATA_MODEL §10.8，随能力一并移除故不补）。运营使用由产品负责人培训把关
 
 ## 4. 建议处理顺序
 

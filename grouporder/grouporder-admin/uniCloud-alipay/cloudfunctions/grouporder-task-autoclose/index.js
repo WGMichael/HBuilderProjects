@@ -8,8 +8,8 @@
  * - 活动在下架期间到期的同样按已截止处理，不能通过恢复重新开放；
  * - 截止时写入 retention_expire_date（该日 +3 年），订单继承（D-035）。
  */
-const { state, snapshot } = require('grouporder-common')
-const { ACTIVITY, END_TYPE } = state
+const { state, lifecycle } = require('grouporder-common')
+const { ACTIVITY } = state
 
 const BATCH_SIZE = 100
 
@@ -36,20 +36,8 @@ exports.main = async () => {
 
   for (const a of (data || [])) {
     try {
-      // 带条件更新：并发下只有一次生效，重复执行不会覆盖已有结果
-      const res = await db.collection('grouporder-activity')
-        .where({ _id: a._id, status: a.status })
-        .update({
-          status: ACTIVITY.CLOSED,
-          // 实际截止时间取计划截止时间，而不是任务的执行时间——
-          // 任务延迟不应让清单上的截止时间往后漂
-          actual_end_time: a.end_time,
-          end_type: END_TYPE.AUTO
-        })
-      if (!res.updated) continue
-
-      await snapshot.stampRetention(ctx, a._id, a.end_time)
-      result.closed++
+      // 与「读时补截止」共用 common/lifecycle：带条件更新，并发下只有一次生效
+      if (await lifecycle.closeIfExpired(ctx, a)) result.closed++
     } catch (e) {
       result.failed++
       result.errors.push({ activity_id: a._id, message: e.message })

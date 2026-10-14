@@ -87,16 +87,16 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding-bottom: 160rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding-bottom: 160rpx; }
 .head { background: #fff; padding: 28rpx; }
-.head__title { font-size: 32rpx; color: #303133; }
-.head__meta { font-size: 24rpx; color: #909399; margin-top: 10rpx; }
+.head__title { font-size: 32rpx; color: $go-ink; }
+.head__meta { font-size: 24rpx; color: $go-muted; margin-top: 10rpx; }
 .block { background: #fff; margin-top: 16rpx; padding: 24rpx 28rpx; }
-.block__title { font-size: 28rpx; color: #303133; font-weight: 600; margin-bottom: 16rpx; }
-.row, .drow { display: flex; justify-content: space-between; padding: 14rpx 0; border-bottom: 1rpx solid #f5f5f5; font-size: 28rpx; color: #303133; }
-.row__qty, .drow__qty { color: #909399; }
+.block__title { font-size: 28rpx; color: $go-ink; font-weight: 600; margin-bottom: 16rpx; }
+.row, .drow { display: flex; justify-content: space-between; padding: 14rpx 0; border-bottom: 1rpx solid $go-soft; font-size: 28rpx; color: $go-ink; }
+.row__qty, .drow__qty { color: $go-muted; }
 .footer { position: fixed; left: 0; right: 0; bottom: 60rpx; display: flex; gap: 16rpx; padding: 20rpx; }
-.btn { flex: 1; margin: 0; font-size: 30rpx; background: #fff; color: #606266; }
-.btn--primary { background: #2979ff; color: #fff; }
-.note { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; font-size: 20rpx; color: #909399; padding: 12rpx; }
+.btn { flex: 1; margin: 0; font-size: 30rpx; background: #fff; color: $go-text; }
+.btn--primary { background: $go-primary; color: #fff; }
+.note { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; font-size: 20rpx; color: $go-muted; padding: 12rpx; }
 </style>

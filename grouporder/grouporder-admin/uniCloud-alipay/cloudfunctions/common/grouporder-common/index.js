@@ -31,5 +31,8 @@ module.exports = {
   config: require('./config'),
   contentcheck: require('./contentcheck'),
   restriction: require('./restriction'),
-  review: require('./review')
+  review: require('./review'),
+  files: require('./files'),
+  deliverystat: require('./deliverystat'),
+  lifecycle: require('./lifecycle')
 }

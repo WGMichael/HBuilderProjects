@@ -93,21 +93,21 @@ onShow(() => loadMine());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #f4f5f7; padding: 20rpx; }
+.page { min-height: 100vh; background: $go-canvas; padding: 20rpx; }
 .card { background: #fff; border-radius: 16rpx; padding: 28rpx; margin-bottom: 16rpx; }
-.card__title { font-size: 30rpx; color: #303133; margin-bottom: 20rpx; }
+.card__title { font-size: 30rpx; color: $go-ink; margin-bottom: 20rpx; }
 .field { margin-bottom: 20rpx; }
-.k { font-size: 26rpx; color: #606266; }
-.req { color: #fa3534; }
-.v { margin-top: 12rpx; font-size: 28rpx; color: #303133; }
-.v--area { width: 100%; height: 160rpx; border: 1rpx solid #f0f0f0; border-radius: 12rpx; padding: 16rpx; box-sizing: border-box; }
+.k { font-size: 26rpx; color: $go-text; }
+.req { color: $go-red; }
+.v { margin-top: 12rpx; font-size: 28rpx; color: $go-ink; }
+.v--area { width: 100%; height: 160rpx; border: 1rpx solid $go-line; border-radius: 12rpx; padding: 16rpx; box-sizing: border-box; }
 .submit { margin: 0; font-size: 30rpx; }
-.note { font-size: 22rpx; color: #909399; line-height: 1.7; margin-top: 16rpx; }
-.r { padding: 20rpx 0; border-bottom: 1rpx solid #f5f5f5; }
-.r__l1 { display: flex; justify-content: space-between; font-size: 28rpx; color: #303133; }
-.r__l2 { font-size: 24rpx; color: #909399; margin-top: 6rpx; }
-.empty { text-align: center; color: #909399; font-size: 26rpx; padding: 40rpx 0; }
+.note { font-size: 22rpx; color: $go-muted; line-height: 1.7; margin-top: 16rpx; }
+.r { padding: 20rpx 0; border-bottom: 1rpx solid $go-soft; }
+.r__l1 { display: flex; justify-content: space-between; font-size: 28rpx; color: $go-ink; }
+.r__l2 { font-size: 24rpx; color: $go-muted; margin-top: 6rpx; }
+.empty { text-align: center; color: $go-muted; font-size: 26rpx; padding: 40rpx 0; }
 .tag { font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 8rpx; }
-.tag--ok { background: #e7faec; color: #18bc37; }
-.tag--wait { background: #fdf6ec; color: #f3a73f; }
+.tag--ok { background: $go-primary-soft; color: $go-primary; }
+.tag--wait { background: $go-orange-soft; color: $go-orange; }
 </style>

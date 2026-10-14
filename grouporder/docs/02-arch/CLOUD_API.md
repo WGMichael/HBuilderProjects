@@ -1,7 +1,7 @@
 # 云函数与云对象总契约
 
-- 文档版本：v0.9（设计稿 v0.1 → 实现回填 v0.2 → 裁决收口 v0.3 → 登录审计归位 v0.4 → 自提点字段 v0.5 → 角色收口 v0.6 → 审核冻结与复用源 v0.7 → 待确认项编号 v0.8 → 强幂等与自动处置 v0.9 → 图片先选后传 v0.10）
-- 日期：2026-09-30
+- 文档版本：v0.9（设计稿 v0.1 → 实现回填 v0.2 → 裁决收口 v0.3 → 登录审计归位 v0.4 → 自提点字段 v0.5 → 角色收口 v0.6 → 审核冻结与复用源 v0.7 → 待确认项编号 v0.8 → 强幂等与自动处置 v0.9 → 图片先选后传 v0.10 → 复用源收紧 v0.11 → 交付方式多选 v0.12 → 起始时间 v0.13 → 商品库新建 v0.14 → 默认值口径 v0.15 → 删除草稿 v0.16 → 复制预填 v0.17 → 取消确认门 v0.18 → 读时补截止 v0.19）
+- 日期：2026-10-08
 - 性质：**全部服务端接口的唯一事实源**。服务端按此实现；admin 端与 client 端两个前端按此调用。
 - 事实来源：`docs/00-product/PRD.md`、`docs/00-product/OPS_ADMIN_REQUIREMENTS.md`、`docs/00-product/DECISIONS.md`、`docs/02-arch/DATA_MODEL.md`、`docs/01-ux/UX_FLOW_SPEC.md`、`docs/02-arch/GOODS_LIB_SPEC.md`
 
@@ -89,13 +89,14 @@
 | errCode | 含义 | 触发点 |
 |---|---|---|
 | `ACTIVITY_CLOSED` | 活动已截止 | 服务端时间判定（§8.4） |
+| `ACTIVITY_NOT_STARTED` | 活动尚未开始 | 服务端时间早于 `start_time`；`detail.start_time` 给出开始时间（D-087） |
 | `ACTIVITY_CANCELLED` | 活动已被团长取消 | |
 | `ACTIVITY_OFFLINE` | 活动被平台下架 | 禁止新建或扩大订单，不影响查看 |
 | `GOODS_OFF_SALE` | 商品已停售 | 允许减少或移除，不允许新增扩大 |
 | `GOODS_OFFLINE` | 商品被平台下架 | 同上，仅影响该商品 |
 | `STOCK_NOT_ENOUGH` | 库存不足 | 原子扣减返回 `updated === 0` |
 | `LIMIT_EXCEEDED` | 超出每人限购 | 按商品分别计算 |
-| `DELIVERY_TYPE_LOCKED` | 交付方式发布后不可改 | D-060 |
+| `DELIVERY_TYPE_LOCKED` | 交付方式集合发布后不可改 | D-060、D-086 |
 | `PRECONDITION_UNMET` | 前置条件不满足 | 如注销时仍是进行中活动的团长（D-056） |
 | `ACTIVITY_REVIEWING` | 活动审核中，内容冻结 | 需先撤回至草稿再修改（D-079）；`activityUpdateDraft`、`activityUpdatePickup`、`goodsCreate/Update/Delete/Sort`、`goodsSetOnSale`、`goodsAdjustStock`、`libCopyToActivity` 命中 |
 
@@ -113,7 +114,7 @@
 
 ### 2.5 服务端时间
 
-**所有截止判断一律用服务端时间**，客户端时间不可信。下单、改单、取消在写入前重新校验活动 `status`、`end_time`、`governance_status`（§8.4）。
+**所有截止判断一律用服务端时间**，客户端时间不可信。下单、改单、取消在写入前重新校验活动 `status`、`start_time`、`end_time`、`governance_status`（§8.4、D-087）。
 
 ---
 
@@ -133,8 +134,10 @@
 | `goodslib.js` | `sinkToLib(goods)` 商品保存时沉淀、`blockLibByGoods(goods)` 治理反写封禁 | `GOODS_LIB_SPEC §4`、§7；D-064 |
 | `config.js` | 读取 `grouporder-config`，主要是 `review_mode` | D-057 |
 | `contentcheck.js` | **v0.2 新增**。送检的发起、`grouporder-content-check` 记录写入、`trace_id` 生成与异步回调匹配；文本同步、图片异步 | D-043、D-058；`DATA_MODEL §10.3` |
+| `deliverystat.js` | **v0.12 新增**。`breakdown(ctx, activity)` 按交付方式拆分有效单数与份数，被 activity-co（M-20 统计）与 order-co（`orderLeaderStat`）共用 | D-086 |
 | `restriction.js` | **v0.2 新增**。`assertCanPublish(ctx, uid)` 发布权限校验（读 `grouporder-user-ext`）、`apply()` 写处置流水并同步当前状态 | OPS §7；`DATA_MODEL §10.4`、§10.9 |
 | `review.js` | **v0.2 新增**。`content_version` 递增与内容改动后的重新送审 | D-043、D-048；`GOODS_LIB_SPEC §5.4` |
+| `files.js` | **v0.10 新增**。`fileIdsOf(...fields)` 取 fileID、`toDbPatch(ctx, patch)` 把 `cover_image` 包成 `dbCmd.set` 整体替换（避免按子字段合并在原值为 null 时报错）、`releaseFiles(ctx, prevIds, nextIds)` 写库成功后回收三表均无引用的旧图。被 activity-co 与 goods-co 共用 | D-084；`GOODS_LIB_SPEC §6` |
 
 > `retention.js`（三年到期日计算）已并入 `snapshot.js`（`stampRetention`）；规则见 `DATA_MODEL §9`。
 > 订单号、活动短码与各类业务编号的生成并入 `idempotent.js`，不单开模块。
@@ -158,28 +161,29 @@
 
 | 方法 | 用途 | 页面 | 关键约束 |
 |---|---|---|---|
-| `activityCreateDraft` | 新建草稿 | M-10 | **`idempotent_key` 必填，活动表唯一索引，重试返回已有草稿**（D-081）；`delivery_type` 必填；`pickup_*` 可选（**草稿阶段不卡自提必填，发布时由 `activitySubmitReview` 校验**，D-077）；**`cover_image` 草稿阶段不校验，发布时校验**（D-084）；出参带 `create_date`，供客户端拼图片目录；草稿不占用任何公开入口 |
-| `activityUpdateDraft` | 编辑草稿 | M-10 | **审核中拒绝，返回 `ACTIVITY_REVIEWING`**（D-079）；**`delivery_type` 发布后不可改**（D-060 → `DELIVERY_TYPE_LOCKED`）；草稿/可编辑态可带 `pickup_*`，改 `pickup_*` 不触发重新审核。**发布后改自提点走独立方法 `activityUpdatePickup`**（D-077）；草稿阶段允许 `cover_image` 为空，已发布过的活动不得清空；**保存成功后回收被替换且无人引用的旧图**（D-084） |
-| `activityUpdatePickup` | 改自提点 | M-20 → 自提点编辑页 | **发布后改自提点专用**（D-077）：仅自提活动、不受内容改动限制、即时生效、不触发重新审核；文本送检不阻塞、写 `oplog`；已取消/已下架拒绝 |
-| `activitySubmitReview` | 提交审核 | M-12 | **提交时把平台配置的 `review_mode` 固化到 `activity.review_mode`**（D-057）；自动模式下内容检测通过即置进行中、`review_uid` 为空；人工模式进审核中；**提交时统一校验资料齐全**：活动封面、至少一个商品、每个商品封面、自提活动的自提地址（D-041、D-077、D-084） |
+| `activityCreateDraft` | 新建草稿 | M-10 | **`idempotent_key` 必填，活动表唯一索引，重试返回已有草稿**（D-081）；**`delivery_types` 必填、至少一种**（D-086，兼容旧单值 `delivery_type`）；`start_time` 可选，默认当前时间，须早于 `end_time`（D-087）；`pickup_*` 可选（**草稿阶段不卡自提必填，发布时由 `activitySubmitReview` 校验**，D-077）；**`cover_image` 草稿阶段不校验，发布时校验**（D-084）；出参带 `create_date`，供客户端拼图片目录；草稿不占用任何公开入口 |
+| `activityUpdateDraft` | 编辑草稿 | M-10 | **审核中拒绝，返回 `ACTIVITY_REVIEWING`**（D-079）；**`delivery_types` 发布后不可改**（D-060、D-086 → `DELIVERY_TYPE_LOCKED`）；`start_time` 发布后仅未开始时可改、不得早于当前、不触发重新审核，按分钟比较判定是否改动（D-087）；草稿/可编辑态可带 `pickup_*`，改 `pickup_*` 不触发重新审核。**发布后改自提点走独立方法 `activityUpdatePickup`**（D-077）；草稿阶段允许 `cover_image` 为空，已发布过的活动不得清空；**保存成功后回收被替换且无人引用的旧图**（D-084） |
+| `activityUpdatePickup` | 改自提点 | M-20 → 自提点编辑页 | **发布后改自提点专用**（D-077）：仅支持自提的活动（D-086）、不受内容改动限制、即时生效、不触发重新审核；文本送检不阻塞、写 `oplog`；已取消/已下架拒绝 |
+| `activitySubmitReview` | 提交审核 | M-12 | **提交时把平台配置的 `review_mode` 固化到 `activity.review_mode`**（D-057）；自动模式下内容检测通过即置进行中、`review_uid` 为空；人工模式进审核中；**提交时统一校验资料齐全**：活动封面、至少一个商品、每个商品封面、支持自提时的自提地址、起始时间早于截止时间（D-041、D-077、D-084、D-086、D-087） |
 | `activityWithdrawReview` | 撤回审核 | M-12 | 审核中 → 草稿 |
 | `activityGetDetail` | 活动详情 | M-13 / M-20 | **同一方法按身份返回不同字段**：参与者得非敏感内容 + 各商品已购份数 + 有效总份数；团长另得统计与管理入口。审核中仅团长与获权内容运营可见 |
 | `activityMyList` | 我发起的 | M-09 | 按业务状态与治理状态双维度筛选，两者**分列不合并** |
 | `activityClose` | 手动截止 | M-23 | 不可逆；截止后不可再取消（D-027） |
 | `activityCancel` | 取消活动 | M-23 | **原因必填**；仅允许草稿或进行中；已截止不可取消（D-027）；写入 `retention_expire_date` |
+| `activityDeleteDraft` | 删除草稿 | M-09 / M-20 | **仅从未发布、未被处置、无订单的草稿**，否则 `PRECONDITION_UNMET`；连同活动商品一起删除，回收三表无人引用的图片；商品库不受影响（D-090） |
 | `activityGetShareEntry` | 取分享入口参数 | M-12 / M-13 / M-20 | 入口不可枚举；**入口有效不等于授予敏感数据权限**，服务端逐次鉴权（D-034）。⚠ 分享 path 用 `activity_id`，**不得用 `short_code`**（仅 32⁴ ≈ 105 万，可枚举）。**D-083 已定方案 1**：`activityGetDetail` 的 `short_code` 查询分支已移除，短码仅用于订单号拼装与口头引用，不再是查询入口。客户端接入方式与 `onShareAppMessage` 的同步性约束见 `SHARE_SPEC.md §4` |
-| `activityCopySourceList` | 可复制的历史活动 | M-31 | 仅本人发起；**不按业务状态过滤，仅被平台下架的活动不可作为源**（D-080、AC-AC-006） |
-| `activityCopy` | 复制为新草稿 | M-31 / M-09「再来一次」 | 出参 `{ activity_id, copied_count, excluded: [{name, reason}] }`；**被治理下架的商品不进新草稿并在出参列出**（AC-AC-005）；截止时间按源活动时长节奏预填（D-067）；源范围见 `activityCopySourceList`（D-080）；幂等 |
+| `activityCopySourceList` | 可复制的历史活动 | M-31 | 仅本人发起；**只列出已截止（`status = 3`）且未被平台下架的活动**（D-085 取代 D-080，AC-AC-006） |
+| `activityCopy` | 按源生成新草稿 | M-10（复制预填后保存 / 下一步 / 首次操作商品时调用，D-091） | 出参 `{ activity_id, copied_count, excluded: [{name, reason}] }`；**被治理下架的商品不进新草稿并在出参列出**（AC-AC-005）；新草稿 `start_time` 取当前时间，截止时间按源活动时长节奏预填（时长 = 源截止 − 源起始，D-067、D-087）；源范围见 `activityCopySourceList`（D-085），**非已截止的源返回 `PRECONDITION_UNMET`**；幂等（D-081） |
 
 ### 4.2 活动内商品
 
 | 方法 | 用途 | 页面 | 关键约束 |
 |---|---|---|---|
-| `goodsCreate` | 新增商品 | M-11 | 保存时**自动沉淀到商品库**（`common/goodslib.sinkToLib`）；`0` 表示不限库存/不限购 |
+| `goodsCreate` | 新增商品 | M-11 | 保存时**自动沉淀到商品库**（`common/goodslib.sinkToLib`），可带 `lib_category_id` 指定库记录分类（D-088）；`0` 表示不限库存/不限购 |
 | `goodsUpdate` | 编辑商品 | M-11 / M-22 | `ever_ordered=1` 时**改价需二次确认并记录前后值**；禁止删除；有限库存不得低于 `sold_qty`；**保存成功（含商品库沉淀）后回收被替换且无人引用的旧图**（D-084） |
 | `goodsDelete` | 删除商品 | M-22 | 仅 `ever_ordered=0` 可删 |
 | `goodsSetOnSale` | 停售 / 恢复售卖 | M-22 | 停售只阻止新增与扩大，**已有明细保留并进入清单**（D-019、D-050）；活动已截止或已取消时**禁止恢复**（D-028） |
-| `goodsAdjustStock` | 调整库存与限购 | M-22 | 可取消库存上限、增加库存、减少至不低于 `sold_qty` |
+| `goodsAdjustStock` | 调整库存与限购 | M-11 / M-22 | 可取消库存上限、增加库存、减少至不低于 `sold_qty`；**成功后把库存 / 限购同步为同名库记录的默认值**（`goodslib.syncStockToLib`，不新建库记录，D-089）。`goodsUpdate` 不接收这两项，M-11 编辑时库存 / 限购须走本方法 |
 | `goodsSort` | 拖拽排序 | M-22 | **v0.2 新增**。按拖拽后的可视顺序**整体重写**该活动全部商品的 `sort`，从 1 连续递增，不允许部分有值部分默认（`GOODS_LIB_SPEC §5.7`、AC-GL-018）。`is_recommend` 不进排序表达式 |
 
 > 商品的 `governance_status`（平台下架）**只能由 `grouporder-ops-co` 设置**，本对象所有方法都不得改写它。
@@ -190,14 +194,14 @@
 
 | 方法 | 用途 | 页面 | 关键约束 |
 |---|---|---|---|
-| `orderPreview` | 确认订单页试算 | M-14 | 校验库存、限购、活动状态；返回预计金额；**不落库** |
-| `orderCreate` | 提交订单 | M-14 | **幂等键必传**；库存**带条件原子自增**（§8.1）；限购按商品分别计算（§8.2）；固化价格与收货快照；自提活动**不采集地址**（D-060） |
+| `orderPreview` | 确认订单页试算 | M-14 | 校验库存、限购、活动状态；返回预计金额与**可选的交付方式**（D-086）；改单时传 `order_id`，库存与限购排除本单已有明细；**不落库** |
+| `orderCreate` | 提交订单 | M-14 | **幂等键必传**；库存**带条件原子自增**（§8.1）；限购按商品分别计算（§8.2）；固化价格与收货快照；**`delivery_type` 落在订单上**：活动只支持一种时可不传，两种都支持时必传且须在支持范围内（D-086）；自提订单**不采集地址**（D-060） |
 | `orderMyList` | 我参与的 | M-18 | 按活动分组，一个活动下可有本人多张订单 |
-| `orderGetDetail` | 订单详情 | M-19 | 返回收货快照 |
-| `orderUpdate` | 改单 | M-19 | 截止前允许改数量、移除商品、换收货信息、改备注；**扩大数量要重新走库存与限购校验** |
+| `orderGetDetail` | 订单详情 | M-19 | 返回收货快照与本单交付方式；自提订单附自提点（读活动最新值，D-077、D-086） |
+| `orderUpdate` | 改单 | M-19 | 截止前允许改数量、移除商品、换收货信息、**换交付方式**（D-086，换方式时按新方式重建收货快照）、改备注；**扩大数量要重新走库存与限购校验** |
 | `orderCancel` | 参与者取消整单 | M-19 | 截止前；返还库存 `inc(-qty)`；**终态不可逆**；取消后仍可新建订单，原记录保留（D-025） |
 | `orderVoid` | 团长作废整单 | M-20 / M-21 | **仅团长、仅截止后、原因必填**；返还库存；**使已有 Excel 清单版本失效**（D-051） |
-| `orderLeaderStat` | 团长统计 | M-21 | 有效订单数、有效总份数、商品汇总、预计金额；**不出现销售额/实收/GMV** |
+| `orderLeaderStat` | 团长统计 | M-21 | 有效订单数、有效总份数、**按交付方式拆分的单数与份数**（D-086）、商品汇总、预计金额；**不出现销售额/实收/GMV** |
 | `orderLeaderList` | 团长看参与者明细 | M-21 | 团长可读**本人活动**履约所需的收货字段（D-016）；跨活动读取一律拒绝 |
 
 ---
@@ -207,9 +211,9 @@
 | 方法 | 用途 | 页面 | 关键约束 |
 |---|---|---|---|
 | `libList` | 商品库列表 | M-28 / M-29 | 入参含 `category_id`；按最近使用倒序；**被封禁记录不可选、不可编辑** |
-| `libUpdate` | 编辑库记录与三项预填值 | M-29 | `GOODS_LIB_SPEC §5.6` |
+| `libUpdate` | 编辑库记录与三项预填值 | M-29 | `GOODS_LIB_SPEC §5.6`；**改图保存成功后回收被替换且无人引用的旧图**（D-084） |
 | `libDelete` | 软删 | M-29 | 软删记录**同样保持封禁状态**（D-064） |
-| `libCopyToActivity` | 复用到当前活动 | M-28 | 多选；价格/总库存/每人限购**预填但必须逐项确认**（D-063）；被下架商品不可选 |
+| `libCopyToActivity` | 复用到当前活动 | M-28 | 多选；价格/总库存/每人限购按默认值**预填**（不强制确认，D-092）；被下架商品不可选 |
 | `categoryList` / `categoryCreate` / `categoryUpdate` / `categoryDelete` | 分类管理 | M-30 | 用户私有；**仅用于筛选，不进活动展示与清单**（D-066）；上限 20 个 |
 | `categorySort` | 分类拖拽排序 | M-30 | **v0.2 补齐**（v0.1 表头声称 9 个方法但只列了 8 个）。与 `goodsSort` 同一原则：整体重写为从 1 起的连续值 |
 
@@ -357,7 +361,7 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 
 | 云函数 | 触发 | 职责 | 规格 |
 |---|---|---|---|
-| `grouporder-task-autoclose` | 定时（建议每分钟） | 到期活动自动置已截止；**审核中到期直接进已截止**，之后即使审核通过也不重开 | `DATA_MODEL §5.1` |
+| `grouporder-task-autoclose` | 定时（每分钟，触发器配置在函数 `package.json` 的 `cloudfunction-config.triggers`，client 与 admin 两份须一致） | 到期活动自动置已截止；**审核中到期直接进已截止**，之后即使审核通过也不重开。截止逻辑与 activity-co 的「读时补截止」共用 `common/lifecycle.js` | `DATA_MODEL §5.1` |
 | `grouporder-task-export-cleanup` | 定时（每日） | 清理超过 **60 天**的清单文件与失效版本 | D-071② |
 | `grouporder-task-retention` | 定时（每日） | 三年到期删除或匿名化收货信息与账号关联，置 `anonymized=1`；汇总数据保留 | D-035；`DATA_MODEL §9` |
 | `grouporder-check-callback` | 内容检测回调 | 图片异步检测**不阻塞审核放行**；回调命中时把商品转治理下架并通知团长，**不回退业务状态、不删除已有订单** | D-058 |
@@ -406,20 +410,21 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 
 | 方法 | 入参 | 出参 `data` | 幂等键 |
 |---|---|---|---|
-| `activityCreateDraft` | `{ idempotent_key, title, description?, cover_image?, images?, delivery_type, end_time, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（`pickup_*` 均可选，`delivery_type=1` 时忽略并存空串；自提必填与封面必填的校验推迟到 `activitySubmitReview`，D-084） | `{ activity_id, short_code, create_date }` | — |
-| `activityUpdateDraft` | `{ activity_id, title?, description?, cover_image?, images?, end_time?, delivery_type?, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（`pickup_*` 仅草稿/可编辑态用，不进 `need_recheck`；发布后改自提点用下一行的 `activityUpdatePickup`） | `{ activity_id, need_recheck, status }` | — |
-| `activityUpdatePickup` **新增** | `{ activity_id, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（仅 `delivery_type=2`；发布后仍可改，已发布则不许把 `pickup_address` 改空；只取显式传来的键）；文本送检**不阻塞**、写 `oplog`（`ACTIVITY_PICKUP_CHANGED`），已取消或已下架活动拒绝（D-077） | `{ activity_id }` | — |
+| `activityCreateDraft` | `{ idempotent_key, title, description?, cover_image?, images?, delivery_types, end_time, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（`delivery_types` 为 [1] / [2] / [1,2]，兼容旧客户端传单值 `delivery_type`；`pickup_*` 均可选，不支持自提时忽略并存空串；自提必填与封面必填的校验推迟到 `activitySubmitReview`，D-084） | `{ activity_id, short_code, create_date }` | — |
+| `activityUpdateDraft` | `{ activity_id, title?, description?, cover_image?, images?, end_time?, delivery_types?, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（`pickup_*` 仅草稿/可编辑态用，不进 `need_recheck`；发布后改自提点用下一行的 `activityUpdatePickup`） | `{ activity_id, need_recheck, status }` | — |
+| `activityUpdatePickup` **新增** | `{ activity_id, pickup_address?, pickup_time_desc?, pickup_contact_name?, pickup_contact_mobile? }`（仅 `delivery_types` 含 2；发布后仍可改，已发布则不许把 `pickup_address` 改空；只取显式传来的键）；文本送检**不阻塞**、写 `oplog`（`ACTIVITY_PICKUP_CHANGED`），已取消或已下架活动拒绝（D-077） | `{ activity_id }` | — |
 | `activitySubmitReview` | `{ activity_id }` | `{ status, review_mode, auto_passed, blocked? }` | 状态机自身（草稿→审核中只能成功一次） |
 | `activityWithdrawReview` | `{ activity_id }` | `{ status }` | 同上 |
 | `activityGetDetail` | `{ activity_id }` | 见下方「活动详情出参」 | — |
-| `activityMyList` | `filters: { status?, governance_status? }`；`orderBy` 可取 `create_date` / `end_time` / `publish_date` | `list[]`：`{ _id, title, cover_image, short_code, status, governance_status, review_result, review_reason, delivery_type, end_time, actual_end_time, publish_date, create_date, valid_total_qty }` | — |
+| `activityMyList` | `filters: { status?, governance_status? }`；`orderBy` 可取 `create_date` / `end_time` / `publish_date` | `list[]`：`{ _id, title, cover_image, short_code, status, governance_status, review_result, review_reason, delivery_types, start_time, end_time, not_started, actual_end_time, publish_date, create_date, valid_total_qty }` | — |
 | `activityClose` | `{ activity_id }` | `{ status, actual_end_time, retention_expire_date }` | 状态机自身 |
 | `activityCancel` | `{ activity_id, reason }`（进行中必填） | `{ status, retention_expire_date }` | 状态机自身 |
+| `activityDeleteDraft` | `{ activity_id }` | `{ activity_id, deleted, goods_deleted }` | — |
 | `activityGetShareEntry` | `{ activity_id }` | `{ activity_id, short_code, title, cover_image, end_time, asOf }` | — |
-| `activityCopySourceList` | — | `list[]`：`{ _id, title, cover_image, status, delivery_type, end_time, publish_date, create_date }` | — |
+| `activityCopySourceList` | — | `list[]`：`{ _id, title, cover_image, status, delivery_types, end_time, publish_date, create_date }` | — |
 | `activityCopy` | `{ source_activity_id, idempotent_key }` | `{ activity_id, copied_count, excluded: [{name, reason}], end_time, duplicated }` | `idempotent_key`（活动表唯一索引，D-081） |
-| `goodsCreate` | `{ activity_id, name, description?, cover_image, detail_images?, price, unit?, total_stock, per_user_limit, is_recommend?, lib_id? }` | `{ goods_id, lib_id, sort, need_recheck, activity_status }` | — |
-| `goodsUpdate` | `{ goods_id, name?, description?, cover_image?, detail_images?, unit?, price?, is_recommend?, confirm_price_change? }` | `{ goods_id, need_recheck, activity_status }` | — |
+| `goodsCreate` | `{ activity_id, name, description?, cover_image, detail_images?, price, unit?, total_stock, per_user_limit, is_recommend?, lib_id?, lib_category_id? }`（`lib_category_id` 不传 = 不指定；`''` = 未分组） | `{ goods_id, lib_id, sort, need_recheck, activity_status }` | — |
+| `goodsUpdate` | `{ goods_id, name?, description?, cover_image?, detail_images?, unit?, price?, is_recommend?, confirm_price_change?, lib_category_id? }` | `{ goods_id, need_recheck, activity_status }` | — |
 | `goodsDelete` | `{ goods_id }` | `{ deleted, need_recheck, activity_status }` | — |
 | `goodsSetOnSale` | `{ goods_id, on_sale }` | `{ goods_id, on_sale, changed }` | 幂等：同值重复提交返回 `changed:false` |
 | `goodsAdjustStock` | `{ goods_id, total_stock?, per_user_limit? }` | `{ goods_id, total_stock?, per_user_limit? }` | — |
@@ -433,10 +438,10 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 > 否则返回 `INVALID_PARAM` 且 `detail = { require_confirm: true, prev_price }`。
 
 **活动详情出参**（`activityGetDetail`）：
-所有访问者得 `{ _id, title, description, cover_image, images, short_code, delivery_type,
+所有访问者得 `{ _id, title, description, cover_image, images, short_code, delivery_types,
 pickup_address, pickup_time_desc, pickup_contact_name, pickup_contact_mobile, status,
-governance_status, end_time, actual_end_time, create_date, publish_date, valid_total_qty,
-goods[], is_leader, joinable }`（`pickup_*` 仅自提活动有值），其中 `goods[]` 每项为
+governance_status, start_time, end_time, not_started, actual_end_time, create_date, publish_date, valid_total_qty,
+goods[], is_leader, joinable }`（`pickup_*` 仅支持自提的活动有值；团长另得 `stat.by_delivery`，D-086），其中 `goods[]` 每项为
 `{ _id, name, description, cover_image, detail_images, price, unit, total_stock, sold_qty,
 per_user_limit, on_sale, governance_status, is_recommend, sort, remain_qty }`
 （`remain_qty` 在不限库存时为 `null`）。
@@ -452,17 +457,17 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 
 | 方法 | 入参 | 出参 `data` | 幂等键 |
 |---|---|---|---|
-| `orderPreview` | `{ activity_id, items: [{goods_id, qty}] }` | `{ activity_id, delivery_type, need_address, items[], unavailable[], total_qty, total_amount, asOf }` | — |
-| `orderCreate` | `{ activity_id, idempotent_key, items, address_id? \| consignee_name+consignee_mobile+consignee_address?, buyer_remark? }` | `{ order_id, order_no, total_qty, total_amount, duplicated }` | **`idempotent_key` 必传**，唯一索引拦截 |
-| `orderMyList` | `filters: { status?, activity_id? }` | `list[]` 按活动分组：`{ activity_id, title, cover_image, activity_status, governance_status, delivery_type, end_time, orders: [{ _id, order_no, status, total_qty, total_amount, create_date, items[] }] }` | — |
-| `orderGetDetail` | `{ order_id }` | `{ _id, order_no, status, activity{}, consignee_*, buyer_remark, total_qty, total_amount, cancel_*, void_*, create_date, items[], editable, asOf }` | — |
-| `orderUpdate` | `{ order_id, items?, address_id?, consignee_*?, buyer_remark? }` | `{ order_id, total_qty, total_amount }` | 无独立键；库存以带条件原子自增保证不超卖 |
+| `orderPreview` | `{ activity_id, items: [{goods_id, qty}], order_id? }`（改单时传 `order_id`） | `{ activity_id, delivery_types, pickup, items[], unavailable[], total_qty, total_amount, asOf }`（`pickup` 仅支持自提时有值） | — |
+| `orderCreate` | `{ activity_id, idempotent_key, items, delivery_type?, address_id? \| consignee_name+consignee_mobile+consignee_address?, buyer_remark? }`（活动两种方式都支持时 `delivery_type` 必传） | `{ order_id, order_no, total_qty, total_amount, duplicated }` | **`idempotent_key` 必传**，唯一索引拦截 |
+| `orderMyList` | `filters: { status?, activity_id? }` | `list[]` 按活动分组：`{ activity_id, title, cover_image, activity_status, governance_status, delivery_types, end_time, orders: [{ _id, order_no, status, delivery_type, total_qty, total_amount, create_date, items[] }] }` | — |
+| `orderGetDetail` | `{ order_id }` | `{ _id, order_no, status, delivery_type, activity{ …, delivery_types }, pickup, consignee_*, buyer_remark, total_qty, total_amount, cancel_*, void_*, create_date, items[], editable, asOf }` | — |
+| `orderUpdate` | `{ order_id, items?, delivery_type?, address_id?, consignee_*?, buyer_remark? }`（换 `delivery_type` 时按新方式重建收货快照） | `{ order_id, total_qty, total_amount }` | 无独立键；库存以带条件原子自增保证不超卖 |
 | `orderCancel` | `{ order_id, reason? }` | `{ order_id, status }` | 状态机自身（带条件更新，重复取消只返还一次） |
 | `orderVoid` | `{ order_id, reason }`（必填） | `{ order_id, status, export_versions_invalidated }` | 同上 |
-| `orderLeaderStat` | `{ activity_id }` | `{ activity_id, title, status, governance_status, valid_order_count, cancelled_order_count, voided_order_count, valid_total_qty, estimated_amount, goods_summary[], asOf }` | — |
-| `orderLeaderList` | `{ activity_id }`；`filters: { status? }`（默认只看有效） | `list[]`：`{ _id, order_no, status, consignee_name, consignee_mobile, consignee_address, buyer_remark, total_qty, total_amount, create_date, void_reason, items[] }` | — |
+| `orderLeaderStat` | `{ activity_id }` | `{ activity_id, title, status, governance_status, valid_order_count, cancelled_order_count, voided_order_count, valid_total_qty, estimated_amount, delivery_types, by_delivery{ home, self_pick }, goods_summary[], asOf }` | — |
+| `orderLeaderList` | `{ activity_id }`；`filters: { status? }`（默认只看有效） | `list[]`：`{ _id, order_no, status, delivery_type, consignee_name, consignee_mobile, consignee_address, buyer_remark, total_qty, total_amount, create_date, void_reason, items[] }` | — |
 
-> `orderLeaderList` 的 `consignee_address` 在自提活动中恒为空串（D-060）。
+> `orderLeaderList` 的 `consignee_address` 在自提订单中恒为空串（D-060、D-086）。`by_delivery` 的 `home` / `self_pick` 各含 `order_count`、`total_qty`，旧订单按所属活动当时的单一方式归类。
 > 金额字段一律是**分**，前端自行换算展示。
 
 ### 14.3 `grouporder-goods-co`（9）
@@ -471,6 +476,7 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 |---|---|---|---|
 | `libList` | `{ keyword?, category_id? }`（`category_id` 传 `"__none__"` 查未分组） | `list[]`：库记录字段 + `{ selectable, unselectable_reason }` | — |
 | `libUpdate` | `{ lib_id, name?, description?, cover_image?, detail_images?, unit?, last_price?, last_total_stock?, last_per_user_limit?, is_recommend?, category_id? }` | `{ lib_id, img_recheck }` | — |
+| `libCreate` **v0.14 新增** | `{ name, unit?, last_price?, last_total_stock?, last_per_user_limit?, description?, is_recommend?, cover_image, detail_images?, category_id? }` | `{ lib_id }` | 同名拒绝 `DUPLICATE`（D-088） |
 | `libDelete` | `{ lib_id }` | `{ lib_id, deleted, changed }` | 幂等 |
 | `libCopyToActivity` | `{ activity_id, lib_ids: string[] }` | `{ created[], failed[], need_recheck, activity_status }`；部分失败时 `errCode = PARTIAL_FAILED` 且 `detail` 为同一结构 | `(activity_id, lib_id, 60 秒窗口)`，同 `activityCopy` 的取舍 |
 | `categoryList` | — | `{ list: [{_id, name, sort, goods_count}], ungrouped_count, total, asOf }` | — |
@@ -509,7 +515,7 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 
 | 方法 | 入参 | 出参 `data` | 幂等键 |
 |---|---|---|---|
-| `listPreview` | `{ activity_id }` | `{ activity_id, title, short_code, delivery_type, has_address_column, actual_end_time, goods_summary[], detail[], valid_order_count, valid_total_qty, estimated_amount, versions[], asOf }` | — |
+| `listPreview` | `{ activity_id }` | `{ activity_id, title, short_code, delivery_types, has_address_column, actual_end_time, goods_summary[], detail[], valid_order_count, valid_total_qty, estimated_amount, versions[], asOf }` | — |
 | `listGenerate` | `{ activity_id }` | `{ activity_id, file_version, valid_order_count, valid_total_qty, row_count, asOf }` | — |
 | `listDownload` | `{ activity_id, file_version }` | `{ url, expires_in, asOf }` | — |
 
@@ -604,7 +610,16 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 
 | 日期 | 版本 | 变化 |
 |---|---|---|
-| 2026-09-30 | v0.10 | 按 **D-084**：`activityCreateDraft` 的 `cover_image` 改为可选、出参增加 `create_date`；`activityUpdateDraft` 草稿阶段允许封面为空；`activitySubmitReview` 统一校验活动封面、商品数、商品封面、自提地址；`activityUpdateDraft` / `goodsUpdate` 保存成功后按三表引用回收被替换的旧图。**已实现**（activity-co，client 与 admin 两份副本同步） |
+| 2026-10-12 | v0.19 | 新增 common `lifecycle.js`（`closeIfExpired` / `closeExpiredIn`）：`activityGetDetail`、`activityMyList`、`activityCopySourceList` 读时补截止，`grouporder-task-autoclose` 改用同一实现；`activityGetDetail` 出参增加 `asOf`。client 工程三个定时函数补齐触发器配置（与 admin 一致） |
+| 2026-10-12 | v0.18 | 按 **D-092**：`libCopyToActivity` 说明去掉「必须逐项确认」（接口不变，确认门为纯前端，已删除） |
+| 2026-10-12 | v0.17 | 按 **D-091**：`activityCopy` 改由发起页在团长保存 / 发布或首次操作商品时调用，M-31 不再直接调用；接口本身不变 |
+| 2026-10-12 | v0.16 | 按 **D-090** 新增 `activityDeleteDraft`。**已实现**，前端方法清单已重新生成 |
+| 2026-10-09 | v0.15 | 按 **D-089**：`goodsAdjustStock` 成功后同步库记录默认库存 / 限购（common 新增 `goodslib.syncStockToLib`）；明确 M-11 编辑时库存 / 限购走 `goodsAdjustStock`。商品库三个 `last_*` 字段的读写点以 GOODS_LIB_SPEC §2.4 为准。**已实现** |
+| 2026-10-09 | v0.14 | 按 **D-088**：goods-co 新增 `libCreate`（商品库直接新建）；activity-co `goodsCreate` / `goodsUpdate` 新增 `lib_category_id`，随沉淀写入库记录分类；common `goodslib` 新增 `assertOwnCategory`、`sinkToLib(…, opts)`。**已实现**（两份副本同步，前端方法清单已重新生成） |
+| 2026-10-08 | v0.13 | 按 **D-087**：新增错误码 `ACTIVITY_NOT_STARTED`；活动建草稿 / 编辑收 `start_time`，提交审核校验起止先后；详情与「我发起的」返回 `start_time`、`not_started`，`joinable` 计入起始时间；复制按源起止时长推算；ops-co 活动详情、审核详情、检索返回 `start_time`；common `state.startTimeOf / isNotStarted`，`assertActivityJoinable` 校验起始时间。**已实现**（两份副本同步） |
+| 2026-10-08 | v0.12 | 按 **D-086** 改为活动级 `delivery_types` + 订单级 `delivery_type`：活动类方法入出参改 `delivery_types`；`orderPreview` 返回可选方式并支持改单试算（`order_id`）；`orderCreate` / `orderUpdate` 收 `delivery_type`；订单详情、明细、我的订单按单返回方式；`orderLeaderStat` 与 M-20 统计新增 `by_delivery`；清单明细新增交付方式列；common 新增 `state.deliveryTypesOf / orderDeliveryTypeOf / normalizeDeliveryTypes / supportsDelivery` 与 `deliverystat.breakdown`，`snapshot.buildConsignee` 改收本单方式。**已实现**（client 与 admin 两份副本同步） |
+| 2026-10-08 | v0.11 | 按 **D-085**：`activityCopySourceList` 只列已截止活动，`activityCopy` 对非已截止源返回 `PRECONDITION_UNMET`（取代 v0.7 按 D-080 放开源范围的约定）。**已实现**（activity-co 两份副本同步） |
+| 2026-09-30 | v0.10 | 按 **D-084**：`activityCreateDraft` 的 `cover_image` 改为可选、出参增加 `create_date`；`activityUpdateDraft` 草稿阶段允许封面为空；`activitySubmitReview` 统一校验活动封面、商品数、商品封面、自提地址；`activityUpdateDraft` / `goodsUpdate` / `libUpdate` 保存成功后按三表引用回收被替换的旧图；回收与 `cover_image` 整体替换逻辑下沉到新增的 common `files.js`。**D-081 实现补齐（2026-10-08）**：`activityCreateDraft` / `activityCopy` 读取并写入 `idempotent_key`（8–64 位，缺失报 `INVALID_PARAM`），经 `idempotent.runOnce` 先查后建，命中返回首次结果并带 `duplicated: true`，命中他人记录报 `FORBIDDEN`；`activityCopy` 的 60 秒弱判重已删除。客户端：M-10 每次新建意图一个键（重置时换新），M-31 每选定一个源一个键。v0.9 所记「实现待跟进」中 activity-co 部分至此完成**已实现**（activity-co，client 与 admin 两份副本同步） |
 | 2026-09-29 | v0.9 | 按 **D-081** 给 `activityCreateDraft` / `activityCopy` 加必填 `idempotent_key`，废止 60 秒弱判重说明；按 **D-082** `reportConclude` 改为自动执行处置，出参 `pending_actions[]` → `executed_actions[]`。事实来源去掉 90-working 与 99-archive 文档。**实现待跟进**：activity-co 两个创建方法读 `idempotent_key` 并按唯一索引判重；ops-co `reportConclude` 调用治理公共逻辑，原 :627 返回错误方法名的问题随之消失 |
 | 2026-09-29 | v0.8 | §14 两处「待确认」补编号与去向：activityCopy 强幂等 → DATA_MODEL §12 A-05，reportConclude 自动联动 → A-06 |
 | 2026-09-29 | v0.7 | 新增错误码 `ACTIVITY_REVIEWING`（D-079，审核中内容冻结）并标注命中方法；`activityCopySourceList` / `activityCopy` 的源范围按 **D-080** 改为仅排除治理下架。**实现待跟进**：`review.canEditContent` 目前仍放行审核中，需改为拒绝；`activityCopy` 与 `activityCopySourceList` 需去掉 DRAFT/REVIEWING 过滤 |

@@ -14,8 +14,28 @@
 
 /* 颜色变量 */
 
+/* 群接龙主题色（取自 prototype/mockup-v3.html 效果图），页面样式统一引用这些变量 */
+$go-primary: #168a55;        // 主色：按钮、选中、链接
+$go-primary-dark: #0f6b41;   // 主色深：选中文字、强调
+$go-primary-soft: #e8f5ed;   // 主色浅底：选中底、成功提示底
+$go-ink: #17231d;            // 主文字
+$go-text: #4b5650;           // 次要文字（效果图未单列，取 ink 与 muted 之间）
+$go-muted: #6f7974;          // 辅助文字
+$go-placeholder: #b5bdb9;    // 占位、禁用文字
+$go-border: #ccd5d0;         // 控件描边
+$go-line: #e3e9e5;           // 分割线、卡片描边
+$go-canvas: #eef2ef;         // 页面底色
+$go-soft: #f5f7f5;           // 浅底：输入框、次要按钮
+$go-red: #c7463f;
+$go-red-soft: #fff0ef;
+$go-orange: #d96a28;
+$go-orange-soft: #fff1e7;
+$go-orange-text: #8b552b;    // 橙色提示条文字
+$go-tag-bg: #eef1ef;         // 灰标签底
+$go-tag-text: #758079;       // 灰标签文字
+
 /* 行为相关颜色 */
-$uni-color-primary: #007aff;
+$uni-color-primary: $go-primary;
 $uni-color-success: #4cd964;
 $uni-color-warning: #f0ad4e;
 $uni-color-error: #dd524d;
@@ -77,9 +97,9 @@ $uni-font-size-paragraph: 15px;
 
 /* uni-id-pages / uni-ui 组件依赖的 uni-scss 命名变量（官方模板未含，补齐后组件才能编译）
  * $uni-primary 为主题主色，后续可按 grouporder 品牌色统一修改 */
-$uni-primary: #007aff;
-$uni-success: #18bc37;
-$uni-warning: #f3a73f;
-$uni-error: #e43d33;
+$uni-primary: $go-primary;
+$uni-success: $go-primary;
+$uni-warning: $go-orange;
+$uni-error: $go-red;
 $uni-info: #8f939c;
 $uni-border-1: #f0f0f0;

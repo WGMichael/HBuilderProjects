@@ -1,0 +1,6 @@
+{
+    "name": "grouporder-dev-cleanup",
+    "extensions": {
+        "uni-cloud-jql": {}
+    }
+}

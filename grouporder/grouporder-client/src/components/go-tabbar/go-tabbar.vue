@@ -57,7 +57,7 @@ const go = (key: string) => {
   height: 100rpx;
   padding-bottom: env(safe-area-inset-bottom);
   background: #fff;
-  border-top: 1rpx solid #ececec;
+  border-top: 1rpx solid $go-line;
   display: flex;
   align-items: center;
   z-index: 999;
@@ -69,9 +69,9 @@ const go = (key: string) => {
     align-items: center;
     justify-content: center;
     position: relative;
-    color: #909399;
+    color: $go-muted;
     &--on {
-      color: #2979ff;
+      color: $go-primary;
     }
   }
   &__icon {
@@ -92,7 +92,7 @@ const go = (key: string) => {
     line-height: 28rpx;
     padding: 0 6rpx;
     border-radius: 14rpx;
-    background: #fa3534;
+    background: $go-red;
     color: #fff;
     font-size: 18rpx;
     text-align: center;
@@ -112,8 +112,8 @@ const go = (key: string) => {
     width: 96rpx;
     height: 96rpx;
     border-radius: 50%;
-    background: #2979ff;
-    box-shadow: 0 6rpx 20rpx rgba(41, 121, 255, 0.4);
+    background: $go-primary;
+    box-shadow: 0 6rpx 20rpx rgba($go-primary, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -125,7 +125,7 @@ const go = (key: string) => {
   }
   &__center-label {
     font-size: 22rpx;
-    color: #2979ff;
+    color: $go-primary;
     margin-bottom: 10rpx;
   }
 }

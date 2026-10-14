@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "99-archive/README.md",
+                "file": "00-product/DECISIONS.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "DECISIONS"
             }
           }
         ]
@@ -99,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "99-archive/README.md",
+                "file": "00-product/DECISIONS.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +118,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "99-archive/README.md",
+                "file": "00-product/DECISIONS.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +161,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "99-archive/README.md",
+                "file": "00-product/DECISIONS.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -190,35 +190,35 @@
   },
   "active": "41ed46c3930f0004",
   "lastOpenFiles": [
+    "00-product/OPS_ADMIN_REQUIREMENTS.md",
+    "00-product/PRD.md",
     "01-ux/UX_FLOW_SPEC.md",
-    "90-working/REQ_AUDIT_2026-09-30_TRACEABILITY.md",
-    "90-working/REQ_AUDIT_2026-09-30_FINDINGS.md",
-    "90-working/REQ_AUDIT_2026-09-30.md",
-    "90-working/README.md",
+    "01-ux/UX_STATE_MATRIX.md",
+    "99-archive/2026-09/ADMIN_BUILD_PLAN.md",
+    "99-archive/2026-09/ADMIN_FRONTEND_BRIEF.md",
+    "99-archive/2026-09/ADMIN_REUSE_MAP.md",
     "99-archive/README.md",
+    "README.md",
+    "00-product/DECISIONS.md",
     "03-release/OPEN_ISSUES.md",
-    "03-release/UX_REVIEW_GATE.md",
     "03-release/RELEASE_AUDIT_CHECKLIST.md",
+    "03-release/UX_REVIEW_GATE.md",
+    "90-working/REQ_AUDIT_2026-09-30.md",
+    "90-working/DOC_AUDIT_2026-10-10.md",
+    "90-working/REQ_AUDIT_2026-09-30_FINDINGS.md",
+    "90-working/REQ_AUDIT_2026-09-30_TRACEABILITY.md",
+    "90-working/README.md",
     "03-release/CATEGORY_VERIFICATION.md",
     "03-release/ADMIN_KNOWN_ISSUES.md",
     "03-release",
     "99-archive/2026-09/CLIENT_FRONTEND_BRIEF.md",
-    "99-archive/2026-09/ADMIN_FRONTEND_BRIEF.md",
-    "99-archive/2026-09/ADMIN_REUSE_MAP.md",
-    "99-archive/2026-09/ADMIN_BUILD_PLAN.md",
     "99-archive/2026-09",
     "99-archive",
-    "00-product/DECISIONS.md",
     "02-arch/SHARE_SPEC.md",
     "90-working/REVIEW_REPORT_2026-09-22.md",
     "90-working/ADMIN_BUILD_PLAN.md",
     "90-working/ADMIN_REUSE_MAP.md",
     "90-working/ADMIN_FRONTEND_BRIEF.md",
-    "90-working/ADMIN_KNOWN_ISSUES.md",
-    "90-working/CLIENT_FRONTEND_BRIEF.md",
-    "01-ux/UX_STATE_MATRIX.md",
-    "01-ux/UX_REVIEW_GATE.md",
-    "03-compliance/RELEASE_AUDIT_CHECKLIST.md",
     "app-ui/IMG_4871 2.PNG",
     "app-ui/IMG_4872.PNG",
     "90-working",

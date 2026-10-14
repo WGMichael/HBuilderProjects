@@ -252,6 +252,12 @@
       "root": "pages/system",
       "pages": [
         {
+          "path": "devzone/index",
+          "style": {
+            "navigationBarTitleText": "运营禁区"
+          }
+        },
+        {
           "path": "menu/list",
           "style": {
             "navigationBarTitleText": "菜单管理"

@@ -1,0 +1,4 @@
+{
+    "confirm": "WIPE-ALL",
+    "scopes": ["activity", "order", "goodslib", "governance"]
+}

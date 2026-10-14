@@ -7,7 +7,7 @@
        活动被下架但业务状态仍有效时统计数据继续保留，是否计入有效汇总
        以业务状态与订单状态为准。
     3. 取消订单数与作废订单数单独展示，不并入有效指标。
-    4. 商品层同样分「售卖状态（团长停售）」与「治理状态（平台下架）」两列。
+    4. 商品层下钻已移除，需要看活动内容走「活动详情」（A-03）。
     5. 任何层级都不列收货人姓名、电话、地址或备注——这是统计口径的结果
        （只统计到活动与商品粒度），不是脱敏；需要看订单明细走 A-04。
     6. 没有「设为推荐」「加权排序」入口——平台不参与商品推荐（D-065）；
@@ -18,9 +18,10 @@
     <view class="uni-header">
       <uni-stat-breadcrumb class="uni-stat-breadcrumb-on-phone" />
       <view class="uni-group">
-        <text class="header-uid">{{ leaderUid }}</text>
-        <button class="uni-button" size="mini" type="primary" :disabled="exporting" @click="exportStat">导出</button>
-        <button class="uni-button" size="mini" type="default" @click="goBack">返回总览</button>
+        <text class="header-uid" v-if="leaderUid">{{ leaderName || '—' }}</text>
+        <text class="header-uid" v-else>全部团长</text>
+        <button v-if="leaderUid" class="uni-button" size="mini" type="primary" :disabled="exporting" @click="exportStat">导出</button>
+        <button v-if="leaderUid" class="uni-button" size="mini" type="default" @click="goBack">返回总览</button>
       </view>
     </view>
 
@@ -34,7 +35,7 @@
 
       <!-- 团长汇总：四项白名单指标 -->
       <view class="uni-stat--x p-m">
-        <view class="section-title">团长汇总<text class="section-sub" v-if="asOf">数据截至 {{ asOf }}</text></view>
+        <view class="section-title">{{ leaderUid ? '团长汇总' : '全部团长汇总' }}<text class="section-sub" v-if="asOf">数据截至 {{ asOf }}</text></view>
         <view class="metric-row">
           <view class="metric">
             <text class="metric-value">{{ summary.published_count || 0 }}</text>
@@ -55,19 +56,17 @@
         </view>
         <view class="sub-metric-row">
           <text class="sub-metric">当前已下架活动：{{ summary.governed_count || 0 }}</text>
-          <text class="sub-metric" v-if="activityStat.cancelled_order_count !== undefined">
-            所选活动取消订单数：{{ activityStat.cancelled_order_count || 0 }} · 作废订单数：{{ activityStat.voided_order_count || 0 }}
-          </text>
         </view>
-        <view class="hint">取消订单数与作废订单数单独展示，不并入有效指标。预计金额是有效明细的价格快照乘数量之和，不代表已付款或平台担保成交。</view>
+        <view class="hint">预计金额是有效明细的价格快照乘数量之和，不代表已付款或平台担保成交。</view>
       </view>
 
       <!-- 活动层 -->
       <view class="uni-stat--x p-m">
         <view class="section-title">活动明细（{{ activities.length }}）</view>
-        <uni-table border stripe :loading="loading" emptyText="该团长没有已发布的活动">
+        <uni-table border stripe :loading="loading" emptyText="没有活动">
           <uni-tr>
             <uni-th align="center">活动</uni-th>
+            <uni-th v-if="!leaderUid" align="center">username</uni-th>
             <uni-th align="center">业务状态（团长）</uni-th>
             <uni-th align="center">治理状态（平台）</uni-th>
             <uni-th align="center">有效订单数</uni-th>
@@ -80,8 +79,8 @@
           <uni-tr v-for="item in activities" :key="item._id">
             <uni-td align="center">
               <view>{{ item.title }}</view>
-              <text class="sub">{{ item.short_code }}</text>
             </uni-td>
+            <uni-td v-if="!leaderUid" align="center">{{ item.username || '—' }}</uni-td>
             <uni-td align="center">
               <uni-tag :type="item.status === 2 ? 'success' : 'primary'" inverted size="small" :text="labelOf(ACTIVITY_STATUS, item.status)"></uni-tag>
               <text v-if="item.status === 4" class="sub">取消前历史快照</text>
@@ -99,33 +98,12 @@
             <uni-td align="center"><uni-dateformat :threshold="[0, 0]" :date="item.publish_date"></uni-dateformat></uni-td>
             <uni-td align="center">
               <view class="uni-group">
-                <button class="uni-button" size="mini" type="default" @click="loadGoods(item)">商品汇总</button>
+                <button class="uni-button" size="mini" type="primary" @click="goDetail(item)">活动详情</button>
               </view>
             </uni-td>
           </uni-tr>
         </uni-table>
         <view class="hint">已取消活动只能查看标记清晰的取消前历史快照，不计入当前有效汇总。活动被下架但业务状态仍有效时统计数据继续保留，是否计入有效汇总以业务状态与订单状态为准。</view>
-      </view>
-
-      <!-- 商品层 -->
-      <view class="uni-stat--x p-m" v-if="currentActivity">
-        <view class="section-title">商品汇总<text class="section-sub">{{ currentActivity.title }}</text></view>
-        <uni-table border stripe :loading="goodsLoading" emptyText="该活动下没有商品">
-          <uni-tr>
-            <uni-th align="center" width="50">#</uni-th>
-            <uni-th align="center">商品</uni-th>
-            <uni-th align="center">已购买份数</uni-th>
-            <uni-th align="center">预计金额</uni-th>
-
-          </uni-tr>
-          <uni-tr v-for="(item, index) in goods" :key="item.goods_id || index">
-            <uni-td align="center">{{ index + 1 }}</uni-td>
-            <uni-td align="center">{{ item.goods_name || '—' }}</uni-td>
-            <uni-td align="center">{{ item.sold_qty || 0 }}</uni-td>
-            <uni-td align="center">￥{{ fen2yuan(item.estimated_amount) }}</uni-td>
-          </uni-tr>
-        </uni-table>
-        <view class="hint">商品汇总只展示名称、已购买份数与预计金额，不展示任何收货资料。后台没有「设为推荐」「加权排序」入口——平台不参与商品推荐。</view>
       </view>
     </view>
 
@@ -142,22 +120,20 @@
   import { ACTIVITY_STATUS, GOVERNANCE_STATUS, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
 
   const leaderUid = ref('');
+  const leaderName = ref('');
   const summary = ref({});
   const activities = ref([]);
-  const goods = ref([]);
-  const activityStat = ref({});
-  const currentActivity = ref(null);
   const asOf = ref('');
   const loading = ref(false);
-  const goodsLoading = ref(false);
   const exporting = ref(false);
 
   const load = async () => {
-    if (!leaderUid.value) return;
     loading.value = true;
     try {
-      // 只传 leader_uid：云对象返回该团长的活动列表（list/total 结构）
-      const data = (await callOps('statActivityDrill', { leader_uid: leaderUid.value, pageSize: 100 })) || {};
+      // 带 leader_uid 返回该团长的活动列表；菜单直达不带 uid 时返回全部团长的活动（list/total 结构）
+      const params = { pageSize: 100 };
+      if (leaderUid.value) params.leader_uid = leaderUid.value;
+      const data = (await callOps('statActivityDrill', params)) || {};
       activities.value = data.list || [];
       asOf.value = data.asOf || '';
       // 团长级汇总由活动行累加，口径与云对象一致（只计有效订单）
@@ -175,20 +151,6 @@
       // 无 ops-stat-view 权限时由 callOps 跳 A-02 结果页
     } finally {
       loading.value = false;
-    }
-  };
-
-  const loadGoods = async (activity) => {
-    currentActivity.value = activity;
-    goodsLoading.value = true;
-    try {
-      const data = (await callOps('statActivityDrill', { activity_id: activity._id })) || {};
-      goods.value = data.goods_summary || [];
-      activityStat.value = data;
-    } catch (err) {
-      goods.value = [];
-    } finally {
-      goodsLoading.value = false;
     }
   };
 
@@ -216,8 +178,19 @@
 
   const goBack = () => uni.navigateBack();
 
+  /** 跳 A-03 活动详情；详情页自身按 ops 权限校验 */
+  const goDetail = (activity) => {
+    uni.navigateTo({ url: '/pages/grouporder/activity/detail?id=' + activity._id });
+  };
+
   onLoad((query = {}) => {
     leaderUid.value = query.uid || '';
+    // H5 端 query 已解码，再解码遇到 % 会抛错，失败时用原值
+    try {
+      leaderName.value = decodeURIComponent(query.username || '');
+    } catch (e) {
+      leaderName.value = query.username || '';
+    }
   });
 
   onReady(() => load());

@@ -4,6 +4,7 @@
   职责：名称、价格、单位、总库存、每人限购、图片和说明；0 值表示对应上限不受限。
   D-044：total_stock=0 表示不设上限（不是售罄）；per_user_limit=0 表示不限购。
   改价可能触发服务端二次确认（confirm_price_change），命中时提示后重发。
+  编辑时库存与限购不走 goodsUpdate（服务端拒收），改动了才另调 goodsAdjustStock，与 M-22 商品管理同一口径。
   图片先选后传（common/grouporder/upload.js）：点「保存」时才上传；封面必填、详情图选填最多 9 张（D-041）。
 -->
 <template>
@@ -54,9 +55,17 @@
     </view>
     <view class="field field--row">
       <text class="label">推荐商品</text>
-      <switch :checked="form.is_recommend === 1" @change="onRecommend" color="#2979ff" />
+      <switch :checked="form.is_recommend === 1" @change="onRecommend" color="#168a55" />
     </view>
     <view class="tip tip--block">推荐只表现为角标与高亮，不改变排序位置（D-065）。</view>
+    <!-- 商品库分类（D-088）：保存时随沉淀写入商品库，活动商品本身不带分类，参与者看不到 -->
+    <view class="field field--row">
+      <text class="label">商品库分类</text>
+      <picker :range="libCatNames" :value="libCatIndex" @change="onLibCat">
+        <text class="picker-v">{{ libCatNames[libCatIndex] }} ›</text>
+      </picker>
+    </view>
+    <view class="tip tip--block">只用于你在商品库里归类查找，参与者看不到。</view>
 
     <view class="footer">
       <button class="save" type="primary" :loading="saving" :disabled="!valid" @click="save">保存</button>
@@ -92,6 +101,30 @@ const valid = computed(() => !!form.value.name.trim() && priceYuan.value !== '' 
 
 const onRecommend = (e: any) => { form.value.is_recommend = e.detail.value ? 1 : 0; };
 
+// —— 商品库分类（D-088）——
+// 第一项是「不指定」：新商品归入未分组、已有同名库商品保持原分类，避免默认值把已有归类冲掉
+const libCats = ref<any[]>([]);
+const libCatIndex = ref(0);
+const libCatOptions = computed(() => [
+  { id: undefined, name: goodsId.value ? '保持商品库原分类' : '未分组（默认）' },
+  ...(goodsId.value ? [{ id: '', name: '未分组' }] : []),
+  ...libCats.value.map((c: any) => ({ id: c._id, name: c.name })),
+]);
+const libCatNames = computed(() => libCatOptions.value.map((o) => o.name));
+const onLibCat = (e: any) => { libCatIndex.value = Number(e.detail.value); };
+const loadLibCats = async () => {
+  try { libCats.value = ((await api.goodsLib.categoryList()) || {}).list || []; } catch (e) { libCats.value = []; }
+};
+/** 选了具体分类才带 lib_category_id；「不指定」不带 */
+const libCatParam = () => {
+  const o = libCatOptions.value[libCatIndex.value];
+  return o && o.id !== undefined ? { lib_category_id: o.id } : {};
+};
+
+// 编辑前的库存与限购：保存时比对，有变化才调 goodsAdjustStock
+let origStock = 0;
+let origLimit = 0;
+
 const load = async () => {
   if (!activityId.value) return;
   // 新增也要读一次活动：图片目录按活动创建日期；编辑时顺带取该商品的当前值
@@ -106,6 +139,8 @@ const load = async () => {
     cover.value = g.cover_image ? [toItem(g.cover_image)] : [];
     details.value = (g.detail_images || []).map(toItem);
     priceYuan.value = fen2yuan(g.price);
+    origStock = g.total_stock || 0;
+    origLimit = g.per_user_limit || 0;
   }
 };
 
@@ -155,6 +190,7 @@ const save = async () => {
           is_recommend: form.value.is_recommend,
           cover_image: cover.value[0].file,
           detail_images: details.value.map((it) => it.file),
+          ...libCatParam(),
         })
       );
     }
@@ -175,24 +211,34 @@ const submitUpdate = async (price: number, confirmPriceChange: boolean) => {
         name: form.value.name.trim(),
         price,
         unit: form.value.unit,
-        total_stock: form.value.total_stock || 0,
-        per_user_limit: form.value.per_user_limit || 0,
+        // total_stock / per_user_limit 不在这里传：goodsUpdate 拒收，统一走 goodsAdjustStock
         description: form.value.description.trim(),
         is_recommend: form.value.is_recommend,
         cover_image: cover.value[0].file,
         detail_images: details.value.map((it) => it.file),
+        ...libCatParam(),
         confirm_price_change: confirmPriceChange,
       },
       { silent: true }
     );
   } catch (err: any) {
-    // 已产生订单的商品改价需二次确认
-    if (err && err.errCode === 'PRICE_CHANGE_NEED_CONFIRM' && !confirmPriceChange) {
+    // 已产生订单的商品改价需二次确认：服务端以 INVALID_PARAM + detail.require_confirm 表示
+    if (err && err.detail && err.detail.require_confirm && !confirmPriceChange) {
       const r = await uni.showModal({ title: '确认改价', content: err.errMsg || '该商品已产生订单，改价将影响后续下单，确认继续？' });
       if (r.confirm) return submitUpdate(price, true);
       throw new Error('cancelled');
     }
+    // silent 调用不会弹默认提示，其余错误在这里如实告知
+    uni.showToast({ title: (err && err.errMsg) || '保存失败，请重试', icon: 'none' });
     throw err;
+  }
+  // 库存 / 限购有改动才调整（D-044：0 表示不限）
+  const stock = form.value.total_stock || 0;
+  const limit = form.value.per_user_limit || 0;
+  if (stock !== origStock || limit !== origLimit) {
+    await guarded(api.activity.goodsAdjustStock({ goods_id: goodsId.value, total_stock: stock, per_user_limit: limit }));
+    origStock = stock;
+    origLimit = limit;
   }
 };
 
@@ -203,25 +249,27 @@ onLoad((q: any = {}) => {
   const cur: any = pages[pages.length - 1];
   if (cur && cur.getOpenerEventChannel) eventChannel = cur.getOpenerEventChannel();
   load();
+  loadLibCats();
 });
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; padding: 20rpx; padding-bottom: 160rpx; background: #f4f5f7; }
+.page { min-height: 100vh; padding: 20rpx; padding-bottom: 160rpx; background: $go-canvas; }
 .field { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .field--row { display: flex; align-items: center; justify-content: space-between; }
-.label { font-size: 26rpx; color: #606266; }
-.req { color: #fa3534; }
-.input { margin-top: 12rpx; font-size: 30rpx; color: #303133; }
+.label { font-size: 26rpx; color: $go-text; }
+.req { color: $go-red; }
+.input { margin-top: 12rpx; font-size: 30rpx; color: $go-ink; }
 .label--sub { display: block; margin-top: 24rpx; }
 .imgs { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
 .img { position: relative; width: 160rpx; height: 160rpx; }
-.img-pic { width: 160rpx; height: 160rpx; border-radius: 8rpx; background: #f5f5f5; }
+.img-pic { width: 160rpx; height: 160rpx; border-radius: 8rpx; background: $go-soft; }
 .img-del { position: absolute; top: -12rpx; right: -12rpx; width: 36rpx; height: 36rpx; line-height: 34rpx; text-align: center; font-size: 28rpx; color: #fff; background: rgba(0, 0, 0, 0.55); border-radius: 50%; }
-.img-add { width: 160rpx; height: 160rpx; line-height: 160rpx; text-align: center; font-size: 56rpx; color: #c0c4cc; border: 1rpx dashed #dcdfe6; border-radius: 8rpx; }
+.img-add { width: 160rpx; height: 160rpx; line-height: 160rpx; text-align: center; font-size: 56rpx; color: $go-placeholder; border: 1rpx dashed $go-border; border-radius: 8rpx; }
 .textarea { margin-top: 12rpx; width: 100%; height: 140rpx; font-size: 28rpx; }
-.tip { display: block; font-size: 22rpx; color: #909399; margin-top: 8rpx; }
+.tip { display: block; font-size: 22rpx; color: $go-muted; margin-top: 8rpx; }
 .tip--block { padding: 0 24rpx; }
-.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #ececec; }
+.picker-v { font-size: 28rpx; color: $go-ink; }
+.footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $go-line; }
 .save { margin: 0; font-size: 30rpx; }
 </style>

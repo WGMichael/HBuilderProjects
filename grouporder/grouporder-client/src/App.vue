@@ -18,4 +18,30 @@ onHide(() => {
   console.log("App Hide");
 });
 </script>
-<style></style>
+<style>
+/* 原生主按钮统一为主题绿（H5 默认蓝、微信默认微信绿），色值同 uni.scss 的 $go-primary */
+button[type="primary"],
+uni-button[type="primary"] {
+  background-color: #168a55;
+  color: #ffffff;
+}
+button[type="primary"][disabled],
+uni-button[type="primary"][disabled] {
+  background-color: #168a55;
+  color: #ffffff;
+  opacity: 0.5;
+}
+
+/* uni-id-pages（uni_modules 内，不直接改插件文件）的蓝色在这里覆盖为主题色。
+ * 插件样式带 scoped 属性选择器或行内样式，只能用 !important 压过。 */
+.link,
+.agreement {
+  color: #0f6b41 !important; /* 协议、忘记密码等文字链接，原 #04498c */
+}
+.uni-easyinput__content.is-focused {
+  border-color: #168a55 !important; /* 输入框聚焦描边，原为组件默认 #2979ff 行内样式 */
+}
+.uni-easyinput__content.is-focused .content-clear-icon {
+  color: #168a55 !important;
+}
+</style>

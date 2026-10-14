@@ -8,7 +8,7 @@
  * 不在本对象暴露为方法——前者被 activity-co 调用、后者被 ops-co 调用。
  */
 const {
-  auth, errors, paging, state, review, contentcheck, bindMethods
+  auth, errors, paging, state, review, contentcheck, files, bindMethods
 } = require('grouporder-common')
 
 const { throwBiz, assertParam, ok } = errors
@@ -191,7 +191,8 @@ module.exports = {
     if (imgChanged) patch.img_check_status = contentcheck.CHECK_STATUS.PENDING
     patch.update_date = ctx.now
 
-    await this.db.collection('grouporder-goods-lib').doc(lib._id).update(patch)
+    // cover_image 整体替换（见 common/files.toDbPatch）；patch 本身保持原始值，下面送检与回收还要用
+    await this.db.collection('grouporder-goods-lib').doc(lib._id).update(files.toDbPatch(ctx, patch))
 
     if (imgChanged) {
       const merged = Object.assign({}, lib, patch)
@@ -201,9 +202,75 @@ module.exports = {
         contentVersion: 1,
         fileIds: [merged.cover_image, ...(merged.detail_images || [])].map(f => (f && f.fileID) || f)
       })
+      // 换下来的旧图，三表都无人引用时从云存储删除（D-084）
+      await files.releaseFiles(ctx,
+        files.fileIdsOf(lib.cover_image, lib.detail_images),
+        files.fileIdsOf(merged.cover_image, merged.detail_images)
+      )
     }
 
     return ok({ lib_id: lib._id, img_recheck: imgChanged })
+  },
+
+  /**
+   * 在商品库直接新建商品（M-29，D-088）
+   * 补充 D-063「库记录只由活动商品沉淀」：团长可以先建库存模板，再复用到活动。
+   * 口径与沉淀一致：同一用户未删除的记录不得同名（同名是沉淀判重依据）；封面必填、详情图 ≤ 9（D-041）；
+   * use_count = 0，last_used_time = now（新建排在列表最前）；有图即送检（D-058）。
+   */
+  async libCreate (params = {}) {
+    const ctx = this.ctx
+    const uid = auth.requireLogin(ctx)
+
+    const name = String(params.name || '').trim()
+    assertParam(name.length >= 1 && name.length <= 50, '商品名称为 1–50 字')
+    const description = String(params.description || '')
+    assertParam(description.length <= 500, '商品说明不超过 500 字')
+    assertParam(params.cover_image, '商品必须包含封面图')
+    assertParam((params.detail_images || []).length <= 9, '详情图最多 9 张')
+    const unit = String(params.unit || '份').trim()
+    assertParam(unit, '商品单位不能为空')
+    const lastPrice = params.last_price === undefined ? 0 : params.last_price
+    assertParam(Number.isInteger(lastPrice) && lastPrice >= 0, '单价必须是不小于 0 的整数（单位：分）')
+    const lastStock = params.last_total_stock === undefined ? 0 : params.last_total_stock
+    assertParam(Number.isInteger(lastStock) && lastStock >= 0, '总库存必须是不小于 0 的整数')
+    const lastLimit = params.last_per_user_limit === undefined ? 0 : params.last_per_user_limit
+    assertParam(Number.isInteger(lastLimit) && lastLimit >= 0, '每人限购必须是不小于 0 的整数')
+    if (params.category_id) await this._getOwnCategory(uid, params.category_id)
+
+    const coll = this.db.collection('grouporder-goods-lib')
+    const dup = await coll.where({ user_id: uid, name, deleted: 0 }).limit(1).get()
+    if (dup.data && dup.data.length) throwBiz('DUPLICATE', '商品库中已存在同名商品，请换一个名称')
+
+    const doc = {
+      user_id: uid,
+      name,
+      description,
+      cover_image: params.cover_image,
+      detail_images: params.detail_images || [],
+      unit,
+      last_price: lastPrice,
+      last_total_stock: lastStock,
+      last_per_user_limit: lastLimit,
+      last_used_time: ctx.now,
+      use_count: 0,
+      is_recommend: params.is_recommend === 1 ? 1 : 0,
+      category_id: params.category_id || '',
+      img_check_status: contentcheck.CHECK_STATUS.PENDING,
+      governance_blocked: 0,
+      deleted: 0,
+      create_date: ctx.now,
+      update_date: ctx.now
+    }
+    const res = await coll.add(doc)
+
+    await contentcheck.submitImages(ctx, {
+      objectType: contentcheck.OBJECT_TYPE.GOODS,
+      objectId: res.id,
+      contentVersion: 1,
+      fileIds: files.fileIdsOf(doc.cover_image, doc.detail_images)
+    })
+    return ok({ lib_id: res.id })
   },
 
   /**

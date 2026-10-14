@@ -740,5 +740,17 @@
     "enable": false,
     "create_date": 1667387078947,
     "_id": "uni-stat-pay-order-list"
+  },
+  {
+    "menu_id": "system_devzone",
+    "parent_id": "system_management",
+    "name": "运营禁区",
+    "icon": "",
+    "url": "/pages/system/devzone/index",
+    "sort": 1060,
+    "permission": [
+      "ops-sys-config"
+    ],
+    "enable": true
   }
 ]
