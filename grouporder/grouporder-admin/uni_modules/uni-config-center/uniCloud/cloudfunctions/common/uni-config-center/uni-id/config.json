@@ -23,8 +23,8 @@
     }
   },
   "web": {
-    "tokenExpiresIn": 7200,
-    "tokenExpiresThreshold": 3600,
+    "tokenExpiresIn": 604800,
+    "tokenExpiresThreshold": 86400,
     "oauth": {
       "weixin-h5": {
         "appid": "微信公众号登录所用的appid、appsecret需要在对应的小程序管理控制台获取",

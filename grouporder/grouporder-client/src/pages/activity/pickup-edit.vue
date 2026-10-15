@@ -7,6 +7,7 @@
   仅支持自提的活动（delivery_types 含 2，D-086）可进入，由 M-20 控制入口。
 -->
 <template>
+  <go-result v-if="loadFailed" type="unknown" detail="页面加载失败，请检查网络后重试" @retry="load" />
   <view class="page" v-if="loaded">
     <view class="tip">改完立刻对所有参与者生效，不需要重新审核。已下单的人看到的也是新内容。</view>
 
@@ -37,7 +38,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import GoResult from '@/components/go-result/go-result.vue';
 import { onLoad } from '@dcloudio/uni-app';
+// @ts-ignore
+import { safeBack, backTo } from '@/common/grouporder/nav.js';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 
@@ -46,7 +50,7 @@ const loaded = ref(false);
 const saving = ref(false);
 const form = ref<any>({ pickup_address: '', pickup_time_desc: '', pickup_contact_name: '', pickup_contact_mobile: '' });
 
-const load = async () => {
+const loadInner = async () => {
   if (!activityId.value) return;
   const data = (await guarded(api.activity.activityGetDetail({ activity_id: activityId.value }))) || {};
   form.value.pickup_address = data.pickup_address || '';
@@ -54,6 +58,17 @@ const load = async () => {
   form.value.pickup_contact_name = data.pickup_contact_name || '';
   form.value.pickup_contact_mobile = data.pickup_contact_mobile || '';
   loaded.value = true;
+};
+
+// 加载失败（断网、非对象级错误）时给出重试，不白屏；对象级错误由 guarded 跳 M-26
+const loadFailed = ref(false);
+const load = async () => {
+  loadFailed.value = false;
+  try {
+    await loadInner();
+  } catch (e) {
+    if (!loaded.value) loadFailed.value = true;
+  }
 };
 
 const save = async () => {
@@ -68,7 +83,7 @@ const save = async () => {
       pickup_contact_mobile: form.value.pickup_contact_mobile.trim(),
     }));
     uni.showToast({ title: '已保存', icon: 'success' });
-    setTimeout(() => uni.navigateBack(), 600);
+    setTimeout(() => safeBack('/pages/activity/manage?id=' + activityId.value), 600);
   } catch (e) {
     /* 统一提示 */
   } finally {

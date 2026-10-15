@@ -89,7 +89,6 @@
 - [严重] DATA_MODEL:358 `todo_key` 示例 `report_closed` 应为 `report_result`；CLOUD_API:493/:500 `todoList.list[].type` 未枚举（代码 10 个）
 - [中] DATA_MODEL:242 / CLOUD_API:462 自提 `consignee_address` 恒为空串，但 order schema 该字段 `minLength: 1`
 - [中] CLOUD_API:197/:458 `export_versions_invalidated` 恒为 true 且为派生状态
-- [中] CLOUD_API:454 `orderMyList`「按活动分组」实际按订单分页再页内分组，同一活动可跨页拆分；`items[]`、`activity{}` 字段未给
 - [中] CLOUD_API:207/:469 `libList` 图片拦截同样不可选未写
 - [中] CLOUD_API:546 `reportRecheck` 一个方法两套签名未写分流条件
 - [中] CLOUD_API §11 多个 ops 方法 `list[]` 无字段定义（:542/:547/:550/:555-571）
@@ -124,11 +123,20 @@
 
 ### 3.1 小程序端（grouporder-client）
 
+- [待产品确认] **留存匿名化的「账号关联」**：D-035 / DATA_MODEL §9 只写「匿名化账号关联」，未规定字段与占位值；订单与明细的 `user_id` 为必填且参与限购与「我的订单」查询，`grouporder-task-retention` 目前只清收货三要素、不动 `user_id`。需确定处理口径
+- [待配置] 内容检测回调密钥：接入真实检测服务时，在 client 与 admin 的 uni-config-center 新建 `grouporder-check-callback/config.json`（`{ "secret": "..." }`）；未配置时所有回调被拒（当前 `IMAGE_CHECK_ASYNC=false`，本就无回调）。`context.SOURCE` 在支付宝云的取值与 URL 化请求头大小写需实测
+- [待提供] 用户服务协议、隐私政策正式链接：`uni_modules/uni-id-pages/config.js` 的 `agreements.serviceUrl / privacyUrl` 仍为占位 `https://xxx`，上线前须替换为真实页面
+- [待小程序账号] 以下项依赖微信小程序 appid，申请下来后处理：`pages.json` 的 `tabBar.custom: true` 在小程序端需 `custom-tab-bar` 目录或改为非 custom；「设置用户名密码」（`pages/account/bind.vue` → set-pwd 依赖短信验证码）需改为不依赖手机号的设置方式
+- [待实测] 订单编辑锁用到 `db.command.exists(false)`：需在支付宝云实测老订单（无 `editing_until` 字段）能正常改单、取消、作废
+
+- [低·升级提醒] uni-id-pages 另两处按项目需要修改（标注「grouporder 修改」）：`config.js` 的 `weixin` 登录只在 MP-WEIXIN 启用（H5 未配公众号 appid）；`pages/login/login-withpwd.vue` 的「找回密码」改为说明弹窗（找回页依赖短信，本项目不采集手机号，D-029）。升级插件后须重新合入
+
+- [低·升级提醒] `src/uni_modules/uni-id-pages/common/store.js` 的 `loginBack` 已按 D-096 修改（标注「grouporder 修改 · D-096」）：登录 / 注册成功后退掉栈顶 uni-id 页面回到原页面，而不是 reLaunch 首页。**升级 uni-id-pages 插件会覆盖此改动，升级后须重新合入**
+
 **阻断级**
 
 - **已解决（2026-10-08）** [严重] `pages/hall/faqi.vue:23` `onShow` 无条件 `reset()`，从商品编辑 / 复用历史商品 / 商品库返回时表单、商品列表、草稿 id 全部清空，草稿留在服务端。违反 CLIENT_BRIEF §4「草稿表单状态不得丢失」
 - [严重] 全工程无 `onShareAppMessage`；`pages/activity/publish.vue:35` `open-type="share"` 会分享团长自己的发布页；`activityGetShareEntry` 与 `short_code` 从未调用；`pages/activity/detail.vue:128` 把 `short_code` 当 `activity_id` 传，必然 NOT_FOUND。D-059 下分享是唯一传播入口
-- [严重] `pages/hall/jielong.vue:140` 把服务端已分组的 `orderMyList` 结果再当订单分组一次，订单号 / 份数 / 金额全空，点订单 id 为 undefined
 - **已解决（2026-10-08）** [严重] `pages/order/detail.vue:13` `order.title || order.activity` 渲染出 `[object Object]`；`:61` `order.activity_id` 不存在，「修改订单」跳转参数为空
 - [严重] `src/manifest.json:53` `mp-weixin.appid` 为空；无 `uniCloud` 字段；client 工程 `cloudfunctions/` 为空目录，全部云对象在 admin 工程，两工程是否绑同一空间仓库内无证据
 
@@ -200,6 +208,7 @@
 
 ### 3.3 运营后台（grouporder-admin）—— 仅做覆盖抽查，另含 D-078 落地待办
 
+
 - 16 个业务页面已存在，统一走 `common/grouporder/ops-co.js` 的 `callOps` / `callOpsList`，鉴权错误引到 A-02 结果页，封装层设计与 client 端对称
 - 页面直接点名调用的 ops 方法 14 个；列表页通过 `callOpsList` 传方法名，本次未逐页验证 24 个列表/治理方法是否全部接线，建议单独做一轮
 - [中] D-078 落地：`uniCloud-alipay/database/uni-id-roles.init_data.json` 删除 `ops-content` / `ops-privacy` / `ops-auditor` 三条，只保留 `admin` 与 `ops-super`
@@ -210,7 +219,7 @@
 
 ## 3.4 禁区 / 开发工具 —— 上线前必须移除
 
-- **[严重] 运营禁区·测试数据清理（2026-10-12 产品负责人授权加入，上线前必须移除）**：为开发/测试期重置数据加了一套物理清库能力，违反 OPS §2.2「运营不得代替团长经营」与 D-035 留存，属**临时禁区**，正式上线前需整套删除：① 云对象方法 `grouporder-ops-co.devWipe` / `_wipeCollection` 与常量 `DEV_WIPE_GROUPS`；② 前端 `pages/system/devzone/index.vue`、`pages.json` 的 `pages/system/devzone/index` 路由、`js_sdk/grouporder-api/index.js` 的 `ops.devWipe`；③ 菜单 `opendb-admin-menus.init_data.json` 的 `system_devzone`（权限点 `ops-sys-config`）；④ 独立开发函数 `cloudfunctions/grouporder-dev-cleanup/`（无鉴权，仅 HBuilderX 本地用，严禁上生产）。现有防护：devWipe 要求 `ops-sys-config` 鉴权 + 逐字输入 `WIPE` + 二次确认 + 全程审计（`action_type=dev_data_wipe`，该取值未登记 DATA_MODEL §10.8，随能力一并移除故不补）。运营使用由产品负责人培训把关
+- **[严重] 运营禁区·测试数据清理（2026-10-12 产品负责人授权加入，上线前必须移除）**：为开发/测试期重置数据加了一套物理清库能力，违反 OPS §2.2「运营不得代替团长经营」与 D-035 留存，属**临时禁区**，正式上线前需整套删除：① 云对象方法 `grouporder-ops-co.devWipe` / `_wipeCollection` 与常量 `DEV_WIPE_GROUPS`；② 前端 `pages/system/devzone/index.vue`、`pages.json` 的 `pages/system/devzone/index` 路由、`js_sdk/grouporder-api/index.js` 的 `ops.devWipe`；③ 菜单 `opendb-admin-menus.init_data.json` 的 `system_devzone`（权限点 `ops-sys-config`）；④ 独立开发函数 `cloudfunctions/grouporder-dev-cleanup/`（产品负责人 2026-10-15 决定保留至正式上线后；已加防护：拒绝客户端调用 `context.SOURCE === 'client'`、必须传清库密钥 `secret`（代码常量 `SECRET`）、密钥错误延迟 3 秒返回）。现有防护：devWipe 要求 `ops-sys-config` 鉴权 + 逐字输入 `WIPE` + 二次确认 + 全程审计（`action_type=dev_data_wipe`，该取值未登记 DATA_MODEL §10.8，随能力一并移除故不补）。运营使用由产品负责人培训把关
 
 ## 4. 建议处理顺序
 

@@ -54,5 +54,21 @@
       ],
       "MgoIsUnique": false
     }
+  },
+  {
+    "IndexName": "reporter_create",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "reporter_uid",
+          "Direction": "1"
+        },
+        {
+          "Name": "create_date",
+          "Direction": "-1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
   }
 ]

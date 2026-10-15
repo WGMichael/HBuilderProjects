@@ -48,7 +48,12 @@ const pick = (a: any) => {
   uni.navigateBack();
 };
 const edit = (a: any) => uni.navigateTo({ url: '/pages/address/edit?id=' + a._id, events: { saved: () => load() } });
-const add = () => uni.navigateTo({ url: '/pages/address/edit', events: { saved: () => load() } });
+// 选择模式下新增的地址：回到本页时直接选中并返回确认订单页，不用再点一次（D-096）
+let pendingPick: any = null;
+const add = () => uni.navigateTo({
+  url: '/pages/address/edit',
+  events: { saved: (a: any) => { if (selectMode.value && a && a._id) pendingPick = a; } },
+});
 
 onLoad((q: any = {}) => {
   selectMode.value = q.select === '1';
@@ -56,7 +61,16 @@ onLoad((q: any = {}) => {
   const cur: any = pages[pages.length - 1];
   if (cur && cur.getOpenerEventChannel) eventChannel = cur.getOpenerEventChannel();
 });
-onShow(() => load());
+onShow(() => {
+  if (pendingPick) {
+    const a = pendingPick;
+    pendingPick = null;
+    if (eventChannel && eventChannel.emit) eventChannel.emit('picked', a);
+    uni.navigateBack();
+    return;
+  }
+  load();
+});
 </script>
 
 <style lang="scss" scoped>

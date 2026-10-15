@@ -32,7 +32,9 @@ function toDbPatch (ctx, patch) {
  * 回收被替换掉的云存储文件
  *
  * 同一 fileID 可能同时被活动、活动商品、商品库引用（复用历史接龙 / 商品库复制的都是引用，
- * GOODS_LIB_SPEC §6），所以只删三张表里都已无人引用的文件；软删的库记录也算引用。
+ * GOODS_LIB_SPEC §6），所以只删各表里都已无人引用的文件；软删的库记录也算引用。
+ * 举报快照与内容检测快照里的图片是治理证据（OPS §5.1、§5.2），同样算引用——
+ * 团长换图不能把举报 / 送检时的证据图删掉。
  * 必须在新值写库成功之后调用。回收是附属动作，失败只记日志，不影响主操作。
  *
  * @param {object} ctx     auth.createContext 返回的上下文
@@ -45,18 +47,25 @@ async function releaseFiles (ctx, prevIds, nextIds) {
   if (!candidates.length) return
   try {
     const cmd = ctx.db.command
+    // [集合, 图片字段路径...]：字段值可能是 file 对象 / file 对象数组 / fileID 字符串（数组），
+    // 每个路径同时按 `路径.fileID` 与 `路径` 本身匹配；数组字段按元素匹配
     const refs = [
       ['grouporder-activity', 'cover_image', 'images'],
       ['grouporder-goods', 'cover_image', 'detail_images'],
-      ['grouporder-goods-lib', 'cover_image', 'detail_images']
+      ['grouporder-goods-lib', 'cover_image', 'detail_images'],
+      // 举报时的内容快照（report-co reportSubmit 写入）
+      ['grouporder-report', 'content_snapshot.activity_cover', 'content_snapshot.activity_images',
+        'content_snapshot.goods_cover', 'content_snapshot.goods_detail_images'],
+      // 图片送检快照 { files: [fileID] }（contentcheck.submitImages 写入）
+      ['grouporder-content-check', 'content_snapshot.files']
     ]
-    // 每个文件在三张表里的引用并发查询，文件之间也并发：删草稿、换多图时不再逐条串行等待
+    // 每个文件在各表里的引用并发查询，文件之间也并发：删草稿、换多图时不再逐条串行等待
+    // 折中：快照字段无索引，举报 / 检测表按这些路径查询是全表扫描；回收只在换图、删草稿时触发，量可接受
     const isUsed = async (id) => {
-      const counts = await Promise.all(refs.map(([coll, single, list]) =>
-        ctx.db.collection(coll).where(cmd.or([
-          { [`${single}.fileID`]: id }, { [`${list}.fileID`]: id },
-          { [single]: id }, { [list]: id }
-        ])).count()
+      const counts = await Promise.all(refs.map(([coll, ...paths]) =>
+        ctx.db.collection(coll).where(cmd.or(
+          paths.reduce((arr, f) => arr.concat([{ [`${f}.fileID`]: id }, { [f]: id }]), [])
+        )).count()
       ))
       return counts.some(r => (r.total || 0) > 0)
     }

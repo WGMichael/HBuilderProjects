@@ -6,7 +6,12 @@
 -->
 <template>
   <view class="page">
-    <view class="card">
+    <!-- 举报必须针对某个活动：从「我的」进入时没有活动，只看记录并说明入口 -->
+    <view v-if="!activityId" class="card">
+      <view class="card__title">举报</view>
+      <view class="note">要举报某个活动或商品，请打开该活动页，点底部的「举报」。</view>
+    </view>
+    <view v-else class="card">
       <view class="card__title">举报</view>
       <view class="field">
         <text class="k">举报类型 <text class="req">*</text></text>
@@ -82,7 +87,9 @@ const viewResult = async (r: any) => {
     const data = (await guarded(api.report.reportGetResult({ report_id: r._id, report_no: r.report_no }))) || {};
     uni.showModal({
       title: '举报结果',
-      content: data.finished ? `状态：${labelOf(REPORT_STATUS, data.status)}${data.close_time ? '\n结案时间：' + fmt(data.close_time) : ''}` : '举报处理中，请耐心等待。',
+      content: data.finished
+        ? `状态：${labelOf(REPORT_STATUS, data.status)}${data.result_summary ? '\n处理结论：' + data.result_summary : ''}${data.close_time ? '\n结案时间：' + fmt(data.close_time) : ''}`
+        : '举报处理中，请耐心等待。',
       showCancel: false,
     });
   } catch (e) {}

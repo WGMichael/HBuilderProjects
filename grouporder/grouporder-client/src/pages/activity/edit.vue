@@ -5,7 +5,8 @@
 -->
 <template>
   <view class="page">
-    <activity-form :activity-id="activityId" />
+    <!-- 拿到 id 后再挂载表单：表单在 setup 时按 activityId 读取草稿，小程序端子组件 setup 可能早于页面 onLoad -->
+    <activity-form v-if="activityId" :activity-id="activityId" />
   </view>
 </template>
 

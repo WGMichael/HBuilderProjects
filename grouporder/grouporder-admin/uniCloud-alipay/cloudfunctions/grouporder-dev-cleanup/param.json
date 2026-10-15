@@ -1,4 +1,5 @@
 {
+    "secret": "8888",
     "confirm": "WIPE-ALL",
     "scopes": ["activity", "order", "goodslib", "governance"]
 }

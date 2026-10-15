@@ -49,6 +49,10 @@ async function createContext (cloudObj, opts = {}) {
         ctx.roles = payload.role || []
         ctx.permissions = payload.permission || []
         ctx.tokenValid = true
+        // 快到期时 checkToken 会顺带签发新 token：记下来，由 _after 经 attachNewToken 返回给前端
+        if (payload.token && payload.tokenExpired) {
+          ctx.newToken = { token: payload.token, tokenExpired: payload.tokenExpired }
+        }
       }
     } catch (e) {
       ctx.tokenError = 'TOKEN_INVALID'
@@ -103,8 +107,21 @@ function hasPermission (ctx, permissionId) {
   return ctx.permissions.includes(permissionId)
 }
 
+/**
+ * 使用中自动续期：把 checkToken 签发的新 token 以 newToken 挂到返回结果顶层，
+ * uniCloud 前端 SDK 收到后自动替换本地 uni_id_token / uni_id_token_expired。
+ * 各云对象 _after 统一调用；成功与失败的返回都带上，避免续期被一次报错吞掉
+ */
+function attachNewToken (ctx, result) {
+  if (ctx && ctx.newToken && result && typeof result === 'object' && !result.newToken) {
+    result.newToken = ctx.newToken
+  }
+  return result
+}
+
 module.exports = {
   createContext,
+  attachNewToken,
   requireLogin,
   optionalLogin,
   requireLeader,

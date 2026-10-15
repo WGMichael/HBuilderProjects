@@ -82,6 +82,8 @@ import api, { guarded } from '@/common/grouporder/request.js';
 import { fen2yuan } from '@/common/grouporder/dict.js';
 // @ts-ignore
 import { toItem, pickImages, imageDir, uploadPending } from '@/common/grouporder/upload.js';
+// @ts-ignore
+import { safeBack } from '@/common/grouporder/nav.js';
 
 const MAX_IMAGES = 9;
 
@@ -154,8 +156,29 @@ const chooseDetails = async () => {
   details.value = details.value.concat(picked);
 };
 
+/**
+ * 新建商品时：商品库已有同名商品（未删除、未被封禁）就先问是否用本次内容更新商品库（D-094）。
+ * 返回 true = 同步到商品库（照常沉淀覆盖），false = 只保存到本活动。查询失败按「同步」处理，与原行为一致
+ */
+const askSyncToLib = async (name: string) => {
+  try {
+    const data = (await api.goodsLib.libList({ page: 1, pageSize: 20, keyword: name }, { silent: true })) || {};
+    const same = (data.list || []).find((g: any) => String(g.name || '').trim() === name && g.governance_blocked !== 1);
+    if (!same) return true;
+  } catch (e) {
+    return true;
+  }
+  const r: any = await uni.showModal({
+    title: '商品库已有同名商品',
+    content: `商品库里已有「${name}」。是否用本次填写的价格、库存、图片等内容更新商品库？\n选「不更新」则只保存到本次接龙，商品库保持原样。`,
+    confirmText: '更新',
+    cancelText: '不更新',
+  });
+  return !!(r && r.confirm);
+};
+
 const save = async () => {
-  if (!valid.value) return;
+  if (!valid.value || saving.value) return;
   if (!cover.value.length) {
     uni.showToast({ title: '请上传商品封面图', icon: 'none' });
     return;
@@ -163,6 +186,8 @@ const save = async () => {
   const price = Math.round(Number(priceYuan.value) * 100);
   saving.value = true;
   try {
+    // 只在新建时询问；编辑已有商品照常同步（活动里最后保存的值即下次默认值，D-089）
+    const syncToLib = goodsId.value ? true : await askSyncToLib(form.value.name.trim());
     uni.showLoading({ title: '上传图片中', mask: true });
     try {
       const dir = imageDir(createDate.value, activityId.value);
@@ -175,10 +200,11 @@ const save = async () => {
       // 要在保存请求之前关：小程序 loading 与 toast 共用一个层，晚关会把接口的错误提示一起关掉
       uni.hideLoading();
     }
+    let res: any = null;
     if (goodsId.value) {
-      await submitUpdate(price, false);
+      res = await submitUpdate(price, false);
     } else {
-      await guarded(
+      res = await guarded(
         api.activity.goodsCreate({
           activity_id: activityId.value,
           name: form.value.name.trim(),
@@ -190,12 +216,19 @@ const save = async () => {
           is_recommend: form.value.is_recommend,
           cover_image: cover.value[0].file,
           detail_images: details.value.map((it) => it.file),
-          ...libCatParam(),
+          // 选「不更新」时不沉淀，商品库分类也一并不动
+          ...(syncToLib ? libCatParam() : { sync_to_lib: false }),
         })
       );
+      // 记下新商品 id：返回失败（如 H5 刷新后栈不全）时再点保存走编辑，不会因同名被拒
+      if (res && res.goods_id) goodsId.value = res.goods_id;
     }
     if (eventChannel && eventChannel.emit) eventChannel.emit('saved');
-    uni.navigateBack();
+    // 进行中活动的文字 / 图片 / 新增商品改动会转入审核中（D-048）：告知团长接龙已暂停
+    if (res && res.need_recheck) {
+      await uni.showModal({ title: '活动已转入审核中', content: '本次改动需要重新审核，审核通过前参与者暂时不能下单。', showCancel: false });
+    }
+    safeBack('/pages/activity/goods-manage?id=' + activityId.value);
   } catch (e) {
     /* 统一提示 */
   } finally {
@@ -203,9 +236,10 @@ const save = async () => {
   }
 };
 
-const submitUpdate = async (price: number, confirmPriceChange: boolean) => {
+const submitUpdate = async (price: number, confirmPriceChange: boolean): Promise<any> => {
+  let res: any = null;
   try {
-    await api.activity.goodsUpdate(
+    res = await api.activity.goodsUpdate(
       {
         goods_id: goodsId.value,
         name: form.value.name.trim(),
@@ -240,6 +274,7 @@ const submitUpdate = async (price: number, confirmPriceChange: boolean) => {
     origStock = stock;
     origLimit = limit;
   }
+  return res;
 };
 
 onLoad((q: any = {}) => {

@@ -4,7 +4,7 @@
  * 放在 common 的原因：libCopyToActivity 在 goods-co 里，
  * 但它向活动新增商品，按 D-048 要让活动重新进审核——这是跨对象逻辑。
  */
-const { ACTIVITY, REVIEW_RESULT } = require('./state')
+const { ACTIVITY, REVIEW_RESULT, REVIEW_MODE } = require('./state')
 
 /**
  * 哪些改动触发重新审核（D-048）。
@@ -35,7 +35,9 @@ async function bumpContentVersion (ctx, activityId) {
  *
  * - 草稿：不改变任何状态，只递增版本
  * - 审核中：递增版本，重新排队（状态不变，仍是审核中）
- * - 进行中：退回审核中，审核通过前暂停接龙（D-048）
+ * - 进行中：退回审核中，审核通过前暂停接龙（D-048）；
+ *   但活动按自动审核模式发布（D-057）时，沿用提交审核的口径当场做文本检测，通过即保持进行中、不暂停，
+ *   否则自动模式下没有任何环节会再放行，只能干等运营人工处理
  * - 已截止 / 已取消：调用方应在更早的位置就已拒绝，这里兜底不处理
  *
  * @returns {object} { need_recheck, next_status }
@@ -44,6 +46,24 @@ async function applyContentChange (ctx, activity) {
   await bumpContentVersion(ctx, activity._id)
 
   if (activity.status === ACTIVITY.ONGOING) {
+    // 延迟加载：config / contentcheck 与本模块同属 common，避免循环依赖
+    const mode = activity.review_mode || await require('./config').getReviewMode(ctx)
+    if (mode === REVIEW_MODE.AUTO) {
+      const { data } = await ctx.db.collection('grouporder-activity').doc(activity._id).get()
+      const fresh = (data && data[0]) || activity
+      const { data: goodsList } = await ctx.db.collection('grouporder-goods')
+        .where({ activity_id: activity._id }).limit(100).get()
+      const checkResult = await require('./contentcheck').checkOnSubmit(ctx, fresh, goodsList || [])
+      if (checkResult.textPass) {
+        await ctx.db.collection('grouporder-activity').doc(activity._id).update({
+          review_submit_date: ctx.now,
+          review_result: REVIEW_RESULT.PASS,
+          review_time: ctx.now,
+          review_uid: ''
+        })
+        return { need_recheck: false, next_status: ACTIVITY.ONGOING, auto_passed: true }
+      }
+    }
     await ctx.db.collection('grouporder-activity').doc(activity._id).update({
       status: ACTIVITY.REVIEWING,
       review_submit_date: ctx.now,

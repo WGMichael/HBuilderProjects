@@ -9,6 +9,7 @@
 -->
 <template>
   <view class="page">
+    <go-result v-if="loadFailed" type="unknown" detail="页面加载失败，请检查网络后重试" @retry="load" />
     <block v-if="loaded">
       <!-- 活动内容：与 M-12 发布预览共用同一组件，团长预览所见即参与者所见 -->
       <go-activity-view :act="act">
@@ -44,11 +45,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import GoResult from '@/components/go-result/go-result.vue';
 import { onLoad, onShow, onHide, onUnload, onShareAppMessage } from '@dcloudio/uni-app';
 // @ts-ignore
 import { serverOffset, scheduleBoundary } from '@/common/grouporder/activity-time.js';
 // @ts-ignore
-import api, { guarded, ensureLogin } from '@/common/grouporder/request.js';
+import api, { guarded, ensureLogin, takeLoginIntent } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { fen2yuan } from '@/common/grouporder/dict.js';
 import GoActivityView from '@/components/go-activity-view/go-activity-view.vue';
@@ -111,7 +113,7 @@ onShareAppMessage(() => shareCard.value || ({
   imageUrl: (act.value.cover_image && act.value.cover_image.url) || '',
 }));
 
-const load = async () => {
+const loadInner = async () => {
   if (!activityId.value) return;
   act.value = (await guarded(api.activity.activityGetDetail({ activity_id: activityId.value }))) || {};
   // 改单：只在首次进入时按本单明细预填，之后保留用户的调整
@@ -129,12 +131,26 @@ const load = async () => {
   armTick();
 };
 
+// 加载失败（断网、非对象级错误）时给出重试，不白屏；对象级错误由 guarded 跳 M-26
+const loadFailed = ref(false);
+const load = async () => {
+  loadFailed.value = false;
+  try {
+    await loadInner();
+  } catch (e) {
+    if (!loaded.value) loadFailed.value = true;
+  }
+};
+
+// 去过确认页：回来时若待提交商品已被清掉（下单 / 改单成功），清空本页所选数量，避免误下第二单
+let wentToConfirm = false;
 const confirm = () => {
-  // 提交时才要求登录（D-033）
-  if (!ensureLogin()) return;
   const items = Object.keys(qty.value).filter((k) => qty.value[k] > 0).map((k) => ({ goods_id: k, qty: qty.value[k] }));
   if (!items.length) return;
+  // 提交时才要求登录（D-033）；记下所选商品，登录回到本页后自动继续（D-096）
+  if (!ensureLogin({ type: 'order', activity_id: activityId.value, order_id: orderId.value, items })) return;
   uni.setStorageSync('order_draft_items', items);
+  wentToConfirm = true;
   uni.navigateTo({ url: '/pages/order/confirm?activity_id=' + activityId.value + (orderId.value ? '&order_id=' + orderId.value : '') });
 };
 
@@ -156,7 +172,24 @@ const armTick = () => {
   cancelTick();
   cancelTick = scheduleBoundary([act.value], serverOffset(act.value.asOf), () => load());
 };
-onShow(() => load());
+onShow(async () => {
+  if (wentToConfirm) {
+    wentToConfirm = false;
+    let draft: any = null;
+    try { draft = uni.getStorageSync('order_draft_items'); } catch (e) {}
+    if (!draft || !draft.length) qty.value = {};
+  }
+  try { await load(); } catch (e) { return; }
+  // 登录前点了「下一步」：登录成功回到本页后，恢复所选数量并直接进入确认订单（D-096）。
+  // 恢复数量是为了 H5 登录中刷新过页面也不用重选；能否购买由确认页试算再校验
+  const intent = takeLoginIntent((i: any) => i.type === 'order' && i.activity_id === activityId.value);
+  if (intent && act.value.joinable) {
+    const m: Record<string, number> = {};
+    for (const it of intent.items || []) m[it.goods_id] = it.qty;
+    qty.value = { ...qty.value, ...m };
+    confirm();
+  }
+});
 onHide(() => cancelTick());
 onUnload(() => cancelTick());
 </script>

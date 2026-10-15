@@ -87,6 +87,9 @@ function normalize (raw) {
   if (!raw || typeof raw !== 'object') {
     return { errCode: 'INVALID_PARAM', errMsg: '服务返回异常' }
   }
+  // reject 路径：SDK 抛出的错误对象上 errCode / errMsg 是外层的，云对象返回的完整结果
+  // { errCode, errMsg, detail } 挂在 e.detail 上，必须取它，否则业务 detail 会多包一层读不到
+  if (raw instanceof Error && raw.detail && typeof raw.detail === 'object' && raw.detail.errCode !== undefined) return raw.detail
   if (raw.errCode !== undefined) return raw
   if (raw.result && raw.result.errCode !== undefined) return raw.result
   return { errCode: 'INVALID_PARAM', errMsg: raw.message || '服务返回异常' }

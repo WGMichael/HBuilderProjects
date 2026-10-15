@@ -26,5 +26,21 @@
       ],
       "MgoIsUnique": true
     }
+  },
+  {
+    "IndexName": "applicant_create",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "applicant_uid",
+          "Direction": "1"
+        },
+        {
+          "Name": "create_date",
+          "Direction": "-1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
   }
 ]

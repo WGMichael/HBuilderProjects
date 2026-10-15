@@ -19,7 +19,13 @@
       </view>
     </view>
 
-    <scroll-view class="body" scroll-y>
+    <scroll-view class="body" scroll-y @scrolltolower="onReachEnd">
+      <!-- 未登录：三个子页都是本人数据，不发请求（否则会被会话失效钩子反复拉去登录页），给出登录入口 -->
+      <view v-if="!logged" class="login-tip">
+        <view class="login-tip__text">登录后查看你的待办、发起和参与的接龙</view>
+        <button class="login-tip__btn" type="primary" size="mini" @click="goLogin">去登录</button>
+      </view>
+      <block v-else>
       <!-- M-27 待办事项 -->
       <view v-if="sub === 'todo'">
         <!-- 样式按效果图 v3 A 组「今日待办」：事项标签 + 标题 + 说明 + ›，标签颜色按优先级档位 -->
@@ -69,15 +75,27 @@
             <button v-if="canDeleteDraft(a)" class="mini-btn mini-btn--del" size="mini" @click.stop="deleteDraft(a)">删除</button>
           </view>
         </view>
+        <view v-if="leadList.length" class="list-foot">{{ leadLoading ? '加载中…' : leadHasMore ? '上滑加载更多' : '没有更多了' }}</view>
       </view>
 
       <!-- M-18 我参与的 -->
       <view v-else>
         <view v-if="!joinLoading && !joinList.length" class="empty">你还没有参与过接龙</view>
+        <!-- 服务端已按活动分组、按组分页（orderMyList），这里直接展示 -->
         <view v-for="g in joinList" :key="g.activity_id" class="card card--join" @click="openActivity(g.activity_id)">
+          <image v-if="g.cover_image && g.cover_image.url" class="card__cover" :src="g.cover_image.url" mode="aspectFill" />
           <view class="card__main">
-            <view class="card__title">{{ g.title || g.activity_id }}</view>
-            <view class="card__meta">共 {{ g.orders.length }} 张订单</view>
+            <view class="card__title">{{ g.title || '活动已删除' }}</view>
+            <view v-if="g.activity_status !== null" class="card__tags">
+              <text class="tag" :class="g.activity_status === 2 ? 'tag--biz' : 'tag--warn'">{{ labelOf(ACTIVITY_STATUS, g.activity_status) }}</text>
+              <text v-if="g.governance_status === 1" class="tag tag--gov">已下架</text>
+              <text v-if="g.not_started" class="tag tag--warn">未开始</text>
+            </view>
+            <view class="card__meta">
+              <text v-if="g.not_started">{{ fmtDate(g.start_time) }} 开始 · </text>
+              <text v-if="g.end_time">截止 {{ fmtDate(g.end_time) }} · </text>
+              <text>共 {{ g.orders.length }} 张订单</text>
+            </view>
             <view v-for="o in g.orders" :key="o._id" class="join-order" @click.stop="openOrder(o._id)">
               <text>{{ o.order_no }}</text>
               <text class="join-order__qty">{{ o.total_qty }} 份 · ￥{{ fen2yuan(o.total_amount) }}</text>
@@ -85,7 +103,9 @@
             </view>
           </view>
         </view>
+        <view v-if="joinList.length" class="list-foot">{{ joinLoading ? '加载中…' : joinHasMore ? '上滑加载更多' : '没有更多了' }}</view>
       </view>
+      </block>
     </scroll-view>
 
     <go-tabbar current="jielong" :badge="todoBadge" />
@@ -101,7 +121,7 @@ import { serverOffset, applyLiveStatus, scheduleBoundary } from '@/common/groupo
 import { takeHallSub } from '@/common/grouporder/hall.js';
 import GoTabbar from '@/components/go-tabbar/go-tabbar.vue';
 // @ts-ignore
-import api, { guarded } from '@/common/grouporder/request.js';
+import api, { guarded, isLoggedIn, ensureLogin } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { canDeleteDraft, confirmDeleteDraft } from '@/common/grouporder/draft.js';
 // @ts-ignore
@@ -113,6 +133,8 @@ const subtabs = [
   { key: 'join', text: '我参与的' },
 ];
 const sub = ref('todo');
+const logged = ref(isLoggedIn());
+const goLogin = () => ensureLogin();
 
 const todoList = ref<any[]>([]);
 const todoBadge = ref(0);
@@ -121,18 +143,23 @@ const leadList = ref<any[]>([]);
 const leadLoading = ref(false);
 const joinList = ref<any[]>([]);
 const joinLoading = ref(false);
+const joinHasMore = ref(false);
+const JOIN_PAGE_SIZE = 20;
+let joinPage = 0;
+let joinSeq = 0; // 重新加载时丢弃上一轮未返回的结果
 
 const todoLabel = (item: any) => TODO_TYPE_LABEL[item.type] || TODO_LEVEL_LABEL[item.level] || '待办';
 const fmtDate = (ts: number) => (ts ? new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
+
+// 角标 = 前两档合计（最紧迫的）；关闭待办后就地重算
+const calcBadge = () => { todoBadge.value = todoList.value.filter((t: any) => t.level === 1 || t.level === 2).length; };
 
 const loadTodo = async () => {
   todoLoading.value = true;
   try {
     const data = (await guarded(api.user.todoList())) || {};
     todoList.value = data.list || [];
-    // 角标 = 前两档合计（最紧迫的）
-    const c = data.count_by_level || {};
-    todoBadge.value = (c[1] || 0) + (c[2] || 0);
+    calcBadge();
   } catch (e) {
     todoList.value = [];
   } finally {
@@ -152,42 +179,69 @@ const armLeadTick = () => {
   });
 };
 
-const loadLead = async () => {
+const leadHasMore = ref(false);
+const LEAD_PAGE_SIZE = 20;
+let leadPage = 0;
+let leadSeq = 0;
+/** 我发起的（M-09）：分页加载，滑到底取下一页；more 为 false 时从第一页重新加载 */
+const loadLead = async (more = false) => {
+  if (more && (leadLoading.value || !leadHasMore.value)) return;
+  const my = ++leadSeq;
+  const page = more ? leadPage + 1 : 1;
   leadLoading.value = true;
   try {
-    const data = (await guarded(api.activity.activityMyList({ page: 1, pageSize: 50 }))) || {};
-    leadList.value = data.list || [];
+    const data = (await guarded(api.activity.activityMyList({ page, pageSize: LEAD_PAGE_SIZE }))) || {};
+    if (my !== leadSeq) return;
+    const list = data.list || [];
+    leadList.value = more ? leadList.value.concat(list) : list;
+    leadPage = page;
+    leadHasMore.value = leadList.value.length < (data.total || 0);
     leadOffset = serverOffset(data.asOf);
     armLeadTick();
   } catch (e) {
-    leadList.value = [];
+    if (my === leadSeq && !more) leadList.value = [];
   } finally {
-    leadLoading.value = false;
+    if (my === leadSeq) leadLoading.value = false;
   }
 };
 
-const loadJoin = async () => {
+/**
+ * 我参与的（M-18）：orderMyList 已按活动分组，分页单位是活动分组（同一活动的订单不会跨页），
+ * 每项 { activity_id, title, cover_image, activity_status, governance_status, not_started, start_time, end_time, orders[] }
+ * @param more true 为加载下一页，否则从第一页重新加载
+ */
+const loadJoin = async (more = false) => {
+  if (more && (joinLoading.value || !joinHasMore.value)) return;
+  const my = ++joinSeq;
+  const page = more ? joinPage + 1 : 1;
   joinLoading.value = true;
   try {
-    // 我参与的：按订单聚合到活动。orderMyList 返回本人订单，前端按 activity_id 分组
-    const data = (await guarded(api.order.orderMyList({ page: 1, pageSize: 100 }))) || {};
-    const groups = new Map<string, any>();
-    for (const o of data.list || []) {
-      if (!groups.has(o.activity_id)) groups.set(o.activity_id, { activity_id: o.activity_id, title: o.activity_title || o.title, orders: [] });
-      groups.get(o.activity_id).orders.push(o);
-    }
-    joinList.value = [...groups.values()];
+    const data = (await guarded(api.order.orderMyList({ page, pageSize: JOIN_PAGE_SIZE }))) || {};
+    if (my !== joinSeq) return;
+    const list = data.list || [];
+    joinList.value = more ? joinList.value.concat(list) : list;
+    joinPage = page;
+    joinHasMore.value = joinList.value.length < (data.total || 0);
   } catch (e) {
-    joinList.value = [];
+    if (my !== joinSeq) return;
+    if (!more) joinList.value = [];
   } finally {
-    joinLoading.value = false;
+    if (my === joinSeq) joinLoading.value = false;
   }
+};
+
+// 滚到底：「我发起的」「我参与的」分页
+const onReachEnd = () => {
+  if (!logged.value) return;
+  if (sub.value === 'join') loadJoin(true);
+  else if (sub.value === 'lead') loadLead(true);
 };
 
 const loadCurrent = () => {
-  if (sub.value === 'todo') loadTodo();
-  else if (sub.value === 'lead') loadLead();
-  else loadJoin();
+  if (!logged.value) return Promise.resolve();
+  if (sub.value === 'todo') return loadTodo();
+  if (sub.value === 'lead') return loadLead();
+  return loadJoin();
 };
 
 const switchSub = (key: string) => {
@@ -199,6 +253,7 @@ const dismiss = async (item: any) => {
   try {
     await api.user.todoDismiss({ todo_key: item.todo_key });
     todoList.value = todoList.value.filter((t) => t.todo_key !== item.todo_key);
+    calcBadge();
   } catch (e) {
     /* 提示已由 client.js 统一处理 */
   }
@@ -235,6 +290,8 @@ onShow(() => {
   // 从「我的」统计项等入口指定了子页时，先切过去（hall.js 经缓存中转，读取即清除）
   const target = takeHallSub();
   if (target) sub.value = target;
+  logged.value = isLoggedIn();
+  if (!logged.value) { todoList.value = []; leadList.value = []; joinList.value = []; todoBadge.value = 0; return; }
   // 每次进入都刷新当前子页 + 待办角标（派生视图，不缓存）
   loadCurrent();
   if (sub.value !== 'todo') loadTodo();
@@ -245,8 +302,7 @@ onHide(() => cancelLeadTick());
 onUnload(() => cancelLeadTick());
 
 onPullDownRefresh(async () => {
-  await Promise.resolve(loadCurrent());
-  uni.stopPullDownRefresh();
+  try { await loadCurrent(); } finally { uni.stopPullDownRefresh(); }
 });
 </script>
 
@@ -380,6 +436,18 @@ onPullDownRefresh(async () => {
   border-top: 1rpx solid $go-soft;
   margin-top: 12rpx;
   &__qty { color: $go-ink; }
+}
+.login-tip {
+  text-align: center;
+  padding: 120rpx 0;
+  &__text { font-size: 26rpx; color: $go-muted; margin-bottom: 28rpx; }
+  &__btn { font-size: 26rpx; }
+}
+.list-foot {
+  text-align: center;
+  font-size: 22rpx;
+  color: $go-muted;
+  padding: 16rpx 0 24rpx;
 }
 .mini-btn {
   margin: 0;

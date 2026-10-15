@@ -36,7 +36,10 @@
         <uni-tr v-for="item in list" :key="item._id">
           <uni-td align="center">{{ item.short_code || '—' }}</uni-td>
           <uni-td align="center">{{ item.title }}</uni-td>
-          <uni-td align="center">{{ item.leader_uid || '—' }}</uni-td>
+          <uni-td align="center">
+            <view>{{ item.username || '—' }}</view>
+            <view class="leader-uid">{{ item.leader_uid }}</view>
+          </uni-td>
           <uni-td align="center">v{{ item.content_version || 1 }}</uni-td>
           <uni-td align="center">{{ labelOf(REVIEW_MODE, item.review_mode) }}</uni-td>
           <uni-td align="center">
@@ -100,4 +103,11 @@
   onReady(() => reload());
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+  .leader-uid {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+    word-break: break-all;
+  }
+</style>

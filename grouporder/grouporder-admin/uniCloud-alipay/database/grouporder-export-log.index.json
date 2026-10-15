@@ -30,5 +30,21 @@
       ],
       "MgoIsUnique": false
     }
+  },
+  {
+    "IndexName": "event_create",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "event_type",
+          "Direction": "1"
+        },
+        {
+          "Name": "create_date",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
   }
 ]

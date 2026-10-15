@@ -74,7 +74,7 @@
     },
     {
       "path": "pages/lib/history-goods",
-      "style": { "navigationBarTitleText": "复用历史商品" }
+      "style": { "navigationBarTitleText": "从商品库添加" }
     },
     {
       "path": "pages/lib/manage",

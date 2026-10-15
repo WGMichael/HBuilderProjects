@@ -3,11 +3,11 @@
 
   CLIENT_FRONTEND_BRIEF §4：
     - 「发起接龙」tab 恒为新建态（约束 3）：无 activity_id 进入。
-    - 三个并列主按钮：＋添加商品 / ↺复用历史商品 / ↺复用历史接龙。
+    - 三个并列按钮（按主次区分样式）：＋添加新商品 / 从商品库添加（原「复用历史商品」）/ ↺复用历史接龙。
     - 「管理商品库 ›」是轻量文字链接，不是第四个并列按钮。
   D-060 / D-086：交付方式可多选（送货上门、自提至少一种），发布后不可修改；参与者下单时在其中选一种，自提只收姓名+电话。
 
-  草稿模型：加商品 / 复用历史商品都需要 activity_id，所以首次执行这类动作前
+  草稿模型：加商品 / 从商品库添加都需要 activity_id，所以首次执行这类动作前
   先用当前标题创建草稿（activityCreateDraft）拿到 id；之后的商品操作直接落服务端。
   图片先选后传（common/grouporder/upload.js）：建草稿时不传图，「保存草稿 / 下一步」时才上传。
   资料齐全性（封面图、商品、自提地址）只在「下一步」时检查，填写过程中不拦（D-041）。
@@ -67,11 +67,12 @@
       </view>
 
       <view class="af__actions">
-        <button class="af__btn" size="mini" @click="addGoods">＋ 添加商品</button>
-        <button class="af__btn" size="mini" @click="reuseGoods">↺ 复用历史商品</button>
-        <button class="af__btn" size="mini" @click="reuseActivity">↺ 复用历史接龙</button>
+        <!-- 按主次区分：新建为主操作，从商品库挑选为次操作，整场照搬为辅助操作 -->
+        <button class="af__btn af__btn--primary" size="mini" @click="addGoods">＋ 添加新商品</button>
+        <button class="af__btn af__btn--outline" size="mini" @click="reuseGoods">从商品库添加</button>
+        <button class="af__btn af__btn--plain" size="mini" @click="reuseActivity">↺ 复用历史接龙</button>
       </view>
-      <view class="af__hint">复用历史商品＝挑几件；复用历史接龙＝整场照搬，含活动资料与全部商品</view>
+      <view class="af__hint">添加新商品＝现填一件；从商品库添加＝从你保存过的商品里挑几件；复用历史接龙＝整场照搬，含活动资料与全部商品</view>
     </view>
 
     <!-- 本次接龙设置 -->
@@ -136,7 +137,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 // @ts-ignore
-import api, { guarded } from '@/common/grouporder/request.js';
+import api, { guarded, ensureLogin } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { fen2yuan } from '@/common/grouporder/dict.js';
 // @ts-ignore
@@ -281,6 +282,7 @@ const ensureDraft = async () => {
     uni.showToast({ title: '请先填写接龙标题', icon: 'none' });
     return '';
   }
+  if (!requireLogin()) return '';
   if (copySourceId.value) {
     // 复制预填（D-091）：此刻才按源生成草稿（商品、图片引用、被下架商品剔除均由服务端完成），
     // 表单里改过的资料随后由 persist 覆盖；复制来的价格 / 库存 / 限购为预填值，不强制确认（D-092）
@@ -399,6 +401,15 @@ const chooseImages = async () => {
 // faqi tab 的 onShow 在「切 tab 进入」和「从子页返回」时都会触发，只有前者该重置（D-061）。
 // 表单里所有去子页的跳转都走这里打标记，faqi 用 consumeChildReturn 区分两种情况
 let leftForChild = false;
+/**
+ * 写操作前确保已登录。去登录页同样打子页标记：登录完返回发起页时保留已填表单，
+ * 不被当作「从其他 tab 切入」而清空（D-061）
+ */
+const requireLogin = () => {
+  if (ensureLogin()) return true;
+  leftForChild = true;
+  return false;
+};
 const toChild = (opts: any) => {
   leftForChild = true;
   uni.navigateTo(Object.assign({}, opts, { fail: () => { leftForChild = false; } }));
@@ -440,7 +451,7 @@ const reloadGoods = async () => {
   goods.value = data.goods || [];
 };
 
-// —— 复用历史商品 M-28 ——
+// —— 从商品库添加 M-28（原名「复用历史商品」）——
 const reuseGoods = async () => {
   const id = await ensureDraft();
   if (!id) return;
@@ -545,6 +556,10 @@ if (props.activityId) loadDraft();
 .goods-row__del { font-size: 24rpx; color: $go-red; padding: 0 4rpx; }
 .af__actions { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 20rpx; }
 .af__btn { margin: 0; font-size: 24rpx; color: $go-primary; background: $go-primary-soft; }
+.af__btn::after { border: none; }
+.af__btn--primary { color: #fff; background: $go-primary; font-weight: 600; }
+.af__btn--outline { color: $go-primary-dark; background: #fff; border: 2rpx solid $go-primary; }
+.af__btn--plain { color: $go-text; background: $go-soft; }
 .af__hint { font-size: 22rpx; color: $go-muted; line-height: 1.7; margin-top: 16rpx; }
 .af__set-row { display: flex; align-items: center; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid $go-soft; }
 .af__set-k { font-size: 26rpx; color: $go-text; }

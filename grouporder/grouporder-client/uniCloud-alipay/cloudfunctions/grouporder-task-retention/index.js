@@ -7,8 +7,19 @@
  * 活动数量、份数、金额等【不可识别个人的汇总数据可长期保留】。
  *
  * 本函数只做匿名化，【不删除订单与明细】——汇总口径要保住。
+ *
+ * 单次执行在时间预算内循环处理多批，直到没有到期未匿名化的订单；
+ * 已处理的订单 anonymized = 1，不会被下一批重复选中。
+ *
+ * ⚠ 账号关联（user_id）暂未匿名化：D-035 / DATA_MODEL §9 要求匿名化「账号关联」，
+ *   但未规定字段与占位值（user_id 在订单与明细两表都是必填，且参与限购、我的订单等查询），
+ *   待文档明确后再补。
  */
 const BATCH_SIZE = 100
+// 单次执行的时间预算：package.json 中 timeout = 60 秒，留出余量写日志并返回
+const TIME_BUDGET_MS = 50 * 1000
+// 单次执行中失败订单的上限：超过即停止，避免同一批异常数据反复重试耗尽预算
+const MAX_FAILED = 200
 
 // 匿名化后的占位值。保留字段结构，避免下游读到 undefined
 const ANONYMIZED = {
@@ -23,28 +34,50 @@ exports.main = async () => {
   const db = uniCloud.database()
   const dbCmd = db.command
   const now = Date.now()
-  const result = { orders_anonymized: 0, cases_updated: 0, failed: 0, errors: [] }
+  const result = { orders_anonymized: 0, cases_updated: 0, failed: 0, batches: 0, errors: [] }
 
-  // ① 到期订单：匿名化收货三要素与账号关联
-  const { data: orders } = await db.collection('grouporder-order')
-    .where({
+  // ① 到期订单：匿名化收货信息（账号关联见文件头说明）
+  // 本次执行中失败的订单排除出后续批次，否则会被反复选中
+  const failedIds = []
+  let hasMore = true
+  while (hasMore && Date.now() - now < TIME_BUDGET_MS && failedIds.length < MAX_FAILED) {
+    const where = {
       retention_expire_date: dbCmd.lte(now),
       anonymized: dbCmd.neq(1)
-    })
-    .field({ _id: true, activity_id: true, order_no: true })
-    .limit(BATCH_SIZE)
-    .get()
+    }
+    if (failedIds.length) where._id = dbCmd.nin(failedIds)
+    const { data: orders } = await db.collection('grouporder-order')
+      .where(where)
+      .field({ _id: true })
+      .limit(BATCH_SIZE)
+      .get()
+    const ids = (orders || []).map(o => o._id)
+    hasMore = ids.length === BATCH_SIZE
+    if (!ids.length) break
+    result.batches++
 
-  for (const o of (orders || [])) {
+    // 只写 schema 已定义的字段；anonymized = 1 本身即到期标记。
+    // 整批一次更新；带 anonymized 条件，并发重入时不重复计数
+    const patch = Object.assign({ anonymized: 1 }, ANONYMIZED)
     try {
-      // 只写 schema 已定义的字段；anonymized = 1 本身即到期标记
-      await db.collection('grouporder-order').doc(o._id).update(
-        Object.assign({ anonymized: 1 }, ANONYMIZED))
-      result.orders_anonymized++
+      const res = await db.collection('grouporder-order')
+        .where({ _id: dbCmd.in(ids), anonymized: dbCmd.neq(1) })
+        .update(patch)
+      result.orders_anonymized += res.updated || 0
     } catch (e) {
-      result.failed++
-      result.errors.push({ order_id: o._id, message: e.message })
-      console.error('[retention] 订单匿名化失败：', o._id, e)
+      // 整批失败时逐条重试，定位具体失败的订单
+      console.error('[retention] 批量匿名化失败，改为逐条处理：', e)
+      for (const id of ids) {
+        try {
+          await db.collection('grouporder-order').doc(id).update(patch)
+          result.orders_anonymized++
+        } catch (err) {
+          failedIds.push(id)
+          result.failed++
+          if (result.errors.length < 20) result.errors.push({ order_id: id, message: err.message })
+          console.error('[retention] 订单匿名化失败：', id, err)
+        }
+      }
     }
   }
 
@@ -73,7 +106,8 @@ exports.main = async () => {
     result.errors.push({ stage: 'privacy_case', message: e.message })
   }
 
-  result.has_more = (orders || []).length === BATCH_SIZE
+  // 预算用尽或失败过多而提前停止时为 true，剩余部分由次日继续
+  result.has_more = hasMore
   console.log('[retention]', JSON.stringify(result))
   return result
 }

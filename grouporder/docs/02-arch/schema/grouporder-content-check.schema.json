@@ -24,7 +24,7 @@
     "object_type": {
       "bsonType": "string",
       "title": "送检对象类型",
-      "description": "activity 或 goods",
+      "description": "activity、goods 或 goods_lib（商品库记录，object_id 为库记录 ID）",
       "enum": [
         {
           "value": "activity",
@@ -33,13 +33,17 @@
         {
           "value": "goods",
           "text": "商品"
+        },
+        {
+          "value": "goods_lib",
+          "text": "商品库"
         }
       ]
     },
     "object_id": {
       "bsonType": "string",
       "title": "送检对象",
-      "description": "活动或商品的 ID",
+      "description": "活动、商品或商品库记录的 ID",
       "maxLength": 64
     },
     "content_type": {

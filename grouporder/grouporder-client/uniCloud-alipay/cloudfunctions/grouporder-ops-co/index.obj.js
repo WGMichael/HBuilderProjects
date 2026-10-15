@@ -9,6 +9,9 @@
  * ③ 超管按权限点判断即可，无超管特例分支（D-076）；
  * ④ 运营不得代替团长经营（OPS §2.2）——本对象没有任何创建/修改活动、
  *    商品、订单、库存、价格、统计的方法。
+ *    唯一例外：devWipe（运营禁区·测试数据清理），经产品负责人 2026-10-12 授权，
+ *    鉴权 ops-sys-config + 全程审计，仅供受训运营在测试环境重置数据，上线前应移除
+ *    （见 docs/03-release/OPEN_ISSUES.md）。
  *
  * ⚠ 依赖 xlsx（SheetJS），用于检索结果与统计导出。部署前需 npm install。
  */
@@ -26,6 +29,14 @@ const REPORT_STATUS = { PENDING: 1, HANDLING: 2, CLOSED: 3, RECHECKING: 4, RECHE
 const APPEAL_STATUS = { PENDING: 1, HANDLING: 2, SUCCESS: 3, FAILED: 4 }
 const PRIVACY_STATUS = { REGISTERED: 1, RESTRICTED: 2, EXPIRED: 3, DONE: 4, FAILED: 5 }
 
+// 运营禁区清理分组（经产品负责人 2026-10-12 授权的测试数据重置能力，详见 devWipe）
+const DEV_WIPE_GROUPS = {
+  activity: ['grouporder-activity', 'grouporder-goods'],
+  order: ['grouporder-order', 'grouporder-order-item'],
+  goodslib: ['grouporder-goods-lib', 'grouporder-goods-category'],
+  governance: ['grouporder-report', 'grouporder-report-review', 'grouporder-content-check', 'grouporder-restriction']
+}
+
 module.exports = {
   async _before () {
     bindMethods(this, module.exports)
@@ -35,8 +46,9 @@ module.exports = {
   },
 
   _after (error, result) {
-    if (error) return errors.normalize(error)
-    return result
+    // 使用中自动续期登录（auth.attachNewToken）
+    if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
+    return auth.attachNewToken(this.ctx, result)
   },
 
   // ==========================================================================
@@ -66,6 +78,57 @@ module.exports = {
     }
   },
 
+  /**
+   * 【运营禁区 · 开发测试数据清理】物理清空选定业务表，不可恢复。
+   *
+   * ⚠ 本方法违反 OPS §2.2「运营不得代替团长经营」与 D-035 留存——是产品负责人
+   *   2026-10-12 明确授权、仅供受训运营在测试环境重置数据的禁区能力。
+   *   鉴权：要求 ops-sys-config 权限（挡匿名 / 非运营调用）；每次清理写审计。
+   *   正式上线前应移除本方法、禁区页面与菜单（见 OPEN_ISSUES）。
+   *
+   * 入参：{ confirm: 'WIPE-ALL', scopes?: ['activity','order','goodslib','governance'] }
+   * 出参：{ scopes, deleted: { 集合名: 条数 } }
+   */
+  async devWipe (params = {}) {
+    await this._perm('ops-sys-config', { deniedAction: 'dev_data_wipe', objectType: 'dev_cleanup' })
+    assertParam(params.confirm === 'WIPE-ALL', '需要传 confirm:"WIPE-ALL" 才会执行这项不可恢复的清库操作')
+
+    const scopes = Array.isArray(params.scopes) && params.scopes.length
+      ? params.scopes.filter(s => DEV_WIPE_GROUPS[s])
+      : Object.keys(DEV_WIPE_GROUPS)
+    assertParam(scopes.length, '没有匹配的清理分组')
+
+    const collections = [...new Set(scopes.reduce((a, s) => a.concat(DEV_WIPE_GROUPS[s]), []))]
+    const deleted = {}
+    for (const name of collections) {
+      deleted[name] = await this._wipeCollection(name)
+    }
+
+    await oplog.success(this.ctx, {
+      action_type: 'dev_data_wipe',
+      object_type: 'dev_cleanup',
+      object_id: scopes.join(','),
+      reason: '运营禁区：清空测试数据',
+      prev_state: null,
+      next_state: deleted
+    })
+    return ok({ scopes, deleted })
+  },
+
+  /** 分批清空一张集合，返回删除条数。_id 恒非空，neq('') 匹配全部 */
+  async _wipeCollection (name) {
+    const dbCmd = this.dbCmd
+    let total = 0
+    for (;;) {
+      const { data } = await this.db.collection(name).where({ _id: dbCmd.neq('') }).field({ _id: true }).limit(500).get()
+      if (!data || !data.length) break
+      const res = await this.db.collection(name).where({ _id: dbCmd.in(data.map(d => d._id)) }).remove()
+      total += (res.deleted || data.length)
+      if (data.length < 500) break
+    }
+    return total
+  },
+
   async _mustGet (collection, id, label) {
     assertParam(id, `缺少${label}标识`)
     const { data } = await this.db.collection(collection).doc(id).get()
@@ -82,6 +145,17 @@ module.exports = {
       coll.count()
     ])
     return { list: listRes.data || [], total: countRes.total || 0 }
+  },
+
+  /** 按用户 _id 批量取 username，返回 Map<uid, username>；只取 username，不取凭证字段 */
+  async _userNameMap (uids) {
+    const ids = [...new Set((uids || []).filter(Boolean))]
+    if (!ids.length) return new Map()
+    const { data } = await this.db.collection('uni-id-users')
+      .where({ _id: this.dbCmd.in(ids) })
+      .field({ _id: true, username: true })
+      .limit(ids.length).get()
+    return new Map((data || []).map(u => [u._id, u.username || '']))
   },
 
   /** 把时间范围筛选转成 where 片段；起止非法时阻止查询并指出问题（OPS §12.2） */
@@ -875,12 +949,15 @@ module.exports = {
     if (range) Object.assign(where, range)
 
     const { list, total } = await this._query('grouporder-activity', where, p)
+    // 补团长 username，只查本页团长，方便运营辨认；筛选仍按 leader_uid 精确搜
+    const userMap = await this._userNameMap(list.map(a => a.leader_uid))
     return ok(paging.wrap(list.map(a => ({
       _id: a._id,
       title: a.title,
       cover_image: a.cover_image,
       short_code: a.short_code,
       leader_uid: a.leader_uid,
+      username: userMap.get(a.leader_uid) || '',
       review_mode: a.review_mode || null,
       // 审核结论绑定提交时固化的内容版本
       content_version: a.content_version,
@@ -1400,11 +1477,12 @@ module.exports = {
     const range = this._dateRange(p.filters, 'publish_date')
     if (range) Object.assign(actWhere, range)
 
-    const { data: activities } = await this.db.collection('grouporder-activity')
+    // 分批读完全部匹配活动：单次 get 有条数上限，只取第一批会漏统计（按 _id 稳定排序）
+    const activities = await paging.fetchAll(() => this.db.collection('grouporder-activity')
       .where(actWhere)
       .field({ _id: true, leader_uid: true, status: true, governance_status: true,
                ever_governed: true, publish_date: true, create_date: true })
-      .limit(1000).get()
+      .orderBy('_id', 'asc'))
 
     const byLeader = new Map()
     for (const a of (activities || [])) {
@@ -1441,16 +1519,21 @@ module.exports = {
 
     const allIds = (activities || []).map(a => a._id)
     if (allIds.length) {
-      const [orderAgg, itemAgg] = await Promise.all([
-        this.db.collection('grouporder-order').aggregate()
-          .match({ activity_id: this.dbCmd.in(allIds), status: ORDER.VALID })
-          .group({ _id: '$activity_id', cnt: { $sum: 1 } }).end(),
-        this.db.collection('grouporder-order-item').aggregate()
-          .match({ activity_id: this.dbCmd.in(allIds), status: ORDER.VALID })
-          .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end()
-      ])
-      const orderMap = new Map((orderAgg.data || []).map(r => [r._id, r.cnt]))
-      const itemMap = new Map((itemAgg.data || []).map(r => [r._id, r]))
+      // 活动 id 分批聚合：每批分组数 ≤ AGG_LIMIT，显式 limit 保证分组结果不被平台默认条数截断
+      const orderMap = new Map()
+      const itemMap = new Map()
+      for (const ids of paging.chunk(allIds, 500)) {
+        const [orderAgg, itemAgg] = await Promise.all([
+          this.db.collection('grouporder-order').aggregate()
+            .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
+            .group({ _id: '$activity_id', cnt: { $sum: 1 } }).limit(paging.AGG_LIMIT).end(),
+          this.db.collection('grouporder-order-item').aggregate()
+            .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
+            .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end()
+        ])
+        for (const r of (orderAgg.data || [])) orderMap.set(r._id, r.cnt)
+        for (const r of (itemAgg.data || [])) itemMap.set(r._id, r)
+      }
       for (const row of byLeader.values()) {
         for (const id of row._activity_ids) {
           row.valid_order_count += orderMap.get(id) || 0
@@ -1463,6 +1546,9 @@ module.exports = {
     const rows = [...byLeader.values()].map(r => { delete r._activity_ids; return r })
     rows.sort((a, b) => (b.last_publish_date || 0) - (a.last_publish_date || 0))
     const pageRows = rows.slice(p.skip, p.skip + p.pageSize)
+    // 补团长 username，只查本页团长，方便运营辨认
+    const userMap = await this._userNameMap(pageRows.map(r => r.leader_uid))
+    for (const r of pageRows) r.username = userMap.get(r.leader_uid) || ''
 
     await oplog.success(ctx, {
       action_type: ACTION.STAT_QUERY,
@@ -1493,11 +1579,11 @@ module.exports = {
         this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VOIDED }).count(),
         this.db.collection('grouporder-order-item').aggregate()
           .match({ activity_id: activity._id, status: ORDER.VALID })
-          .group({ _id: null, qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end(),
+          .group({ _id: null, qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end(),
         this.db.collection('grouporder-order-item').aggregate()
           .match({ activity_id: activity._id, status: ORDER.VALID })
           .group({ _id: '$goods_id', goods_name: { $first: '$goods_name' },
-                   qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end(),
+                   qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end(),
         this.db.collection('grouporder-report').where({ activity_id: activity._id }).count()
       ])
       const agg = (itemAgg.data && itemAgg.data[0]) || { qty: 0, amount: 0 }
@@ -1534,13 +1620,13 @@ module.exports = {
       })
     }
 
-    // 未指定活动时，按团长列出其活动
-    assertParam(params.leader_uid, '请指定团长或活动')
+    // 未指定活动时，按团长列出其活动；未指定团长则列出全部团长的活动（菜单直达）
     const p = paging.normalize(params, {
       defaultOrderBy: { field: 'publish_date', direction: 'desc' },
       allowOrderFields: ['publish_date', 'create_date', 'end_time']
     })
-    const where = { leader_uid: params.leader_uid }
+    const where = {}
+    if (params.leader_uid) where.leader_uid = params.leader_uid
     const range = this._dateRange(p.filters, 'publish_date')
     if (range) Object.assign(where, range)
     const { list, total } = await this._query('grouporder-activity', where, p)
@@ -1552,19 +1638,20 @@ module.exports = {
       const [oa, ia] = await Promise.all([
         this.db.collection('grouporder-order').aggregate()
           .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
-          .group({ _id: '$activity_id', cnt: { $sum: 1 } }).end(),
+          .group({ _id: '$activity_id', cnt: { $sum: 1 } }).limit(paging.AGG_LIMIT).end(),
         this.db.collection('grouporder-order-item').aggregate()
           .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
-          .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end()
+          .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end()
       ])
       orderMap = new Map((oa.data || []).map(r => [r._id, r.cnt]))
       itemMap = new Map((ia.data || []).map(r => [r._id, r]))
     }
+    const userMap = await this._userNameMap(list.map(a => a.leader_uid))
 
     await oplog.success(ctx, {
       action_type: ACTION.STAT_QUERY,
       object_type: 'user',
-      object_id: params.leader_uid,
+      object_id: params.leader_uid || '(全部团长)',
       reason: '团长活动列表统计',
       prev_state: null,
       next_state: null
@@ -1574,7 +1661,9 @@ module.exports = {
       const it = itemMap.get(a._id)
       return {
         _id: a._id, title: a.title, short_code: a.short_code,
+        leader_uid: a.leader_uid, username: userMap.get(a.leader_uid) || '',
         status: a.status, governance_status: a.governance_status,
+        ever_governed: a.ever_governed || 0,
         publish_date: a.publish_date || null, end_time: a.end_time,
         valid_order_count: orderMap.get(a._id) || 0,
         valid_total_qty: it ? it.qty : 0,

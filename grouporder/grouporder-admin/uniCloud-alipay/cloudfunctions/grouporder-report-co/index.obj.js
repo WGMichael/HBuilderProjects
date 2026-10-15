@@ -36,8 +36,9 @@ module.exports = {
   },
 
   _after (error, result) {
-    if (error) return errors.normalize(error)
-    return result
+    // 使用中自动续期登录（auth.attachNewToken）
+    if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
+    return auth.attachNewToken(this.ctx, result)
   },
 
   /**

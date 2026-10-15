@@ -12,7 +12,7 @@
  *   或在 HBuilderX 中右键该云对象「管理依赖」安装。
  */
 const XLSX = require('xlsx')
-const { auth, errors, state, exportlog, bindMethods } = require('grouporder-common')
+const { auth, errors, state, exportlog, paging, bindMethods } = require('grouporder-common')
 
 const { throwBiz, assertParam, ok } = errors
 const { ACTIVITY, ORDER, DELIVERY } = state
@@ -26,8 +26,9 @@ module.exports = {
   },
 
   _after (error, result) {
-    if (error) return errors.normalize(error)
-    return result
+    // 使用中自动续期登录（auth.attachNewToken）
+    if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
+    return auth.attachNewToken(this.ctx, result)
   },
 
   // ==========================================================================
@@ -80,6 +81,8 @@ module.exports = {
         qty: { $sum: '$qty' },
         amount: { $sum: '$amount' }
       })
+      // 显式上限：不依赖平台默认返回条数，商品多时不截断
+      .limit(paging.AGG_LIMIT)
       .end()
     const aggMap = new Map((agg.data || []).map(r => [r._id, r]))
 
@@ -98,17 +101,15 @@ module.exports = {
       }
     })
 
-    const { data: orders } = await this.db.collection('grouporder-order')
+    // 有效订单与明细分批读完，不设条数上限：清单少一行就是团长漏发一单
+    const orders = await paging.fetchAll(() => this.db.collection('grouporder-order')
       .where({ activity_id: activity._id, status: ORDER.VALID })
-      .orderBy('create_date', 'asc').limit(600).get()
+      .orderBy('create_date', 'asc').orderBy('_id', 'asc'))
 
-    let items = []
-    if (orders && orders.length) {
-      const { data } = await this.db.collection('grouporder-order-item')
-        .where({ order_id: this.dbCmd.in(orders.map(o => o._id)), status: ORDER.VALID })
-        .limit(2000).get()
-      items = data || []
-    }
+    const items = await paging.fetchAllByIds(orders.map(o => o._id), ids =>
+      this.db.collection('grouporder-order-item')
+        .where({ order_id: this.dbCmd.in(ids), status: ORDER.VALID })
+        .orderBy('_id', 'asc'))
     const orderMap = new Map((orders || []).map(o => [o._id, o]))
 
     // 参与者明细：每条商品明细一行，同一订单的订单号与收货信息在多行重复（D-053）

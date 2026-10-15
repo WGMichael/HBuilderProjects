@@ -5,6 +5,7 @@
   D-057/D-043：队列来源由平台审核模式决定；D-058：图片异步检测不阻塞放行。
 -->
 <template>
+  <go-result v-if="loadFailed" type="unknown" detail="页面加载失败，请检查网络后重试" @retry="load" />
   <view class="page" v-if="loaded">
     <view class="mode-bar">预览模式 · 下面是参与者将看到的活动内容</view>
     <view class="banner" :class="{ 'banner--bad': act.review_result === 2 && act.status === 0 }" v-if="statusText">{{ statusText }}</view>
@@ -57,7 +58,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import GoResult from '@/components/go-result/go-result.vue';
 import { onLoad, onShow, onShareAppMessage } from '@dcloudio/uni-app';
+// @ts-ignore
+import { safeBack, backTo } from '@/common/grouporder/nav.js';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
@@ -116,14 +120,26 @@ const statusText = computed(() => {
 
 const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-const load = async () => {
+const loadInner = async () => {
   if (!activityId.value) return;
   act.value = (await guarded(api.activity.activityGetDetail({ activity_id: activityId.value }))) || {};
   loaded.value = true;
   await loadShareEntry();
 };
 
+// 加载失败（断网、非对象级错误）时给出重试，不白屏；对象级错误由 guarded 跳 M-26
+const loadFailed = ref(false);
+const load = async () => {
+  loadFailed.value = false;
+  try {
+    await loadInner();
+  } catch (e) {
+    if (!loaded.value) loadFailed.value = true;
+  }
+};
+
 const submit = async () => {
+  if (busy.value) return; // 连点会让第二次请求撞上已变化的状态，被当成「结果未知」
   busy.value = true;
   try {
     const r = (await guarded(api.activity.activitySubmitReview({ activity_id: activityId.value }))) || {};
@@ -133,6 +149,7 @@ const submit = async () => {
 };
 
 const withdraw = async () => {
+  if (busy.value) return;
   busy.value = true;
   try {
     await guarded(api.activity.activityWithdrawReview({ activity_id: activityId.value }));
@@ -177,8 +194,9 @@ onShareAppMessage(() => {
   };
 });
 
-const goBack = () => uni.navigateBack();
-const goManage = () => uni.redirectTo({ url: '/pages/activity/manage?id=' + activityId.value });
+const goBack = () => safeBack('/pages/activity/manage?id=' + activityId.value);
+// 从管理页进来的直接退回去，避免栈里出现两层管理页
+const goManage = () => backTo('pages/activity/manage', '/pages/activity/manage?id=' + activityId.value);
 
 onLoad((q: any = {}) => { activityId.value = q.id || ''; });
 onShow(() => load());

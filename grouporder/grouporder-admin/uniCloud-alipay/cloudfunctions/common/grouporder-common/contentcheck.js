@@ -12,7 +12,19 @@
  */
 
 const CONTENT_TYPE = { TEXT: 'text', IMAGE: 'image' }
-const OBJECT_TYPE = { ACTIVITY: 'activity', GOODS: 'goods' }
+// goods_lib：商品库记录（libCreate / libUpdate 送检时 object_id 是库记录 id，不是活动商品 id）
+const OBJECT_TYPE = { ACTIVITY: 'activity', GOODS: 'goods', GOODS_LIB: 'goods_lib' }
+// 送检对象类型 → 对象所在集合（回写 img_check_status、回调处置都按它找表）
+const OBJECT_COLLECTION = {
+  [OBJECT_TYPE.ACTIVITY]: 'grouporder-activity',
+  [OBJECT_TYPE.GOODS]: 'grouporder-goods',
+  [OBJECT_TYPE.GOODS_LIB]: 'grouporder-goods-lib'
+}
+
+/** 送检对象所在集合；未知类型返回空串，由调用方决定是否忽略 */
+function collectionOf (objectType) {
+  return OBJECT_COLLECTION[objectType] || ''
+}
 // check_result：1 通过 2 命中需人工 3 明确违规拦截
 const RESULT = { PASS: 1, NEED_REVIEW: 2, BLOCKED: 3 }
 // status：1 待复核 2 已放行 3 维持拦截 4 已处置
@@ -104,8 +116,8 @@ async function submitImages (ctx, { objectType, objectId, contentVersion, fileId
       status: STATUS.RELEASED
     })
     // 对象的图片检测状态同步置「通过」，否则详情页会长期显示「待检测」
-    const coll = objectType === OBJECT_TYPE.ACTIVITY ? 'grouporder-activity' : 'grouporder-goods'
-    await ctx.db.collection(coll).doc(objectId).update({ img_check_status: CHECK_STATUS.PASS })
+    const coll = collectionOf(objectType)
+    if (coll) await ctx.db.collection(coll).doc(objectId).update({ img_check_status: CHECK_STATUS.PASS })
     return null
   }
 
@@ -184,6 +196,7 @@ async function checkOnSubmit (ctx, activity, goodsList) {
 module.exports = {
   CONTENT_TYPE,
   OBJECT_TYPE,
+  collectionOf,
   RESULT,
   STATUS,
   CHECK_STATUS,

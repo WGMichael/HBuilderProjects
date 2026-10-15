@@ -46,8 +46,9 @@ module.exports = {
   },
 
   _after (error, result) {
-    if (error) return errors.normalize(error)
-    return result
+    // 使用中自动续期登录（auth.attachNewToken）
+    if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
+    return auth.attachNewToken(this.ctx, result)
   },
 
   // ==========================================================================
@@ -948,12 +949,15 @@ module.exports = {
     if (range) Object.assign(where, range)
 
     const { list, total } = await this._query('grouporder-activity', where, p)
+    // 补团长 username，只查本页团长，方便运营辨认；筛选仍按 leader_uid 精确搜
+    const userMap = await this._userNameMap(list.map(a => a.leader_uid))
     return ok(paging.wrap(list.map(a => ({
       _id: a._id,
       title: a.title,
       cover_image: a.cover_image,
       short_code: a.short_code,
       leader_uid: a.leader_uid,
+      username: userMap.get(a.leader_uid) || '',
       review_mode: a.review_mode || null,
       // 审核结论绑定提交时固化的内容版本
       content_version: a.content_version,
@@ -1473,11 +1477,12 @@ module.exports = {
     const range = this._dateRange(p.filters, 'publish_date')
     if (range) Object.assign(actWhere, range)
 
-    const { data: activities } = await this.db.collection('grouporder-activity')
+    // 分批读完全部匹配活动：单次 get 有条数上限，只取第一批会漏统计（按 _id 稳定排序）
+    const activities = await paging.fetchAll(() => this.db.collection('grouporder-activity')
       .where(actWhere)
       .field({ _id: true, leader_uid: true, status: true, governance_status: true,
                ever_governed: true, publish_date: true, create_date: true })
-      .limit(1000).get()
+      .orderBy('_id', 'asc'))
 
     const byLeader = new Map()
     for (const a of (activities || [])) {
@@ -1514,16 +1519,21 @@ module.exports = {
 
     const allIds = (activities || []).map(a => a._id)
     if (allIds.length) {
-      const [orderAgg, itemAgg] = await Promise.all([
-        this.db.collection('grouporder-order').aggregate()
-          .match({ activity_id: this.dbCmd.in(allIds), status: ORDER.VALID })
-          .group({ _id: '$activity_id', cnt: { $sum: 1 } }).end(),
-        this.db.collection('grouporder-order-item').aggregate()
-          .match({ activity_id: this.dbCmd.in(allIds), status: ORDER.VALID })
-          .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end()
-      ])
-      const orderMap = new Map((orderAgg.data || []).map(r => [r._id, r.cnt]))
-      const itemMap = new Map((itemAgg.data || []).map(r => [r._id, r]))
+      // 活动 id 分批聚合：每批分组数 ≤ AGG_LIMIT，显式 limit 保证分组结果不被平台默认条数截断
+      const orderMap = new Map()
+      const itemMap = new Map()
+      for (const ids of paging.chunk(allIds, 500)) {
+        const [orderAgg, itemAgg] = await Promise.all([
+          this.db.collection('grouporder-order').aggregate()
+            .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
+            .group({ _id: '$activity_id', cnt: { $sum: 1 } }).limit(paging.AGG_LIMIT).end(),
+          this.db.collection('grouporder-order-item').aggregate()
+            .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
+            .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end()
+        ])
+        for (const r of (orderAgg.data || [])) orderMap.set(r._id, r.cnt)
+        for (const r of (itemAgg.data || [])) itemMap.set(r._id, r)
+      }
       for (const row of byLeader.values()) {
         for (const id of row._activity_ids) {
           row.valid_order_count += orderMap.get(id) || 0
@@ -1569,11 +1579,11 @@ module.exports = {
         this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VOIDED }).count(),
         this.db.collection('grouporder-order-item').aggregate()
           .match({ activity_id: activity._id, status: ORDER.VALID })
-          .group({ _id: null, qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end(),
+          .group({ _id: null, qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end(),
         this.db.collection('grouporder-order-item').aggregate()
           .match({ activity_id: activity._id, status: ORDER.VALID })
           .group({ _id: '$goods_id', goods_name: { $first: '$goods_name' },
-                   qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end(),
+                   qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end(),
         this.db.collection('grouporder-report').where({ activity_id: activity._id }).count()
       ])
       const agg = (itemAgg.data && itemAgg.data[0]) || { qty: 0, amount: 0 }
@@ -1628,10 +1638,10 @@ module.exports = {
       const [oa, ia] = await Promise.all([
         this.db.collection('grouporder-order').aggregate()
           .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
-          .group({ _id: '$activity_id', cnt: { $sum: 1 } }).end(),
+          .group({ _id: '$activity_id', cnt: { $sum: 1 } }).limit(paging.AGG_LIMIT).end(),
         this.db.collection('grouporder-order-item').aggregate()
           .match({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
-          .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).end()
+          .group({ _id: '$activity_id', qty: { $sum: '$qty' }, amount: { $sum: '$amount' } }).limit(paging.AGG_LIMIT).end()
       ])
       orderMap = new Map((oa.data || []).map(r => [r._id, r.cnt]))
       itemMap = new Map((ia.data || []).map(r => [r._id, r]))

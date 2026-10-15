@@ -14,6 +14,7 @@
  *
  * 入参：
  *   {
+ *     "secret": "8888",                     // 必填，清库密钥（见 SECRET），不符一律拒绝
  *     "confirm": "WIPE-ALL",                 // 必填，固定口令，缺失或不符一律拒绝
  *     "scopes": ["activity","order","goodslib","governance"]  // 选填，默认全部四组
  *   }
@@ -22,6 +23,10 @@
  */
 
 const CONFIRM_TOKEN = 'WIPE-ALL'
+// 清库密钥（产品负责人 2026-10-15 指定）。只存在云函数代码里，前端拿不到；
+// 4 位数字容易被穷举，下面另有两道防护：拒绝客户端直接调用、密钥错误时延迟返回
+const SECRET = '8888'
+const WRONG_SECRET_DELAY_MS = 3000
 
 // 清理分组 → 集合清单。按需扩展，但不要把 uni-id-users / uni-pay-orders 等非本业务表放进来。
 const GROUPS = {
@@ -51,7 +56,17 @@ async function wipeCollection (db, dbCmd, name) {
   return total
 }
 
-exports.main = async (event = {}) => {
+exports.main = async (event = {}, context = {}) => {
+  // 只允许 HBuilderX 本地运行 / 上传并运行、控制台测试等服务端方式调用；
+  // 客户端（小程序 / H5 / App 里 callFunction）一律拒绝，避免任何人从前端清库
+  if (context.SOURCE === 'client') {
+    return { ok: false, error: '本函数禁止从客户端调用' }
+  }
+  if (String(event.secret || '') !== SECRET) {
+    // 错误密钥延迟返回，拖慢穷举
+    await new Promise((resolve) => setTimeout(resolve, WRONG_SECRET_DELAY_MS))
+    return { ok: false, error: '清库密钥不正确' }
+  }
   // 定时触发器参数带 Type==='Timer'，这里额外挡一道：绝不因误配触发器而自动清库
   if (event && event.Type === 'Timer') {
     return { ok: false, error: '本函数禁止由定时触发器调用' }

@@ -32,7 +32,7 @@
 
     <!-- 订单明细 -->
     <view class="block">
-      <view class="block__title">订单明细（{{ orders.length }}）</view>
+      <view class="block__title">订单明细（{{ orderTotal }}）</view>
       <view class="tabs">
         <text v-for="t in statusTabs" :key="t.v" class="tabs__i" :class="{ 'tabs__i--on': orderStatus === t.v }" @click="switchStatus(t.v)">{{ t.text }}</text>
       </view>
@@ -44,19 +44,21 @@
         <view class="orow__l2" v-if="o.consignee_address">{{ o.consignee_address }}</view>
         <view class="orow__l3">{{ o.total_qty }} 份 · ￥{{ fen2yuan(o.total_amount) }} · {{ fmt(o.create_date) }}</view>
         <view class="orow__items" v-if="o.items">{{ (o.items || []).map(it => it.goods_name + '×' + it.qty).join('，') }}</view>
-        <view class="orow__act" v-if="o.status === 1">
+        <!-- 作废只在活动截止后（D-051）：截止前异常单由参与者自行取消 -->
+        <view class="orow__act" v-if="o.status === 1 && stat.status === 3">
           <text class="orow__void" @click="voidOrder(o)">作废此单</text>
         </view>
         <view class="orow__reason" v-if="o.void_reason">作废原因：{{ o.void_reason }}</view>
       </view>
-      <view v-if="!orders.length" class="empty">暂无订单</view>
+      <view v-if="!orders.length && !ordersLoading" class="empty">暂无订单</view>
+      <view v-if="orders.length" class="list-foot">{{ ordersLoading ? '加载中…' : orders.length < orderTotal ? '上滑加载更多' : '没有更多了' }}</view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { onLoad, onShow } from '@dcloudio/uni-app';
+import { onLoad, onShow, onReachBottom } from '@dcloudio/uni-app';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
@@ -77,11 +79,34 @@ const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-dig
 const loadStat = async () => {
   stat.value = (await guarded(api.order.orderLeaderStat({ activity_id: activityId.value }))) || {};
 };
-const loadOrders = async () => {
-  const data = (await guarded(api.order.orderLeaderList({ activity_id: activityId.value, page: 1, pageSize: 100, filters: { status: orderStatus.value } }))) || {};
-  orders.value = data.list || [];
+// 订单明细分页加载：参与人多时不一次拉完，滑到底加载下一页；total 为该状态下的订单总数
+const ORDER_PAGE_SIZE = 20;
+const orderTotal = ref(0);
+const ordersLoading = ref(false);
+let orderPage = 0;
+let orderSeq = 0; // 切换状态或刷新时丢弃上一轮未返回的结果
+
+/** @param more true 为加载下一页，否则从第一页重新加载 */
+const loadOrders = async (more = false) => {
+  if (more && (ordersLoading.value || orders.value.length >= orderTotal.value)) return;
+  const my = ++orderSeq;
+  const page = more ? orderPage + 1 : 1;
+  ordersLoading.value = true;
+  try {
+    const data = (await guarded(api.order.orderLeaderList({ activity_id: activityId.value, page, pageSize: ORDER_PAGE_SIZE, filters: { status: orderStatus.value } }))) || {};
+    if (my !== orderSeq) return;
+    const list = data.list || [];
+    orders.value = more ? orders.value.concat(list) : list;
+    orderTotal.value = data.total || 0;
+    orderPage = page;
+  } catch (e) {
+    if (my === orderSeq && !more) { orders.value = []; orderTotal.value = 0; }
+  } finally {
+    if (my === orderSeq) ordersLoading.value = false;
+  }
 };
-const switchStatus = (v: number) => { orderStatus.value = v; loadOrders(); };
+onReachBottom(() => loadOrders(true));
+const switchStatus = (v: number) => { orderStatus.value = v; orders.value = []; orderTotal.value = 0; loadOrders(); };
 
 const voidOrder = (o: any) => {
   uni.showModal({
@@ -113,6 +138,7 @@ onShow(() => { loadStat(); loadOrders(); });
 .tabs { display: flex; gap: 16rpx; margin-bottom: 16rpx; }
 .tabs__i { font-size: 24rpx; color: $go-text; padding: 8rpx 24rpx; border: 1rpx solid $go-border; border-radius: 32rpx; }
 .tabs__i--on { color: $go-primary; border-color: $go-primary; background: $go-primary-soft; }
+.list-foot { text-align: center; font-size: 22rpx; color: $go-muted; padding: 20rpx 0 4rpx; }
 .orow { padding: 20rpx 0; border-bottom: 1rpx solid $go-soft; }
 .orow__l1 { display: flex; justify-content: space-between; font-size: 28rpx; color: $go-ink; }
 .orow__dlv { font-size: 22rpx; color: $go-primary; margin-left: 12rpx; }

@@ -1,6 +1,6 @@
 # 云函数与云对象总契约
 
-- 文档版本：v0.9（设计稿 v0.1 → 实现回填 v0.2 → 裁决收口 v0.3 → 登录审计归位 v0.4 → 自提点字段 v0.5 → 角色收口 v0.6 → 审核冻结与复用源 v0.7 → 待确认项编号 v0.8 → 强幂等与自动处置 v0.9 → 图片先选后传 v0.10 → 复用源收紧 v0.11 → 交付方式多选 v0.12 → 起始时间 v0.13 → 商品库新建 v0.14 → 默认值口径 v0.15 → 删除草稿 v0.16 → 复制预填 v0.17 → 取消确认门 v0.18 → 读时补截止 v0.19）
+- 文档版本：v0.9（设计稿 v0.1 → 实现回填 v0.2 → 裁决收口 v0.3 → 登录审计归位 v0.4 → 自提点字段 v0.5 → 角色收口 v0.6 → 审核冻结与复用源 v0.7 → 待确认项编号 v0.8 → 强幂等与自动处置 v0.9 → 图片先选后传 v0.10 → 复用源收紧 v0.11 → 交付方式多选 v0.12 → 起始时间 v0.13 → 商品库新建 v0.14 → 默认值口径 v0.15 → 删除草稿 v0.16 → 复制预填 v0.17 → 取消确认门 v0.18 → 读时补截止 v0.19 → 商品库添加去重 v0.20 → 新建不覆盖选项 v0.21 → 我参与的按活动分页 v0.22 → 读取不截断 v0.23 → 上线前 Review 修复 v0.24 → 并发与一致性 v0.25）
 - 日期：2026-10-08
 - 性质：**全部服务端接口的唯一事实源**。服务端按此实现；admin 端与 client 端两个前端按此调用。
 - 事实来源：`docs/00-product/PRD.md`、`docs/00-product/OPS_ADMIN_REQUIREMENTS.md`、`docs/00-product/DECISIONS.md`、`docs/02-arch/DATA_MODEL.md`、`docs/01-ux/UX_FLOW_SPEC.md`、`docs/02-arch/GOODS_LIB_SPEC.md`
@@ -69,6 +69,8 @@
 | 出参 | `{ list: [...], total, asOf }` |
 
 `pageSize` 服务端强制上限 100。`asOf` 为数据截至时间，统计类必须返回（OPS §12.2）。
+
+**服务端内部读取不得用固定条数截断**（2026-10-15）：分页只约束返回给前端的条数；凡是需要「全部」的读取——清单导出的全部有效订单与明细、一页订单的全部明细、本人全部订单（M-18 归组、待办、注销检查）——一律用 `paging.fetchAll` / `paging.fetchAllByIds` 分批读完（每批 500 条，`dbCmd.in` 每批 100 个 id），并带稳定排序（末位 `_id`）。聚合 `group` 一律显式 `.limit(paging.AGG_LIMIT)`（1000），不依赖平台默认返回条数。统计数字（订单数、份数、金额）用 `count` / 聚合计算，不读出全部记录。
 
 ### 2.3 错误码
 
@@ -179,8 +181,8 @@
 
 | 方法 | 用途 | 页面 | 关键约束 |
 |---|---|---|---|
-| `goodsCreate` | 新增商品 | M-11 | 保存时**自动沉淀到商品库**（`common/goodslib.sinkToLib`），可带 `lib_category_id` 指定库记录分类（D-088）；`0` 表示不限库存/不限购 |
-| `goodsUpdate` | 编辑商品 | M-11 / M-22 | `ever_ordered=1` 时**改价需二次确认并记录前后值**；禁止删除；有限库存不得低于 `sold_qty`；**保存成功（含商品库沉淀）后回收被替换且无人引用的旧图**（D-084） |
+| `goodsCreate` | 新增商品 | M-11 | **同一活动内不得重名**，否则 `DUPLICATE`（D-093）；保存时**自动沉淀到商品库**（`common/goodslib.sinkToLib`），可带 `lib_category_id` 指定库记录分类（D-088）；`0` 表示不限库存/不限购 |
+| `goodsUpdate` | 编辑商品 | M-11 / M-22 | 改名后不得与本活动其他商品重名，否则 `DUPLICATE`（D-093）；`ever_ordered=1` 时**改价需二次确认并记录前后值**；禁止删除；有限库存不得低于 `sold_qty`；**保存成功（含商品库沉淀）后回收被替换且无人引用的旧图**（D-084） |
 | `goodsDelete` | 删除商品 | M-22 | 仅 `ever_ordered=0` 可删 |
 | `goodsSetOnSale` | 停售 / 恢复售卖 | M-22 | 停售只阻止新增与扩大，**已有明细保留并进入清单**（D-019、D-050）；活动已截止或已取消时**禁止恢复**（D-028） |
 | `goodsAdjustStock` | 调整库存与限购 | M-11 / M-22 | 可取消库存上限、增加库存、减少至不低于 `sold_qty`；**成功后把库存 / 限购同步为同名库记录的默认值**（`goodslib.syncStockToLib`，不新建库记录，D-089）。`goodsUpdate` 不接收这两项，M-11 编辑时库存 / 限购须走本方法 |
@@ -213,7 +215,7 @@
 | `libList` | 商品库列表 | M-28 / M-29 | 入参含 `category_id`；按最近使用倒序；**被封禁记录不可选、不可编辑** |
 | `libUpdate` | 编辑库记录与三项预填值 | M-29 | `GOODS_LIB_SPEC §5.6`；**改图保存成功后回收被替换且无人引用的旧图**（D-084） |
 | `libDelete` | 软删 | M-29 | 软删记录**同样保持封禁状态**（D-064） |
-| `libCopyToActivity` | 复用到当前活动 | M-28 | 多选；价格/总库存/每人限购按默认值**预填**（不强制确认，D-092）；被下架商品不可选 |
+| `libCopyToActivity` | 从商品库添加到当前活动 | M-28 | 多选；价格/总库存/每人限购按默认值**预填**（不强制确认，D-092）；**去重**：活动已有同名商品或同一 `lib_id` 的商品时该项列入 `failed[]`（`DUPLICATE`），同次请求重复 id 只算一次（D-093）；被下架商品不可选 |
 | `categoryList` / `categoryCreate` / `categoryUpdate` / `categoryDelete` | 分类管理 | M-30 | 用户私有；**仅用于筛选，不进活动展示与清单**（D-066）；上限 20 个 |
 | `categorySort` | 分类拖拽排序 | M-30 | **v0.2 补齐**（v0.1 表头声称 9 个方法但只列了 8 个）。与 `goodsSort` 同一原则：整体重写为从 1 起的连续值 |
 
@@ -423,7 +425,7 @@ OPS §13 把「运营账号停用/角色变更」列为必记事件，但 A-15 �
 | `activityGetShareEntry` | `{ activity_id }` | `{ activity_id, short_code, title, cover_image, end_time, asOf }` | — |
 | `activityCopySourceList` | — | `list[]`：`{ _id, title, cover_image, status, delivery_types, end_time, publish_date, create_date }` | — |
 | `activityCopy` | `{ source_activity_id, idempotent_key }` | `{ activity_id, copied_count, excluded: [{name, reason}], end_time, duplicated }` | `idempotent_key`（活动表唯一索引，D-081） |
-| `goodsCreate` | `{ activity_id, name, description?, cover_image, detail_images?, price, unit?, total_stock, per_user_limit, is_recommend?, lib_id?, lib_category_id? }`（`lib_category_id` 不传 = 不指定；`''` = 未分组） | `{ goods_id, lib_id, sort, need_recheck, activity_status }` | — |
+| `goodsCreate` | `{ activity_id, name, description?, cover_image, detail_images?, price, unit?, total_stock, per_user_limit, is_recommend?, lib_id?, lib_category_id?, sync_to_lib? }`（`lib_category_id` 不传 = 不指定；`''` = 未分组；`sync_to_lib: false` = 只存活动、不沉淀商品库，D-094） | `{ goods_id, lib_id, sort, need_recheck, activity_status }` | — |
 | `goodsUpdate` | `{ goods_id, name?, description?, cover_image?, detail_images?, unit?, price?, is_recommend?, confirm_price_change?, lib_category_id? }` | `{ goods_id, need_recheck, activity_status }` | — |
 | `goodsDelete` | `{ goods_id }` | `{ deleted, need_recheck, activity_status }` | — |
 | `goodsSetOnSale` | `{ goods_id, on_sale }` | `{ goods_id, on_sale, changed }` | 幂等：同值重复提交返回 `changed:false` |
@@ -459,13 +461,13 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 |---|---|---|---|
 | `orderPreview` | `{ activity_id, items: [{goods_id, qty}], order_id? }`（改单时传 `order_id`） | `{ activity_id, delivery_types, pickup, items[], unavailable[], total_qty, total_amount, asOf }`（`pickup` 仅支持自提时有值） | — |
 | `orderCreate` | `{ activity_id, idempotent_key, items, delivery_type?, address_id? \| consignee_name+consignee_mobile+consignee_address?, buyer_remark? }`（活动两种方式都支持时 `delivery_type` 必传） | `{ order_id, order_no, total_qty, total_amount, duplicated }` | **`idempotent_key` 必传**，唯一索引拦截 |
-| `orderMyList` | `filters: { status?, activity_id? }` | `list[]` 按活动分组：`{ activity_id, title, cover_image, activity_status, governance_status, delivery_types, end_time, orders: [{ _id, order_no, status, delivery_type, total_qty, total_amount, create_date, items[] }] }` | — |
+| `orderMyList` | `{ page, pageSize, filters: { status?, activity_id? } }`（`pageSize` 按**活动分组**计） | `list[]` 按活动分组：`{ activity_id, title, cover_image, activity_status, governance_status, not_started, delivery_types, start_time, end_time, orders: [{ _id, order_no, status, delivery_type, total_qty, total_amount, create_date, items[] }] }`；**分页单位是活动分组**：分批读完本人全部订单，按活动归组、组按最近一次下单时间倒序后分页，同一活动的订单不跨页，`total` 为分组数；页内活动读时补截止 | — |
 | `orderGetDetail` | `{ order_id }` | `{ _id, order_no, status, delivery_type, activity{ …, delivery_types }, pickup, consignee_*, buyer_remark, total_qty, total_amount, cancel_*, void_*, create_date, items[], editable, asOf }` | — |
 | `orderUpdate` | `{ order_id, items?, delivery_type?, address_id?, consignee_*?, buyer_remark? }`（换 `delivery_type` 时按新方式重建收货快照） | `{ order_id, total_qty, total_amount }` | 无独立键；库存以带条件原子自增保证不超卖 |
 | `orderCancel` | `{ order_id, reason? }` | `{ order_id, status }` | 状态机自身（带条件更新，重复取消只返还一次） |
 | `orderVoid` | `{ order_id, reason }`（必填） | `{ order_id, status, export_versions_invalidated }` | 同上 |
 | `orderLeaderStat` | `{ activity_id }` | `{ activity_id, title, status, governance_status, valid_order_count, cancelled_order_count, voided_order_count, valid_total_qty, estimated_amount, delivery_types, by_delivery{ home, self_pick }, goods_summary[], asOf }` | — |
-| `orderLeaderList` | `{ activity_id }`；`filters: { status? }`（默认只看有效） | `list[]`：`{ _id, order_no, status, delivery_type, consignee_name, consignee_mobile, consignee_address, buyer_remark, total_qty, total_amount, create_date, void_reason, items[] }` | — |
+| `orderLeaderList` | `{ activity_id, page, pageSize }`；`filters: { status? }`（默认只看有效）；按 `create_date` 升序、`_id` 次序分页，`total` 为该状态订单总数，前端 M-21 每页 20 张、滑到底加载 | `list[]`：`{ _id, order_no, status, delivery_type, consignee_name, consignee_mobile, consignee_address, buyer_remark, total_qty, total_amount, create_date, void_reason, items[] }` | — |
 
 > `orderLeaderList` 的 `consignee_address` 在自提订单中恒为空串（D-060、D-086）。`by_delivery` 的 `home` / `self_pick` 各含 `order_count`、`total_qty`，旧订单按所属活动当时的单一方式归类。
 > 金额字段一律是**分**，前端自行换算展示。
@@ -610,6 +612,12 @@ ever_governed, cancel_reason, stat: { valid_order_count, valid_total_qty, estima
 
 | 日期 | 版本 | 变化 |
 |---|---|---|
+| 2026-10-15 | v0.25 | 并发与一致性：① 订单编辑锁 `editing_until`：`orderUpdate` 持锁执行、`orderCancel` / `orderVoid` 以未锁为条件，抢不到返回 `STATE_CHANGED`「订单正在处理中，请稍后重试」；`orderCreate` 写明细期间持锁，写明细失败整单回滚；② 扣库存条件带上读到的 `total_stock`，团长同时调库存时按新值重试最多 3 次；`goodsAdjustStock` 调小库存以 `sold_qty <= 新库存` 为条件写入；③ 限购改为写入后复核，超限则回滚本单并返回 `LIMIT_EXCEEDED`；④ 幂等键查询限定本人；⑤ `activityClose` / `activityCancel` 以当前状态为条件更新，起止时间校验为数字；⑥ `libUpdate` 只更新变化的字段、未换图不重新送检，无变化返回 `changed:false`；⑦ 自动审核模式下进行中活动内容改动当场文本检测（D-097）；⑧ `grouporder-check-callback` 拒绝客户端调用并要求 HMAC 签名（密钥在 uni-config-center `grouporder-check-callback/config.json` 的 `secret`），商品库送检类型 `goods_lib` 回写商品库；⑨ 定时任务：匿名化在单次预算内循环多批、清单清理按 `file_cleaned` 选取并循环；⑩ ops-co 聚合全部显式上限、`statOverview` 分批读完 |
+| 2026-10-15 | v0.24 | 上线前 Review 修复：① 所有 grouporder 云对象 `_after` 经 `auth.attachNewToken` 在返回顶层带 `newToken`（使用中自动续期，uni-id web 端有效期 7 天、剩 1 天续期）；② `goodsUpdate` 只有值真正变化的字段进 patch（图片按 fileID 比较），只改价格 / 库存 / 限购不再触发重审（D-048），无变化不报错；③ `orderPreview` / `orderUpdate` 改单口径：不增加份数的商品不受停售 / 下架 / 库存 / 限购阻止（D-050），本单原有份数保留下单价、新增份数按现价（D-018），明细逐条更新、数量未变的不重写；④ `orderCreate` 订单号撞唯一索引时换号重试最多 5 次；⑤ `addressList`、待办（已关闭记录、团长活动）分批读完 |
+| 2026-10-15 | v0.23 | §2.2 新增「服务端内部读取不得用固定条数截断」：清单导出不再只读前 600 张有效订单 / 2000 条明细；`orderLeaderList` 每页明细分批读完、加 `_id` 次排序，M-21 前端改为分页加载并显示真实总数；待办与注销检查分批读完本人订单；商品汇总、活动列表份数、商品库分类计数的聚合显式加上限 |
+| 2026-10-15 | v0.22 | `orderMyList` 分页单位改为**活动分组**：分批读完本人全部订单后按活动归组（组按最近一次下单时间倒序）再分页，同一活动的订单不再跨页，`total` 为分组数；明细不再受单次 500 条上限截断；补出参 `not_started`、`start_time`，并对页内活动读时补截止。修复 M-18 前端把已分组结果二次分组导致订单号 / 份数 / 金额为空、点订单报「订单不存在」 |
+| 2026-10-15 | v0.21 | 按 **D-094**：`goodsCreate` 新增 `sync_to_lib`（`false` 时不沉淀商品库）。**已实现** |
+| 2026-10-15 | v0.20 | 按 **D-093**：`libCopyToActivity` 增加去重（同名或同 `lib_id` 列入 `failed[]`，`DUPLICATE`）；`goodsCreate` / `goodsUpdate`（改名）同一活动内不重名。**已实现** |
 | 2026-10-12 | v0.19 | 新增 common `lifecycle.js`（`closeIfExpired` / `closeExpiredIn`）：`activityGetDetail`、`activityMyList`、`activityCopySourceList` 读时补截止，`grouporder-task-autoclose` 改用同一实现；`activityGetDetail` 出参增加 `asOf`。client 工程三个定时函数补齐触发器配置（与 admin 一致） |
 | 2026-10-12 | v0.18 | 按 **D-092**：`libCopyToActivity` 说明去掉「必须逐项确认」（接口不变，确认门为纯前端，已删除） |
 | 2026-10-12 | v0.17 | 按 **D-091**：`activityCopy` 改由发起页在团长保存 / 发布或首次操作商品时调用，M-31 不再直接调用；接口本身不变 |

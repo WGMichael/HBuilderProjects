@@ -9,7 +9,12 @@
   改单模式（带 order_id）：预填本单交付方式、收货信息与备注，提交走 orderUpdate，截止前可换交付方式。
 -->
 <template>
-  <view class="page" v-if="loaded">
+  <!-- 没有待确认的商品（如 H5 直接打开本页 / 刷新后缓存已清）：不白屏，给出回活动页的入口 -->
+  <view class="page page--empty" v-if="!items.length">
+    <view class="empty">没有待确认的商品</view>
+    <button class="empty__btn" size="mini" @click="backToActivity">返回活动页选购</button>
+  </view>
+  <view class="page" v-else-if="loaded">
     <!-- 商品清单 -->
     <view class="sec">
       <view class="sec__title">商品</view>
@@ -21,6 +26,11 @@
       <view v-for="u in preview.unavailable || []" :key="u.goods_id" class="line line--bad">
         <text class="line__name">{{ u.name }}</text>
         <text class="line__err">{{ errText(u) }}</text>
+      </view>
+      <!-- 有不可购买的商品时不允许提交：服务端会整单拒绝，先回活动页调整 -->
+      <view v-if="(preview.unavailable || []).length" class="bad-tip">
+        <text>以上商品当前不能按所选数量购买，请返回调整后再提交</text>
+        <text class="bad-tip__btn" @click="backToActivity">返回调整</text>
       </view>
     </view>
 
@@ -78,6 +88,8 @@
 import { computed, ref } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 // @ts-ignore
+import { safeBack, backTo } from '@/common/grouporder/nav.js';
+// @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { fen2yuan } from '@/common/grouporder/dict.js';
@@ -104,6 +116,7 @@ const delivery = ref(0);
 const isSelfPick = computed(() => delivery.value === 2);
 const submittable = computed(() => {
   if (!(preview.value.items || []).length) return false;
+  if ((preview.value.unavailable || []).length) return false;
   if (!delivery.value) return false;
   if (isSelfPick.value) return !!selfName.value.trim() && !!selfMobile.value.trim();
   return !!address.value;
@@ -135,13 +148,33 @@ const loadOrder = async () => {
   if (o.consignee_address) address.value = { name: o.consignee_name, mobile: o.consignee_mobile, address: o.consignee_address };
 };
 
-/** 送货上门且还没有地址时，带出地址簿默认地址 */
+/** 送货上门且还没有地址时，带出地址簿默认地址；地址簿为空则引导新增（D-096） */
+let askedNoAddress = false; // 本页只主动提示一次，「稍后」后不再打扰
 const fillDefaultAddress = async () => {
   if (delivery.value !== 1 || address.value) return;
+  let list: any[] = [];
   try {
-    const list = ((await api.user.addressList()) || {}).list || [];
-    address.value = list.find((a: any) => a.is_default) || list[0] || null;
-  } catch (e) {}
+    list = ((await api.user.addressList()) || {}).list || [];
+  } catch (e) { return; }
+  address.value = list.find((a: any) => a.is_default) || list[0] || null;
+  if (!address.value && !askedNoAddress) {
+    askedNoAddress = true;
+    uni.showModal({
+      title: '还没有收货地址',
+      content: '送货上门需要收货地址，添加后会自动用于本单。',
+      confirmText: '去添加',
+      cancelText: '稍后',
+      success: (r: any) => { if (r.confirm) addAddress(); },
+    });
+  }
+};
+
+/** 直接新增地址：保存后自动选中，回到本页 */
+const addAddress = () => {
+  uni.navigateTo({
+    url: '/pages/address/edit',
+    events: { saved: (a: any) => { if (a && a._id) address.value = a; } },
+  });
 };
 
 const pickDelivery = (t: number) => {
@@ -150,6 +183,8 @@ const pickDelivery = (t: number) => {
 };
 
 const chooseAddress = () => {
+  // 地址簿为空时直接进新增，少走一层列表页
+  if (!address.value && askedNoAddress) { addAddress(); return; }
   uni.navigateTo({
     url: '/pages/address/list?select=1',
     events: { picked: (a: any) => { address.value = a; } },
@@ -178,24 +213,39 @@ const submit = async () => {
   try {
     if (orderId.value) {
       params.order_id = orderId.value;
-      await guarded(api.order.orderUpdate(params));
+      await guarded(api.order.orderUpdate(params), { stay: STAY_CODES });
       uni.removeStorageSync('order_draft_items');
       uni.showToast({ title: '订单已修改', icon: 'none' });
-      // 回到订单详情（订单详情 → 活动详情 → 本页）
-      setTimeout(() => uni.navigateBack({ delta: 2 }), 600);
+      // 回到订单详情（通常是 订单详情 → 活动详情 → 本页）；H5 刷新后栈不全时直接打开订单详情
+      setTimeout(() => backTo('pages/order/detail', '/pages/order/detail?id=' + orderId.value), 600);
       return;
     }
     params.activity_id = activityId.value;
     params.idempotent_key = idempotentKey.value;
-    const data = (await guarded(api.order.orderCreate(params))) || {};
+    const data = (await guarded(api.order.orderCreate(params), { stay: STAY_CODES })) || {};
     uni.removeStorageSync('order_draft_items');
+    // 同一次下单意图的重复提交（如首次超时其实已成功）：服务端返回首单，这次的修改不会生效，如实告知
+    if (data.duplicated) {
+      await new Promise((resolve) => uni.showModal({ title: '订单此前已提交', content: '这笔订单之前已经提交成功，本次未重复下单。如需修改收货信息或数量，请在订单详情中修改。', showCancel: false, complete: resolve }));
+    }
     uni.redirectTo({ url: '/pages/order/result?order_id=' + data.order_id + '&activity_id=' + activityId.value });
-  } catch (e) {
-    // 结果未知由 guarded 跳 M-26；其余错误已提示。幂等键不变，用户可安全重试
+  } catch (e: any) {
+    // 结果未知由 guarded 跳 M-26；其余错误已提示。幂等键不变，用户可安全重试。
+    // 商品 / 地址刚失效（NOT_FOUND）：留在本页，重新试算并重新带出地址
+    if (e && e.errCode === 'NOT_FOUND') {
+      address.value = null;
+      askedNoAddress = false;
+      try { await doPreview(); await fillDefaultAddress(); } catch (err) {}
+    }
   } finally {
     submitting.value = false;
   }
 };
+
+// 提交时这些错误只提示、不整页跳走：选中的地址或某件商品刚被删，用户改一下即可重试
+const STAY_CODES = ['NOT_FOUND'];
+
+const backToActivity = () => safeBack('/pages/activity/detail?id=' + activityId.value + (orderId.value ? '&order_id=' + orderId.value : ''));
 
 onLoad((q: any = {}) => {
   activityId.value = q.activity_id || '';
@@ -225,6 +275,11 @@ onShow(async () => {
 .line__amt { color: $go-red; }
 .line--bad { opacity: 0.6; }
 .line__err { color: $go-red; font-size: 24rpx; }
+.page--empty { display: flex; flex-direction: column; align-items: center; padding-top: 200rpx; }
+.empty { font-size: 28rpx; color: $go-muted; margin-bottom: 28rpx; }
+.empty__btn { font-size: 26rpx; }
+.bad-tip { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; margin-top: 12rpx; padding: 16rpx 20rpx; border-radius: 12rpx; background: $go-red-soft; font-size: 24rpx; color: $go-red; }
+.bad-tip__btn { flex-shrink: 0; font-weight: 600; text-decoration: underline; }
 .addr { padding: 12rpx 0; }
 .addr__line1 { font-size: 30rpx; color: $go-ink; }
 .addr__line2 { font-size: 26rpx; color: $go-text; margin-top: 8rpx; }

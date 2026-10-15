@@ -118,7 +118,20 @@ export const mutations = {
 		}
 		// #endif
 
-		if (delta) {
+		// 【grouporder 修改 · D-096】原逻辑只要栈里有登录页就 reLaunch 首页，用户从活动页去登录后回不到原处。
+		// 改为：退掉栈顶连续的 uni-id 页面（登录、注册、找回密码等），回到进入登录前的页面；
+		// 登录页本身就是第一个页面（如 H5 直接打开 / 刷新）时才回首页。升级 uni-id-pages 时需重新合入
+		let idDepth = 0
+		for (let i = pages.length - 1; i >= 0; i--) {
+			if ((pages[i].route || '').indexOf('uni_modules/uni-id-pages/') !== 0) break
+			idDepth++
+		}
+		if (idDepth && idDepth < pages.length) {
+			return uni.navigateBack({
+				delta: idDepth
+			})
+		}
+		if (delta || idDepth) {
 			const page = pagesJson.pages[0]
 			return uni.reLaunch({
 				url: `/${page.path}`

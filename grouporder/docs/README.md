@@ -62,15 +62,15 @@
 
 | 文档 | 当前版本 | 维护者 | 说明 |
 |---|---|---|---|
-| `00-product/PRD.md` | v1.13 | 产品负责人 | 产品范围与规则 |
-| `00-product/DECISIONS.md` | v1.28 | 产品负责人 | **决策编号的唯一出处**，D-001 起；D-083 待确认 |
+| `00-product/PRD.md` | v1.14 | 产品负责人 | 产品范围与规则 |
+| `00-product/DECISIONS.md` | v1.33 | 产品负责人 | **决策编号的唯一出处**，D-001 起；D-083 待确认 |
 | `00-product/OPS_ADMIN_REQUIREMENTS.md` | v0.19 | 产品负责人 | 运营后台需求 |
 | `01-ux/UX_FLOW_SPEC.md` | v1.0 | UX | 页面编号 M-xx / A-xx 的唯一出处 |
 | `01-ux/UX_STATE_MATRIX.md` | v1.0 | UX | |
-| `02-arch/DATA_MODEL.md` | v1.31 | 架构 | 18 张表，schema 已生成 |
-| `02-arch/CLOUD_API.md` | v0.19 | 服务端维护者 | 两个前端只读，发现问题上报不自改 |
-| `02-arch/GOODS_LIB_SPEC.md` | v1.0 | 架构 | 自包含实现规格 |
-| `02-arch/SHARE_SPEC.md` | v0.2 | 架构 | 自包含；**分享是唯一的活动入口**（D-059） |
+| `02-arch/DATA_MODEL.md` | v1.32 | 架构 | 18 张表，schema 已生成 |
+| `02-arch/CLOUD_API.md` | v0.25 | 服务端维护者 | 两个前端只读，发现问题上报不自改 |
+| `02-arch/GOODS_LIB_SPEC.md` | v1.2 | 架构 | 自包含实现规格 |
+| `02-arch/SHARE_SPEC.md` | v0.3 | 架构 | 自包含；**分享是唯一的活动入口**（D-059） |
 
 ### 上线关卡（清空即失效）
 

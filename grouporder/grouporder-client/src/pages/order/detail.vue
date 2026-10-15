@@ -7,6 +7,7 @@
   D-086：交付方式按订单自身展示；「修改订单」走活动详情 → 确认页的改单模式（orderUpdate），截止前可换交付方式。
 -->
 <template>
+  <go-result v-if="loadFailed" type="unknown" detail="页面加载失败，请检查网络后重试" @retry="load" />
   <view class="page" v-if="loaded">
     <view class="status-bar" :class="'st' + order.status">{{ labelOf(ORDER_STATUS, order.status) }}</view>
 
@@ -51,6 +52,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import GoResult from '@/components/go-result/go-result.vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
@@ -62,10 +64,21 @@ const orderId = ref('');
 const order = ref<any>({});
 const loaded = ref(false);
 
-const load = async () => {
+const loadInner = async () => {
   if (!orderId.value) return;
   order.value = (await guarded(api.order.orderGetDetail({ order_id: orderId.value }))) || {};
   loaded.value = true;
+};
+
+// 加载失败（断网、非对象级错误）时给出重试，不白屏；对象级错误由 guarded 跳 M-26
+const loadFailed = ref(false);
+const load = async () => {
+  loadFailed.value = false;
+  try {
+    await loadInner();
+  } catch (e) {
+    if (!loaded.value) loadFailed.value = true;
+  }
 };
 
 const edit = () => {

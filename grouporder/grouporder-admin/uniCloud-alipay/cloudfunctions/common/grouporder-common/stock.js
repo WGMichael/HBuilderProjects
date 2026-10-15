@@ -6,19 +6,25 @@
  */
 const { throwBiz } = require('./errors')
 const { GOVERNANCE } = require('./state')
+const { AGG_LIMIT } = require('./paging')
+
+// 团长并发调整库存导致条件不成立时，按最新库存重试的总次数（含首次）
+const MAX_DEDUCT_ATTEMPTS = 3
 
 /**
- * 扣减库存。
- * total_stock = 0 表示不限库存，只校验可售状态；> 0 才加库存上限条件。
- *
- * @returns {boolean} true 表示占用成功
+ * 按给定的商品快照尝试一次占用。
+ * 条件里同时带上读到的 total_stock：团长在此期间调小（或从不限改为有限）库存时本次不成立，
+ * 由调用方重读后按新库存重试，避免按旧上限放行造成超卖。
  */
-async function deduct (ctx, goods, qty) {
+async function tryDeduct (ctx, goods, qty) {
   const dbCmd = ctx.db.command
   const where = {
     _id: goods._id,
     on_sale: 1,
     governance_status: GOVERNANCE.NORMAL
+  }
+  if (typeof goods.total_stock === 'number') {
+    where.total_stock = goods.total_stock
   }
   if (goods.total_stock > 0) {
     // 占用后不得超过总库存
@@ -28,6 +34,25 @@ async function deduct (ctx, goods, qty) {
     .where(where)
     .update({ sold_qty: dbCmd.inc(qty) })
   return res.updated > 0
+}
+
+/**
+ * 扣减库存。
+ * total_stock = 0 表示不限库存，只校验可售状态；> 0 才加库存上限条件。
+ * 失败时重读商品：只有 total_stock 已被改过才按新值重试，停售、下架或确实卖完直接失败。
+ *
+ * @returns {boolean} true 表示占用成功
+ */
+async function deduct (ctx, goods, qty) {
+  let current = goods
+  for (let attempt = 1; ; attempt++) {
+    if (await tryDeduct(ctx, current, qty)) return true
+    if (attempt >= MAX_DEDUCT_ATTEMPTS) return false
+    const { data } = await ctx.db.collection('grouporder-goods').doc(goods._id).get()
+    const latest = data && data[0]
+    if (!latest || latest.total_stock === current.total_stock) return false
+    current = latest
+  }
 }
 
 /**
@@ -96,4 +121,45 @@ async function checkUserLimit (ctx, { activityId, goods, userId, addQty, exclude
   }
 }
 
-module.exports = { deduct, restore, deductBatch, checkUserLimit }
+/**
+ * 限购事后复核（§8.2）：明细写入后，按与 checkUserLimit 相同的口径
+ * （activity_id + goods_id + user_id + status=1 求和）聚合本人总量，【已包含本单】。
+ * 先查后扣在同一用户并发提交多单时会被绕过，写入后再复核一次，超出的一方回滚。
+ * 并发双方可能同时看到超限而都回滚——宁可让用户重试，也不放过超限。
+ *
+ * @param {Array} goodsList 本次新增或扩大份数的商品（只复核这些）
+ * @returns {object|null} 第一个超限的 { goods, total }，都未超限返回 null
+ */
+async function findLimitExceeded (ctx, { activityId, goodsList, userId }) {
+  const limited = (goodsList || []).filter(g => g && g.per_user_limit > 0)
+  if (!limited.length) return null
+
+  const res = await ctx.db.collection('grouporder-order-item')
+    .aggregate()
+    .match({
+      activity_id: activityId,
+      goods_id: ctx.db.command.in(limited.map(g => g._id)),
+      user_id: userId,
+      status: 1
+    })
+    .group({ _id: '$goods_id', total: { $sum: '$qty' } })
+    // 显式上限：不依赖平台默认返回条数
+    .limit(AGG_LIMIT)
+    .end()
+
+  const totals = new Map((res.data || []).map(r => [r._id, r.total || 0]))
+  for (const g of limited) {
+    const total = totals.get(g._id) || 0
+    if (total > g.per_user_limit) return { goods: g, total }
+  }
+  return null
+}
+
+/** 事后复核超限时抛出的统一异常；调用方须先回滚本单再调用 */
+function throwLimitExceeded (goods) {
+  throwBiz('LIMIT_EXCEEDED',
+    `商品「${goods.name}」每人限购 ${goods.per_user_limit} ${goods.unit || '份'}，本次提交后将超出，请调整数量后重试`,
+    { goods_id: goods._id, limit: goods.per_user_limit })
+}
+
+module.exports = { deduct, restore, deductBatch, checkUserLimit, findLimitExceeded, throwLimitExceeded }

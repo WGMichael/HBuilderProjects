@@ -24,7 +24,8 @@ export default {
     //   不采集手机号 → 不启用 smsCode；univerify/apple/huawei 属 App 端，小程序不需要。
     //   微信登录需先在 manifest.json 填 mp-weixin.appid 并在 uni-id 配好 appsecret。
     //   本文件在 uni-id-pages 模块升级后会被还原，升级后必须重新核对（DATA_MODEL §3）。
-    // #ifndef MP-HARMONY
+    // 【grouporder 修改】微信登录只在微信小程序启用；H5 未配置公众号 appid，显示出来点了只会报错
+    // #ifdef MP-WEIXIN
     'weixin',
     // #endif
     'username'

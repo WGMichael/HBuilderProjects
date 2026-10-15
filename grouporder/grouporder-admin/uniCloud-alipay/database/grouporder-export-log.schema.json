@@ -87,6 +87,17 @@
       "description": "失败原因",
       "maxLength": 500
     },
+    "file_cleaned": {
+      "bsonType": "int",
+      "title": "文件已清理",
+      "description": "仅生成成功事件使用：1 表示 60 天到期后云存储文件已由定时任务删除（D-071②），事件内容本身不改",
+      "defaultValue": 0
+    },
+    "file_clean_date": {
+      "bsonType": "timestamp",
+      "title": "文件清理时间",
+      "description": "定时任务删除云存储文件的时间"
+    },
     "request_id": {
       "bsonType": "string",
       "title": "请求唯一标识",

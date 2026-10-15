@@ -7,6 +7,8 @@
   - 「转发给微信好友 / 群」是 open-type="share" 按钮，触发所在页面的 onShareAppMessage；
     卡片内容在复核通过时经 @ready 交给页面缓存，因为 onShareAppMessage 必须同步返回（SHARE_SPEC §4.3）。
   - 卡片：标题「接龙丨」+ 活动标题，图片为封面（微信按 5:4 裁切，为空时由微信截取页面首屏），path 只带 activity_id（D-083）。
+  - 非微信小程序（H5，D-095）：没有原生转发，改为「复制链接」，复制「标题 + 活动页链接」由用户自己粘贴发给好友；
+    链接按当前页面地址拼出（hash 路由），不写死域名。复核规则与小程序一致。
 -->
 <template>
   <uni-popup ref="popup" type="bottom" @change="onPopupChange">
@@ -30,6 +32,7 @@
         </view>
 
         <block v-else>
+          <!-- #ifdef MP-WEIXIN -->
           <!-- 卡片预览：好友在微信里收到的样子 -->
           <view class="wx-card">
             <view class="wx-card__title">{{ card.title }}</view>
@@ -37,11 +40,27 @@
             <view v-else class="wx-card__img wx-card__img--empty">未设置封面\n好友收到的卡片将显示活动页首屏</view>
             <view class="wx-card__foot"><text class="wx-card__dot" />群接龙</view>
           </view>
+          <!-- #endif -->
+          <!-- #ifndef MP-WEIXIN -->
+          <!-- 链接预览：复制出去的内容 -->
+          <view class="link-box">
+            <view class="link-box__title">{{ card.title }}</view>
+            <view class="link-box__url">{{ shareUrl }}</view>
+          </view>
+          <!-- #endif -->
           <view class="ss__meta">{{ metaText }}</view>
           <view v-if="notStarted" class="ss__tip">活动还没开始：好友现在点开可以先看商品，{{ fmt(info.start_time) }} 后才能下单。</view>
+          <!-- #ifndef MP-WEIXIN -->
+          <view class="ss__hint">复制后粘贴到微信发给好友，好友点开即可选购</view>
+          <!-- #endif -->
         </block>
 
+        <!-- #ifdef MP-WEIXIN -->
         <button class="ss__wx" open-type="share" :disabled="state !== 'ready'" @click="onShareTap">转发给微信好友 / 群</button>
+        <!-- #endif -->
+        <!-- #ifndef MP-WEIXIN -->
+        <button class="ss__wx" :disabled="state !== 'ready'" @click="copyLink">复制链接</button>
+        <!-- #endif -->
         <button class="ss__cancel" @click="close">取消</button>
       </block>
     </view>
@@ -70,6 +89,14 @@ const card = computed(() => ({
   path: '/pages/activity/detail?id=' + (info.value._id || ''),
   imageUrl: (info.value.cover_image && info.value.cover_image.url) || '',
 }));
+/** 活动页的 H5 链接：按当前页面地址拼（hash 路由），换域名或部署路径无需改代码 */
+const shareUrl = computed(() => {
+  let base = '';
+  // #ifdef H5
+  base = location.origin + location.pathname;
+  // #endif
+  return base + '#' + card.value.path;
+});
 const notStarted = computed(() => !!info.value.not_started);
 const metaText = computed(() => {
   const a = info.value;
@@ -122,6 +149,18 @@ const open = async (act: any) => {
 const close = () => popup.value && popup.value.close();
 // 点了转发：微信面板接管，弹窗随即收起
 const onShareTap = () => { if (state.value === 'ready') setTimeout(close, 300); };
+// 非小程序：复制「标题 + 链接」，由用户自己粘贴发给好友（D-095）
+const copyLink = () => {
+  if (state.value !== 'ready') return;
+  uni.setClipboardData({
+    data: card.value.title + '\n' + shareUrl.value,
+    success: () => {
+      close();
+      uni.showToast({ title: '已复制，去微信粘贴给好友', icon: 'none' });
+    },
+    fail: () => uni.showModal({ title: '复制失败', content: '请长按选中上方链接手动复制', showCancel: false }),
+  });
+};
 const onPopupChange = (e: any) => { if (!e.show) seq++; };
 
 defineExpose({ open, close, card });
@@ -140,6 +179,10 @@ defineExpose({ open, close, card });
 .wx-card__img--empty { display: flex; align-items: center; justify-content: center; text-align: center; white-space: pre-line; padding: 0 32rpx; box-sizing: border-box; font-size: 22rpx; color: $go-muted; background: repeating-linear-gradient(45deg, #f2f4f3, #f2f4f3 16rpx, #e9edeb 16rpx, #e9edeb 32rpx); }
 .wx-card__foot { display: flex; align-items: center; gap: 10rpx; margin-top: 14rpx; padding-top: 12rpx; border-top: 1rpx solid #f0f0f0; font-size: 20rpx; color: #8a8a8a; }
 .wx-card__dot { width: 24rpx; height: 24rpx; border-radius: 50%; background: $go-primary; }
+.link-box { margin: 8rpx 0 0; border-radius: 20rpx; padding: 22rpx 24rpx; background: #f5f7f6; border: 1rpx solid #e6ebe8; }
+.link-box__title { font-size: 26rpx; font-weight: 600; color: $go-ink; margin-bottom: 10rpx; }
+.link-box__url { font-size: 22rpx; line-height: 1.5; color: $go-primary-dark; word-break: break-all; user-select: text; }
+.ss__hint { text-align: center; font-size: 22rpx; color: $go-muted; margin-top: 16rpx; }
 .ss__meta { text-align: center; font-size: 22rpx; color: $go-muted; margin-top: 20rpx; }
 .ss__tip { margin-top: 24rpx; border-radius: 20rpx; padding: 18rpx 22rpx; font-size: 22rpx; line-height: 1.55; color: $go-primary-dark; background: $go-primary-soft; }
 .ss__wx { margin: 32rpx 0 0; border-radius: 24rpx; background: #07c160; color: #fff; font-size: 28rpx; font-weight: 600; }

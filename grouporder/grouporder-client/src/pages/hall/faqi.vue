@@ -18,6 +18,8 @@ import ActivityForm from '@/components/activity-form/activity-form.vue';
 import GoTabbar from '@/components/go-tabbar/go-tabbar.vue';
 // @ts-ignore
 import { takeCopySource } from '@/common/grouporder/draft.js';
+// @ts-ignore
+import { consumeLoginReturn } from '@/common/grouporder/request.js';
 
 const formRef = ref<any>(null);
 
@@ -33,8 +35,10 @@ const applyShow = () => {
   const src = takeCopySource();
   if (src) {
     form.consumeChildReturn(); // 从表单打开的 M-31 也会打子页标记，这里一并清掉
+    consumeLoginReturn('pages/hall/faqi');
     form.loadCopySource(src).catch(() => {});
-  } else if (form.consumeChildReturn()) {
+  } else if ([form.consumeChildReturn(), consumeLoginReturn('pages/hall/faqi')].some(Boolean)) {
+    // 从子页或登录页返回：保留已填表单（登录可能由写操作中途的会话失效触发）
     form.onChildReturn().catch(() => {});
   } else {
     form.reset();

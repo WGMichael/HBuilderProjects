@@ -5,6 +5,7 @@
   红线⑦：业务状态与治理状态分列。红线⑧：统计只用白名单指标。
 -->
 <template>
+  <go-result v-if="loadFailed" type="unknown" detail="页面加载失败，请检查网络后重试" @retry="load" />
   <view class="page" v-if="loaded">
     <view class="head">
       <view class="head__title">{{ act.title }}</view>
@@ -35,12 +36,14 @@
 
     <view class="group">
       <view v-if="act.status === 0" class="cell" @click="edit"><text>继续编辑草稿</text><text class="a">›</text></view>
-      <view v-if="act.status === 0 || act.status === 2" class="cell" @click="publish"><text>发布 / 审核状态</text><text class="a">›</text></view>
+      <!-- 审核中也要能进：撤回审核只在发布页（D-043） -->
+      <view v-if="act.status === 0 || act.status === 1 || act.status === 2" class="cell" @click="publish"><text>{{ act.status === 1 ? '审核状态 / 撤回审核' : '发布 / 审核状态' }}</text><text class="a">›</text></view>
       <view class="cell" @click="orderStat"><text>订单与统计</text><text class="a">›</text></view>
       <view class="cell" @click="goodsManage"><text>商品管理</text><text class="a">›</text></view>
       <!-- 自提点发布后可改、即时生效、不重新审核（D-077）；已取消的活动无履约可言 -->
       <view v-if="(act.delivery_types || []).includes(2) && act.status !== 4" class="cell" @click="pickupEdit"><text>修改自提点</text><text class="a">›</text></view>
-      <view v-if="act.status === 2" class="cell" @click="close"><text>截止 / 取消活动</text><text class="a">›</text></view>
+      <!-- 与服务端状态迁移一致：审核中可截止；进行中可截止或取消；发布过又撤回成草稿的可取消（未发布过的草稿走删除） -->
+      <view v-if="canCloseOrCancel" class="cell" @click="close"><text>{{ act.status === 0 ? '取消活动' : act.status === 1 ? '截止活动' : '截止 / 取消活动' }}</text><text class="a">›</text></view>
       <view v-if="act.status === 3" class="cell" @click="exportList"><text>接龙清单导出</text><text class="a">›</text></view>
       <view class="cell" @click="viewAsGuest"><text>以参与者视角查看</text><text class="a">›</text></view>
       <!-- 从未发布过的草稿可删除（D-090）；发布过的只能取消或截止 -->
@@ -53,9 +56,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import GoResult from '@/components/go-result/go-result.vue';
 import { onLoad, onShow, onHide, onUnload, onShareAppMessage } from '@dcloudio/uni-app';
 // @ts-ignore
 import { serverOffset, scheduleBoundary } from '@/common/grouporder/activity-time.js';
+// @ts-ignore
+import { safeBack, backTo } from '@/common/grouporder/nav.js';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
@@ -73,6 +79,10 @@ const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-dig
 // —— 分享（SHARE_SPEC §5，M-20）——
 // 进行中且未被平台下架才给入口；卡片内容同步返回，故预先取好（§4.3）
 const shareEntry = ref<any>(null);
+const canCloseOrCancel = computed(() => {
+  const st = act.value.status;
+  return st === 1 || st === 2 || (st === 0 && !!act.value.publish_date);
+});
 const canShare = computed(() => act.value.status === 2 && act.value.governance_status === 0);
 
 const loadShareEntry = async () => {
@@ -104,7 +114,7 @@ onShareAppMessage(() => {
   };
 });
 
-const load = async () => {
+const loadInner = async () => {
   if (!activityId.value) return;
   act.value = (await guarded(api.activity.activityGetDetail({ activity_id: activityId.value }))) || {};
   await loadShareEntry();
@@ -112,12 +122,23 @@ const load = async () => {
   armTick();
 };
 
+// 加载失败（断网、非对象级错误）时给出重试，不白屏；对象级错误由 guarded 跳 M-26
+const loadFailed = ref(false);
+const load = async () => {
+  loadFailed.value = false;
+  try {
+    await loadInner();
+  } catch (e) {
+    if (!loaded.value) loadFailed.value = true;
+  }
+};
+
 // —— 删除草稿（D-090）：确认、遮罩、提示统一在 common/grouporder/draft.js ——
 const canDeleteDraft = computed(() => canDelete(act.value));
 const deleteDraft = async () => {
   if (!(await confirmDeleteDraft({ _id: activityId.value, title: act.value.title }))) return;
   // 留出「删除成功」提示的时间再返回；「我发起的」在 onShow 时刷新
-  setTimeout(() => uni.navigateBack(), 1200);
+  setTimeout(() => safeBack('/pages/hall/jielong'), 1200);
 };
 
 const edit = () => uni.navigateTo({ url: '/pages/activity/edit?id=' + activityId.value });

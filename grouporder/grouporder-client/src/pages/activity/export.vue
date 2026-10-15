@@ -20,11 +20,16 @@
       </view>
     </view>
 
-    <view class="block" v-if="(preview.detail || []).length">
-      <view class="block__title">参与者明细（{{ preview.detail.length }}）</view>
-      <view v-for="(d, i) in preview.detail" :key="i" class="drow">
-        <text>{{ d.consignee_name || d.name }} {{ d.consignee_mobile || d.mobile }}</text>
-        <text class="drow__qty">{{ d.total_qty || d.qty }} 份</text>
+    <!-- 服务端 detail 是「一条商品明细一行」（D-053，与 Excel 一致）；页面按订单归并展示，一单一块 -->
+    <view class="block" v-if="orderRows.length">
+      <view class="block__title">参与者明细（{{ orderRows.length }} 单）</view>
+      <view v-for="o in orderRows" :key="o.order_no" class="drow">
+        <view class="drow__head">
+          <text>{{ o.consignee_name }} {{ o.consignee_mobile }}</text>
+          <text class="drow__qty">{{ o.qty }} 份 · ￥{{ fen2yuan(o.amount) }}</text>
+        </view>
+        <view class="drow__items">{{ o.items.join('，') }}</view>
+        <view v-if="o.consignee_address" class="drow__addr">{{ o.consignee_address }}</view>
       </view>
     </view>
 
@@ -37,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
@@ -51,9 +56,26 @@ const fileVersion = ref('');
 const generating = ref(false);
 const downloading = ref(false);
 
+// 明细按订单号归并：同一订单的多件商品合成一块
+const orderRows = computed(() => {
+  const map = new Map<string, any>();
+  for (const d of preview.value.detail || []) {
+    if (!map.has(d.order_no)) {
+      map.set(d.order_no, { order_no: d.order_no, consignee_name: d.consignee_name, consignee_mobile: d.consignee_mobile, consignee_address: d.consignee_address, qty: 0, amount: 0, items: [] });
+    }
+    const o = map.get(d.order_no);
+    o.qty += d.qty || 0;
+    o.amount += d.amount || 0;
+    o.items.push(d.goods_name + '×' + d.qty);
+  }
+  return [...map.values()];
+});
+
 const load = async () => {
   preview.value = (await guarded(api.exportList.listPreview({ activity_id: activityId.value }))) || {};
-  fileVersion.value = preview.value.file_version || '';
+  // 可下载的版本：versions 按生成时间倒序，取最新一个未失效的（作废订单会使旧版本失效，D-051）
+  const v = (preview.value.versions || []).find((x: any) => !x.invalidated);
+  fileVersion.value = (v && v.file_version) || '';
   loaded.value = true;
 };
 
@@ -73,7 +95,9 @@ const download = async () => {
     const data = (await guarded(api.exportList.listDownload({ activity_id: activityId.value, file_version: fileVersion.value }))) || {};
     if (data.url) {
       // #ifdef H5
-      window.open(data.url);
+      // 地址是请求返回后才拿到的，window.open 已不算用户手势，iOS / 微信内常被拦截：被拦截就在当前页打开下载
+      const w = window.open(data.url);
+      if (!w) location.href = data.url;
       // #endif
       // #ifndef H5
       uni.setClipboardData({ data: data.url, success: () => uni.showToast({ title: '下载链接已复制', icon: 'none' }) });
@@ -95,6 +119,10 @@ onShow(() => load());
 .block__title { font-size: 28rpx; color: $go-ink; font-weight: 600; margin-bottom: 16rpx; }
 .row, .drow { display: flex; justify-content: space-between; padding: 14rpx 0; border-bottom: 1rpx solid $go-soft; font-size: 28rpx; color: $go-ink; }
 .row__qty, .drow__qty { color: $go-muted; }
+.drow { flex-direction: column; }
+.drow__head { display: flex; justify-content: space-between; }
+.drow__items { font-size: 24rpx; color: $go-text; margin-top: 6rpx; }
+.drow__addr { font-size: 22rpx; color: $go-muted; margin-top: 4rpx; }
 .footer { position: fixed; left: 0; right: 0; bottom: 60rpx; display: flex; gap: 16rpx; padding: 20rpx; }
 .btn { flex: 1; margin: 0; font-size: 30rpx; background: #fff; color: $go-text; }
 .btn--primary { background: $go-primary; color: #fff; }

@@ -29,8 +29,9 @@ module.exports = {
   },
 
   _after (error, result) {
-    if (error) return errors.normalize(error)
-    return result
+    // 使用中自动续期登录（auth.attachNewToken）
+    if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
+    return auth.attachNewToken(this.ctx, result)
   },
 
   // ==========================================================================
@@ -121,6 +122,15 @@ module.exports = {
   },
 
   /**
+   * 取入参的起始时间（D-087）：未传 / 空值 / 0 取默认值（当前时间），否则必须是数字时间戳
+   */
+  _startTimeParam (raw, fallback) {
+    if (raw === undefined || raw === null || raw === '' || raw === 0) return fallback
+    assertParam(Number.isFinite(raw), '起始时间格式不正确')
+    return raw
+  },
+
+  /**
    * 活动创建的幂等闸门（D-081）：同一 idempotent_key 只建一次，重试返回首次结果。
    * 键由客户端为每一次「新建草稿 / 复制」意图生成；命中他人的记录视为非法键，不泄露对方活动
    */
@@ -186,9 +196,11 @@ module.exports = {
     const description = String(params.description || '')
     assertParam(description.length <= 500, '活动说明不超过 500 字')
     this._assertImages(params.images, '轮播图')
-    assertParam(params.end_time && params.end_time > ctx.now, '截止时间必须晚于当前时间')
+    // 时间入参必须是数字时间戳：字符串等会在比较时被隐式转换，写进库后排序与定时截止都会出错
+    assertParam(Number.isFinite(params.end_time), '截止时间格式不正确')
+    assertParam(params.end_time > ctx.now, '截止时间必须晚于当前时间')
     // 起始时间（D-087）：默认当前时间；草稿阶段允许早于当前（发布时已过即视为立即开始）
-    const startTime = Number(params.start_time) || ctx.now
+    const startTime = this._startTimeParam(params.start_time, ctx.now)
     assertParam(startTime < params.end_time, '起始时间必须早于截止时间')
 
     return this._createActivityOnce(params.idempotent_key, uid, async () => {
@@ -256,13 +268,14 @@ module.exports = {
       patch.images = params.images
     }
     if (params.end_time !== undefined) {
+      assertParam(Number.isFinite(params.end_time), '截止时间格式不正确')
       assertParam(params.end_time > ctx.now, '截止时间必须晚于当前时间')
       patch.end_time = params.end_time
     }
     // 起始时间（D-087）。表单只精确到分钟，按分钟比较才算真正改动，避免整表保存时误判
     if (params.start_time !== undefined) {
       const prevStart = state.startTimeOf(activity)
-      const nextStart = Number(params.start_time) || ctx.now
+      const nextStart = this._startTimeParam(params.start_time, ctx.now)
       if (Math.floor(nextStart / 60000) !== Math.floor(prevStart / 60000)) {
         if (activity.publish_date) {
           // 发布后：已开始的不能改；未开始的可以改，但不能改到当前时间之前（不触发重新审核）
@@ -596,6 +609,8 @@ module.exports = {
       const agg = await this.db.collection('grouporder-order-item').aggregate()
         .match({ activity_id: this.dbCmd.in(ids), status: 1 })
         .group({ _id: '$activity_id', qty: { $sum: '$qty' } })
+        // 显式上限：不依赖平台默认返回条数
+        .limit(paging.AGG_LIMIT)
         .end()
       qtyMap = (agg.data || []).reduce((m, r) => { m[r._id] = r.qty; return m }, {})
     }
@@ -630,11 +645,15 @@ module.exports = {
     const activity = await auth.requireLeader(ctx, params.activity_id)
     state.assertActivityTransition(activity.status, ACTIVITY.CLOSED)
 
-    await this.db.collection('grouporder-activity').doc(activity._id).update({
-      status: ACTIVITY.CLOSED,
-      actual_end_time: ctx.now,
-      end_type: END_TYPE.MANUAL
-    })
+    // 带当前状态条件更新：定时任务可能刚把活动自动截止并写了截止信息，不能被覆盖
+    const res = await this.db.collection('grouporder-activity')
+      .where({ _id: activity._id, status: activity.status })
+      .update({
+        status: ACTIVITY.CLOSED,
+        actual_end_time: ctx.now,
+        end_type: END_TYPE.MANUAL
+      })
+    if (!res.updated) throwBiz('STATE_CHANGED')
     // 留存到期日：活动截止之日 +3 年，订单继承（D-035）
     const expire = await snapshot.stampRetention(ctx, activity._id, ctx.now)
     return ok({ status: ACTIVITY.CLOSED, actual_end_time: ctx.now, retention_expire_date: expire })
@@ -654,12 +673,16 @@ module.exports = {
       assertParam(reason, '取消进行中的活动必须填写原因')
     }
 
-    await this.db.collection('grouporder-activity').doc(activity._id).update({
-      status: ACTIVITY.CANCELLED,
-      cancel_uid: ctx.uid,
-      cancel_time: ctx.now,
-      cancel_reason: reason
-    })
+    // 带当前状态条件更新：期间被定时任务截止或被其他请求改了状态时，不覆盖已写的截止信息
+    const res = await this.db.collection('grouporder-activity')
+      .where({ _id: activity._id, status: activity.status })
+      .update({
+        status: ACTIVITY.CANCELLED,
+        cancel_uid: ctx.uid,
+        cancel_time: ctx.now,
+        cancel_reason: reason
+      })
+    if (!res.updated) throwBiz('STATE_CHANGED')
     const expire = await snapshot.stampRetention(ctx, activity._id, ctx.now)
     return ok({ status: ACTIVITY.CANCELLED, retention_expire_date: expire })
   },
@@ -912,6 +935,10 @@ module.exports = {
     const existing = await this._listGoods(activity._id)
     assertParam(existing.length < MAX_GOODS_PER_ACTIVITY,
       `一个活动最多 ${MAX_GOODS_PER_ACTIVITY} 个商品，当前已有 ${existing.length} 个`)
+    // 同一活动内商品不重名（D-093）：与「从商品库添加」的去重同一口径
+    if (existing.some(g => String(g.name || '').trim() === name)) {
+      throwBiz('DUPLICATE', `本次接龙已有「${name}」，请换一个名称`)
+    }
 
     const isRecommend = params.is_recommend === 1 ? 1 : 0
     if (isRecommend) {
@@ -947,7 +974,10 @@ module.exports = {
     doc._id = res.id
 
     // 自动沉淀；失败不影响商品保存（GOODS_LIB_SPEC §4.4）
-    const libId = await goodslib.sinkToLib(ctx, doc, activity.leader_uid, { categoryId: libCategoryId })
+    // 商品库已有同名商品时，团长可选择「不更新商品库」（D-094）：sync_to_lib === false 则只存活动、不沉淀
+    const libId = params.sync_to_lib === false
+      ? ''
+      : await goodslib.sinkToLib(ctx, doc, activity.leader_uid, { categoryId: libCategoryId })
 
     // 图片异步送检，不阻塞（D-058）
     await contentcheck.submitImages(ctx, {
@@ -992,29 +1022,41 @@ module.exports = {
 
     const patch = {}
     const traces = []
+    // 只有值真正变化的字段才进 patch：前端编辑页每次都整表提交，若照单全收，
+    // 只改价格 / 库存也会被判为内容改动而触发重审（D-048）、图片被重复送检
+    const sameFiles = (a, b) => files.fileIdsOf(a).join('|') === files.fileIdsOf(b).join('|')
 
     if (params.name !== undefined) {
       const n = String(params.name).trim()
       assertParam(n.length >= 1 && n.length <= 50, '商品名称为 1–50 字')
-      patch.name = n
+      // 改名时同一活动内不重名（D-093）；名称没变不查
+      if (n !== String(goods.name || '').trim()) {
+        const siblings = await this._listGoods(activity._id)
+        if (siblings.some(g => g._id !== goods._id && String(g.name || '').trim() === n)) {
+          throwBiz('DUPLICATE', `本次接龙已有「${n}」，请换一个名称`)
+        }
+      }
+      if (n !== String(goods.name || '').trim()) patch.name = n
     }
     if (params.description !== undefined) {
       assertParam(String(params.description).length <= 500, '商品说明不超过 500 字')
-      patch.description = String(params.description)
+      if (String(params.description) !== String(goods.description || '')) patch.description = String(params.description)
     }
     if (params.cover_image !== undefined) {
       assertParam(params.cover_image, '商品必须包含封面图')
-      patch.cover_image = params.cover_image
+      if (!sameFiles(params.cover_image, goods.cover_image)) patch.cover_image = params.cover_image
     }
     if (params.detail_images !== undefined) {
       this._assertImages(params.detail_images, '详情图')
-      patch.detail_images = params.detail_images
+      if (!sameFiles(params.detail_images || [], goods.detail_images || [])) patch.detail_images = params.detail_images
     }
     if (params.unit !== undefined) {
       const u = String(params.unit).trim()
       assertParam(u, '商品单位不能为空')
-      if (u !== goods.unit) traces.push([oplog.ACTION.GOODS_UNIT_CHANGED, { unit: goods.unit }, { unit: u }, '修改商品单位'])
-      patch.unit = u
+      if (u !== goods.unit) {
+        traces.push([oplog.ACTION.GOODS_UNIT_CHANGED, { unit: goods.unit }, { unit: u }, '修改商品单位'])
+        patch.unit = u
+      }
     }
     if (params.price !== undefined && params.price !== goods.price) {
       assertParam(Number.isInteger(params.price) && params.price >= 0, '商品单价必须是不小于 0 的整数（单位：分）')
@@ -1040,9 +1082,10 @@ module.exports = {
     // 库存与限购统一走 goodsAdjustStock，这里不接受，避免两条路径口径不一致
     assertParam(params.total_stock === undefined && params.per_user_limit === undefined,
       '库存与每人限购请使用 goodsAdjustStock 调整')
-    assertParam(Object.keys(patch).length > 0, '没有需要修改的内容')
-
-    await this.db.collection('grouporder-goods').doc(goods._id).update(files.toDbPatch(ctx, patch))
+    // 什么都没变（如只改了商品库分类）：不写商品，只做下面的沉淀
+    if (Object.keys(patch).length) {
+      await this.db.collection('grouporder-goods').doc(goods._id).update(files.toDbPatch(ctx, patch))
+    }
     for (const [action, prev, next, reason] of traces) {
       await this._writeLeaderTrace(action, goods, prev, next, reason)
     }
@@ -1178,7 +1221,16 @@ module.exports = {
     }
     assertParam(Object.keys(patch).length > 0, '没有需要调整的内容')
 
-    await this.db.collection('grouporder-goods').doc(goods._id).update(patch)
+    // 调为有限库存时带条件写入：上面的 sold_qty 是先读的值，期间可能有人下单，
+    // 由数据库在写入时再判一次「已购不超过新库存」，与下单扣减（带 total_stock 条件）互斥，不会超卖
+    const where = { _id: goods._id }
+    if (patch.total_stock > 0) where.sold_qty = this.dbCmd.lte(patch.total_stock)
+    const res = await this.db.collection('grouporder-goods').where(where).update(patch)
+    if (!res.updated) {
+      const latest = await this.db.collection('grouporder-goods').doc(goods._id).get()
+      const soldQty = (latest.data && latest.data[0] && latest.data[0].sold_qty) || 0
+      throwBiz('STATE_CHANGED', `已购数量已超过新库存（当前已购 ${soldQty}），请刷新后重试`, { sold_qty: soldQty })
+    }
     await this._writeLeaderTrace(oplog.ACTION.GOODS_STOCK_CHANGED, goods,
       { total_stock: goods.total_stock, per_user_limit: goods.per_user_limit },
       { total_stock: patch.total_stock !== undefined ? patch.total_stock : goods.total_stock,

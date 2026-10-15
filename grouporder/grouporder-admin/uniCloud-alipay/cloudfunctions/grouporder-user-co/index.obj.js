@@ -38,8 +38,9 @@ module.exports = {
   },
 
   _after (error, result) {
-    if (error) return errors.normalize(error)
-    return result
+    // 使用中自动续期登录（auth.attachNewToken）
+    if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
+    return auth.attachNewToken(this.ctx, result)
   },
 
   // ==========================================================================
@@ -92,12 +93,12 @@ module.exports = {
   async addressList () {
     const ctx = this.ctx
     const uid = auth.requireLogin(ctx)
-    const { data } = await this.db.collection('grouporder-address')
+    // 地址簿不设条数上限：分批读完（M-16 编辑也从这份列表里按 id 取记录）
+    const data = await paging.fetchAll(() => this.db.collection('grouporder-address')
       .where({ user_id: uid, deleted: 0 })
       .orderBy('is_default', 'desc')
       .orderBy('create_date', 'asc')
-      .limit(50)
-      .get()
+      .orderBy('_id', 'asc'))
     return ok({
       list: (data || []).map(a => ({
         _id: a._id,
@@ -329,21 +330,21 @@ module.exports = {
       })
     }
 
-    // ② 在尚未截止/取消的活动中仍有有效订单
-    const { data: myOrders } = await this.db.collection('grouporder-order')
+    // ② 在尚未截止/取消的活动中仍有有效订单（本人订单分批读完，不只看前若干张）
+    const myOrders = await paging.fetchAll(() => this.db.collection('grouporder-order')
       .where({ user_id: uid, status: ORDER.VALID })
       .field({ _id: true, order_no: true, activity_id: true })
-      .limit(200).get()
-    if (myOrders && myOrders.length) {
-      const actIds = [...new Set(myOrders.map(o => o.activity_id))]
-      const { data: acts } = await this.db.collection('grouporder-activity')
-        .where({
-          _id: this.dbCmd.in(actIds),
-          status: this.dbCmd.in([ACTIVITY.REVIEWING, ACTIVITY.ONGOING])
-        })
-        .field({ _id: true, title: true })
-        .limit(actIds.length).get()
-      const openMap = new Map((acts || []).map(a => [a._id, a]))
+      .orderBy('_id', 'asc'))
+    if (myOrders.length) {
+      const acts = await paging.fetchAllByIds(myOrders.map(o => o.activity_id), ids =>
+        this.db.collection('grouporder-activity')
+          .where({
+            _id: this.dbCmd.in(ids),
+            status: this.dbCmd.in([ACTIVITY.REVIEWING, ACTIVITY.ONGOING])
+          })
+          .field({ _id: true, title: true })
+          .orderBy('_id', 'asc'))
+      const openMap = new Map(acts.map(a => [a._id, a]))
       for (const o of myOrders) {
         const a = openMap.get(o.activity_id)
         if (!a) continue
@@ -433,16 +434,19 @@ module.exports = {
     const soon = ctx.now + DAY_MS
 
     const [dismissed, leadActs, myOrders, myReports, myAppeals] = await Promise.all([
-      this.db.collection('grouporder-todo-dismiss').where({ user_id: uid }).limit(200).get(),
-      this.db.collection('grouporder-activity')
+      // 已关闭的待办与团长活动只增不减，分批读完：固定上限会让旧待办重新冒出、新活动的待办丢失
+      paging.fetchAll(() => this.db.collection('grouporder-todo-dismiss').where({ user_id: uid })
+        .field({ todo_key: true }).orderBy('_id', 'asc')),
+      paging.fetchAll(() => this.db.collection('grouporder-activity')
         .where({ leader_uid: uid, status: this.dbCmd.neq(ACTIVITY.CANCELLED) })
         .field({ _id: true, title: true, status: true, governance_status: true,
                  review_result: true, review_reason: true, end_time: true, create_date: true })
-        .limit(200).get(),
-      this.db.collection('grouporder-order')
+        .orderBy('_id', 'asc')),
+      // 本人有效订单分批读完：历史订单只增不减，固定上限会漏掉新参与的活动
+      paging.fetchAll(() => this.db.collection('grouporder-order')
         .where({ user_id: uid, status: ORDER.VALID })
-        .field({ _id: true, activity_id: true, order_no: true })
-        .limit(200).get(),
+        .field({ _id: true, activity_id: true })
+        .orderBy('_id', 'asc')),
       this.db.collection('grouporder-report')
         .where({ reporter_uid: uid, status: this.dbCmd.in([3, 5]) })
         .field({ _id: true, report_no: true, status: true, close_time: true })
@@ -453,7 +457,7 @@ module.exports = {
         .limit(50).get()
     ])
 
-    const dismissedKeys = new Set((dismissed.data || []).map(d => d.todo_key))
+    const dismissedKeys = new Set(dismissed.map(d => d.todo_key))
     const items = []
     const push = (meta, objectId, title, desc, extra) => {
       const key = `${meta.key}:${objectId}`
@@ -470,7 +474,7 @@ module.exports = {
     }
 
     // 团长侧
-    for (const a of (leadActs.data || [])) {
+    for (const a of leadActs) {
       if (a.governance_status === GOVERNANCE.OFF) {
         push(TODO.ACTIVITY_OFFLINE, a._id, a.title, '活动已被平台下架')
       }
@@ -489,14 +493,15 @@ module.exports = {
     }
 
     // 参与者侧：按本人有效订单所在的活动
-    const joinedIds = [...new Set((myOrders.data || []).map(o => o.activity_id))]
+    const joinedIds = [...new Set(myOrders.map(o => o.activity_id))]
     if (joinedIds.length) {
-      const { data: joined } = await this.db.collection('grouporder-activity')
-        .where({ _id: this.dbCmd.in(joinedIds) })
-        .field({ _id: true, title: true, status: true, governance_status: true,
-                 end_time: true, cancel_reason: true, leader_uid: true })
-        .limit(joinedIds.length).get()
-      for (const a of (joined || [])) {
+      const joined = await paging.fetchAllByIds(joinedIds, ids =>
+        this.db.collection('grouporder-activity')
+          .where({ _id: this.dbCmd.in(ids) })
+          .field({ _id: true, title: true, status: true, governance_status: true,
+                   end_time: true, cancel_reason: true, leader_uid: true })
+          .orderBy('_id', 'asc'))
+      for (const a of joined) {
         if (a.leader_uid === uid) continue  // 团长侧已经出过条目，不重复
         if (a.status === ACTIVITY.CANCELLED) {
           push(TODO.JOINED_CANCELLED, a._id, a.title, a.cancel_reason || '活动已被团长取消')

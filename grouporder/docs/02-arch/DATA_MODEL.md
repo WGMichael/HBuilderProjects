@@ -1,6 +1,6 @@
 # 数据模型设计
 
-- 文档版本：v1.31
+- 文档版本：v1.32
 - 文档状态：**已落地**。18 张 `.schema.json` 与 `.index.json` 已生成至 `grouporder-admin/uniCloud-alipay/database/`；上传状态由产品负责人在 HBuilderX 确认
 - 适用产品版本：见 `docs/README.md` 版本总表
 - 覆盖范围：核心业务与平台配置 9 张表 + 运营治理 9 张表，共 18 张自建表
@@ -241,6 +241,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | `create_date` | timestamp | ✓ | 自动 | |
 | `retention_expire_date` | timestamp | | | 所属活动截止或取消之日 +3 年（D-035） |
 | `anonymized` | int | | 0 | 0否 1已匿名化 |
+| `editing_until` | timestamp | | | **订单编辑锁**（并发控制，2026-10-15）：下单写明细期间与改单期间置为「当前时间 + 30 秒」，结束后置 0；字段不存在或小于当前时间即未锁。改单、取消、作废都以「未锁」为条件更新，抢不到返回 `STATE_CHANGED`「订单正在处理中」；异常退出时到期自动失效。老数据无需迁移 |
 
 🔒 标记为敏感字段，权限规则见 §8。
 
@@ -322,7 +323,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 
 ### 4.7 `grouporder-goods-lib` 用户商品库
 
-团长保存商品时自动沉淀的用户私有商品库，用于创建活动时复用历史商品（D-063）。完整实现规格见 `GOODS_LIB_SPEC.md`。
+团长保存商品时自动沉淀的用户私有商品库，用于创建活动时从商品库添加（D-063）。完整实现规格见 `GOODS_LIB_SPEC.md`。
 
 | 字段 | bsonType | 必填 | 默认 | 说明 |
 |---|---|---|---|---|
@@ -736,7 +737,7 @@ db.collection('grouporder-goods').where({
 | 字段 | bsonType | 必填 | 说明 |
 |---|---|---|---|
 | `_id` | objectId | - | 系统自动生成 |
-| `object_type` | string | ✓ | `activity` / `goods` |
+| `object_type` | string | ✓ | `activity` / `goods` / `goods_lib`（商品库图片送检，回调按类型回写 `grouporder-goods-lib` 的 `img_check_status`，2026-10-15） |
 | `object_id` | string | ✓ | 送检对象 |
 | `content_type` | string | ✓ | `text` / `image` |
 | `content_version` | string | ✓ | **内容版本标识**，保证复核看到被检测时的版本 |
@@ -833,6 +834,8 @@ db.collection('grouporder-goods').where({
 | `fail_reason` | string | | 失败原因摘要 |
 | `request_id` | string | | 请求唯一标识 |
 | `create_date` | timestamp | ✓ | |
+| `file_cleaned` | int | | 1 = 该事件对应的清单文件已由 `grouporder-task-export-cleanup` 清理（删除成功、文件已不存在或非云存储文件）；清理任务按 `file_cleaned != 1` 选取，删除失败不打标记、次日重试（2026-10-15） |
+| `file_clean_date` | timestamp | | 清理时间 |
 
 **硬性约束**（OPS §10、D-071、**D-073**）：**不得保存公开固定下载地址**，页面不得展示可继续使用的临时下载地址（D-071③）。运营**可以**从 A-13 下载清单，但必须**重新校验权限并重新换取新的临时地址**，不得复用本表记录中的历史地址；**不提供重新生成入口**——清单版本由团长的订单变动驱动。每次下载另写一条 `export_download` 审计。
 
@@ -992,6 +995,7 @@ uni-id-users.schema.json         1 个   覆盖版，补回 status = 4（见 §3
 
 | 日期 | 版本 | 变化 |
 |---|---|---|
+| 2026-10-15 | v1.32 | 上线前 Review 修复：`grouporder-order` 新增 `editing_until`（订单编辑锁）；`grouporder-export-log` 新增 `file_cleaned` / `file_clean_date`（清理任务不再反复选中已删记录）；`content-check.object_type` 增加 `goods_lib`；新增索引 report `reporter_uid+create_date`、bind-appeal `applicant_uid+create_date`、privacy-case `target_uid+create_date`、export-log `event_type+create_date`；图片回收的引用检查纳入举报与内容检测快照（common `files.js`）|
 | 2026-10-12 | v1.31 | §5.1 补充到期截止的两条路径（定时任务 + 读时补截止，common `lifecycle.js`）与前端到点更新规则 |
 | 2026-10-12 | v1.30 | 按 **D-092**：§4.7 说明 2、§4.10 复制字段表、`last_price` 说明去掉「须逐项确认」；AC-AC-009 废止 |
 | 2026-10-09 | v1.29 | 按 **D-089**：`grouporder-goods-lib` 的三个 `last_*` 字段改称「默认价格 / 库存 / 限购」，补充写回规则并指向 GOODS_LIB_SPEC §2.4；schema 文档副本与工程副本的 title / description 同步 |

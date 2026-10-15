@@ -7,6 +7,8 @@
 -->
 <template>
   <view class="page">
+    <!-- 只有草稿与进行中可改商品；审核中冻结（D-079），已截止 / 已取消不可再改 -->
+    <view v-if="loaded && !editable" class="notice">{{ lockText }}</view>
     <view class="list">
       <view v-for="g in goods" :key="g._id" class="g">
         <view class="g__head">
@@ -17,25 +19,27 @@
           </view>
         </view>
         <view class="g__meta">￥{{ fen2yuan(g.price) }} / {{ g.unit || '份' }} · 已购 {{ g.sold_qty || 0 }} · 库存 {{ g.total_stock > 0 ? g.total_stock : '不限' }}</view>
-        <view class="g__act" v-if="g.governance_status !== 1">
+        <view class="g__meta" v-if="g.per_user_limit > 0">每人限购 {{ g.per_user_limit }} {{ g.unit || '份' }}</view>
+        <view class="g__act" v-if="g.governance_status !== 1 && editable">
           <text class="op" @click="editGoods(g)">编辑</text>
-          <text class="op" @click="adjustStock(g)">调库存/限购</text>
+          <text class="op" @click="adjustStock(g)">调库存</text>
+          <text class="op" @click="adjustLimit(g)">调限购</text>
           <text class="op" @click="toggleSale(g)">{{ g.on_sale === 1 ? '停售' : '恢复售卖' }}</text>
           <text class="op op--del" @click="del(g)">删除</text>
         </view>
-        <view class="g__gov" v-else>该商品被平台下架，不能编辑或恢复售卖</view>
+        <view class="g__gov" v-else-if="g.governance_status === 1">该商品被平台下架，不能编辑或恢复售卖</view>
       </view>
       <view v-if="!goods.length" class="empty">还没有商品</view>
     </view>
 
-    <view class="footer">
+    <view class="footer" v-if="editable">
       <button class="add" type="primary" @click="add">＋ 添加商品</button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
@@ -44,10 +48,29 @@ import { ON_SALE, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
 
 const activityId = ref('');
 const goods = ref<any[]>([]);
+const act = ref<any>({});
+const loaded = ref(false);
+
+const editable = computed(() => (act.value.status === 0 || act.value.status === 2) && act.value.governance_status !== 1);
+const lockText = computed(() => {
+  const a = act.value;
+  if (a.governance_status === 1) return '活动已被平台下架，商品不能修改';
+  if (a.status === 1) return '活动审核中，商品不能修改；如需修改请先在「审核状态」中撤回审核';
+  if (a.status === 3) return '活动已截止，商品不能再修改';
+  if (a.status === 4) return '活动已取消，商品不能再修改';
+  return '当前状态不能修改商品';
+});
 
 const load = async () => {
   const data = (await guarded(api.activity.activityGetDetail({ activity_id: activityId.value }))) || {};
+  act.value = data;
   goods.value = data.goods || [];
+  loaded.value = true;
+};
+
+// 进行中活动新增 / 删除商品属于内容改动，会转入审核中（D-048）：告知团长接龙已暂停
+const tipRecheck = (res: any) => {
+  if (res && res.need_recheck) uni.showModal({ title: '活动已转入审核中', content: '商品改动需要重新审核，审核通过前参与者暂时不能下单。', showCancel: false });
 };
 
 const add = () => uni.navigateTo({ url: '/pages/activity/goods-edit?activity_id=' + activityId.value, events: { saved: () => load() } });
@@ -69,10 +92,22 @@ const adjustStock = (g: any) => {
   });
 };
 
+const adjustLimit = (g: any) => {
+  uni.showModal({
+    title: '调整每人限购', content: '输入每人最多可买份数（0=不限购）', editable: true, placeholderText: String(g.per_user_limit || 0),
+    success: async (r: any) => {
+      if (!r.confirm) return;
+      const limit = parseInt(r.content, 10);
+      if (isNaN(limit) || limit < 0) { uni.showToast({ title: '请输入非负整数', icon: 'none' }); return; }
+      try { await guarded(api.activity.goodsAdjustStock({ goods_id: g._id, total_stock: g.total_stock || 0, per_user_limit: limit })); load(); } catch (e) {}
+    },
+  });
+};
+
 const del = (g: any) => {
   uni.showModal({
     title: '删除商品', content: `确认删除「${g.name}」？已产生订单的商品可能不允许删除。`,
-    success: async (r) => { if (!r.confirm) return; try { await guarded(api.activity.goodsDelete({ goods_id: g._id })); load(); } catch (e) {} },
+    success: async (r) => { if (!r.confirm) return; try { tipRecheck(await guarded(api.activity.goodsDelete({ goods_id: g._id }))); load(); } catch (e) {} },
   });
 };
 
@@ -91,6 +126,7 @@ onShow(() => load());
 .op { font-size: 26rpx; color: $go-primary; }
 .op--del { color: $go-red; }
 .g__gov { font-size: 24rpx; color: $go-red; }
+.notice { margin-bottom: 16rpx; padding: 20rpx 24rpx; border-radius: 16rpx; background: $go-orange-soft; color: $go-orange; font-size: 24rpx; line-height: 1.5; }
 .empty { text-align: center; color: $go-muted; font-size: 26rpx; padding: 120rpx 0; }
 .tag { font-size: 20rpx; padding: 2rpx 12rpx; border-radius: 8rpx; margin-left: 8rpx; }
 .tag--on { background: $go-primary-soft; color: $go-primary; }

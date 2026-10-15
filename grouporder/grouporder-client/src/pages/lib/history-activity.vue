@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { onLoad, onShow } from '@dcloudio/uni-app';
+import { onLoad, onShow, onReachBottom } from '@dcloudio/uni-app';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
@@ -45,10 +45,24 @@ import { ACTIVITY_STATUS, deliveryText, labelOf } from '@/common/grouporder/dict
 const list = ref<any[]>([]);
 const selectedId = ref('');
 
-const load = async () => {
-  const data = (await guarded(api.activity.activityCopySourceList({ page: 1, pageSize: 100 }))) || {};
-  list.value = data.list || [];
+// 可复用的历史接龙：分页加载，滑到底取下一页
+const PAGE_SIZE = 20;
+let page = 0;
+let total = 0;
+let loading = false;
+const fetchPage = async (more: boolean) => {
+  if (loading) return;
+  loading = true;
+  try {
+    const p = more ? page + 1 : 1;
+    const data = (await guarded(api.activity.activityCopySourceList({ page: p, pageSize: PAGE_SIZE }))) || {};
+    list.value = more ? list.value.concat(data.list || []) : data.list || [];
+    total = data.total || 0;
+    page = p;
+  } finally { loading = false; }
 };
+const load = () => fetchPage(false);
+onReachBottom(() => { if (list.value.length < total) fetchPage(true).catch(() => {}); });
 const select = (a: any) => { selectedId.value = a._id; };
 
 /**

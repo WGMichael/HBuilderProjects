@@ -30,8 +30,9 @@ module.exports = {
   },
 
   _after (error, result) {
-    if (error) return errors.normalize(error)
-    return result
+    // 使用中自动续期登录（auth.attachNewToken）
+    if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
+    return auth.attachNewToken(this.ctx, result)
   },
 
   // ==========================================================================
@@ -120,7 +121,7 @@ module.exports = {
 
   /**
    * 编辑库记录与三项预填值（M-29，GOODS_LIB_SPEC §5.6）
-   * 改名撞库则拒绝；改图后 img_check_status 归 0 并重新送检；
+   * 改名撞库则拒绝；按 fileID 判定真的换了图才把 img_check_status 归 0 并重新送检；
    * governance_blocked = 1 的记录禁止编辑（否则可靠改名洗白）；
    * 编辑写 update_date，【不更新 last_used_time】——编辑不是使用。
    */
@@ -134,6 +135,9 @@ module.exports = {
     }
     if (lib.deleted === 1) throwBiz('NOT_FOUND', '该商品库记录已删除')
 
+    // 只有值真正变化的字段才进 patch（同 activity-co goodsUpdate）：前端编辑页每次都整表提交封面与详情图，
+    // 若照单全收，每次保存都会把图片检测重置为待检并重新送检——被拦截的图改个名就能重新变成可选
+    const sameFiles = (a, b) => files.fileIdsOf(a).join('|') === files.fileIdsOf(b).join('|')
     const patch = {}
     if (params.name !== undefined) {
       const n = String(params.name).trim()
@@ -145,48 +149,54 @@ module.exports = {
         if (dup.data && dup.data.length && dup.data[0]._id !== lib._id) {
           throwBiz('DUPLICATE', '商品库中已存在同名商品，请换一个名称')
         }
+        patch.name = n
       }
-      patch.name = n
     }
     if (params.description !== undefined) {
       assertParam(String(params.description).length <= 500, '商品说明不超过 500 字')
-      patch.description = String(params.description)
+      if (String(params.description) !== String(lib.description || '')) patch.description = String(params.description)
     }
     if (params.cover_image !== undefined) {
       assertParam(params.cover_image, '商品必须包含封面图')
-      patch.cover_image = params.cover_image
+      if (!sameFiles(params.cover_image, lib.cover_image)) patch.cover_image = params.cover_image
     }
     if (params.detail_images !== undefined) {
       assertParam((params.detail_images || []).length <= 9, '详情图最多 9 张')
-      patch.detail_images = params.detail_images
+      if (!sameFiles(params.detail_images || [], lib.detail_images || [])) patch.detail_images = params.detail_images
     }
     if (params.unit !== undefined) {
       const u = String(params.unit).trim()
       assertParam(u, '商品单位不能为空')
-      patch.unit = u
+      if (u !== lib.unit) patch.unit = u
     }
     // 三个 last_* 允许直接编辑：语义是「下次复用时的预填值」
     if (params.last_price !== undefined) {
       assertParam(Number.isInteger(params.last_price) && params.last_price >= 0, '单价必须是不小于 0 的整数（单位：分）')
-      patch.last_price = params.last_price
+      if (params.last_price !== lib.last_price) patch.last_price = params.last_price
     }
     if (params.last_total_stock !== undefined) {
       assertParam(Number.isInteger(params.last_total_stock) && params.last_total_stock >= 0, '总库存必须是不小于 0 的整数')
-      patch.last_total_stock = params.last_total_stock
+      if (params.last_total_stock !== lib.last_total_stock) patch.last_total_stock = params.last_total_stock
     }
     if (params.last_per_user_limit !== undefined) {
       assertParam(Number.isInteger(params.last_per_user_limit) && params.last_per_user_limit >= 0, '每人限购必须是不小于 0 的整数')
-      patch.last_per_user_limit = params.last_per_user_limit
+      if (params.last_per_user_limit !== lib.last_per_user_limit) patch.last_per_user_limit = params.last_per_user_limit
     }
     if (params.is_recommend !== undefined) {
-      patch.is_recommend = params.is_recommend === 1 ? 1 : 0
+      const want = params.is_recommend === 1 ? 1 : 0
+      if (want !== (lib.is_recommend || 0)) patch.is_recommend = want
     }
     if (params.category_id !== undefined) {
       if (params.category_id) await this._getOwnCategory(uid, params.category_id)
-      patch.category_id = params.category_id || ''
+      const c = params.category_id || ''
+      if (c !== (lib.category_id || '')) patch.category_id = c
     }
-    assertParam(Object.keys(patch).length > 0, '没有需要修改的内容')
+    // 什么都没变：不写库、不送检，按成功返回（前端整表提交时属正常情况）
+    if (!Object.keys(patch).length) {
+      return ok({ lib_id: lib._id, img_recheck: false, changed: false })
+    }
 
+    // 按 fileID 判断是否真的换了图；没换图不重置送检状态
     const imgChanged = patch.cover_image !== undefined || patch.detail_images !== undefined
     if (imgChanged) patch.img_check_status = contentcheck.CHECK_STATUS.PENDING
     patch.update_date = ctx.now
@@ -196,20 +206,21 @@ module.exports = {
 
     if (imgChanged) {
       const merged = Object.assign({}, lib, patch)
+      // 库记录送检用 goods_lib 类型：object_id 是库记录 id，回调据此回写商品库而不是活动商品
       await contentcheck.submitImages(ctx, {
-        objectType: contentcheck.OBJECT_TYPE.GOODS,
+        objectType: contentcheck.OBJECT_TYPE.GOODS_LIB,
         objectId: lib._id,
         contentVersion: 1,
-        fileIds: [merged.cover_image, ...(merged.detail_images || [])].map(f => (f && f.fileID) || f)
+        fileIds: files.fileIdsOf(merged.cover_image, merged.detail_images)
       })
-      // 换下来的旧图，三表都无人引用时从云存储删除（D-084）
+      // 换下来的旧图，各表都无人引用时从云存储删除（D-084）
       await files.releaseFiles(ctx,
         files.fileIdsOf(lib.cover_image, lib.detail_images),
         files.fileIdsOf(merged.cover_image, merged.detail_images)
       )
     }
 
-    return ok({ lib_id: lib._id, img_recheck: imgChanged })
+    return ok({ lib_id: lib._id, img_recheck: imgChanged, changed: true })
   },
 
   /**
@@ -264,8 +275,9 @@ module.exports = {
     }
     const res = await coll.add(doc)
 
+    // 库记录送检用 goods_lib 类型（object_id 是库记录 id）
     await contentcheck.submitImages(ctx, {
-      objectType: contentcheck.OBJECT_TYPE.GOODS,
+      objectType: contentcheck.OBJECT_TYPE.GOODS_LIB,
       objectId: res.id,
       contentVersion: 1,
       fileIds: files.fileIdsOf(doc.cover_image, doc.detail_images)
@@ -299,8 +311,9 @@ module.exports = {
   async libCopyToActivity (params = {}) {
     const ctx = this.ctx
     const uid = auth.requireLogin(ctx)
-    const libIds = params.lib_ids
-    assertParam(Array.isArray(libIds) && libIds.length > 0, '请至少选择一个商品')
+    assertParam(Array.isArray(params.lib_ids) && params.lib_ids.length > 0, '请至少选择一个商品')
+    // 同一次请求里重复的 id 只算一次
+    const libIds = [...new Set(params.lib_ids.filter(Boolean))]
 
     // 校验目标活动：本人团长、草稿或进行中且未截止、治理状态正常（§5.5）
     const activity = await auth.requireLeader(ctx, params.activity_id)
@@ -319,6 +332,11 @@ module.exports = {
     assertParam(libIds.length <= remainSlot,
       `一个活动最多 ${MAX_GOODS_PER_ACTIVITY} 个商品，当前还可添加 ${remainSlot} 个`,
       { remain: remainSlot })
+
+    // 去重：本活动已有同名商品、或已有从同一条库记录复制来的商品，不再重复加入
+    // （库记录按「团长 + 名称」唯一，活动里手工新建的同名商品也算已存在）
+    const namesInActivity = new Set(current.map(g => String(g.name || '').trim()))
+    const libIdsInActivity = new Set(current.map(g => g.lib_id).filter(Boolean))
 
     let recommendCount = current.filter(g => g.is_recommend === 1).length
     let maxSort = current.reduce((m, g) => Math.max(m, g.sort || 0), 0)
@@ -343,6 +361,10 @@ module.exports = {
         if (dup.data && dup.data.length) {
           created.push({ lib_id: libId, goods_id: dup.data[0]._id, name: lib.name, duplicated: true })
           continue
+        }
+        // 幂等窗口之外的重复：如实列入失败，不当作成功
+        if (libIdsInActivity.has(libId) || namesInActivity.has(String(lib.name || '').trim())) {
+          throwBiz('DUPLICATE', `本次接龙已有「${lib.name}」，不能重复添加`)
         }
 
         const wantRecommend = lib.is_recommend === 1 ? 1 : 0
@@ -394,6 +416,8 @@ module.exports = {
         })
 
         created.push({ lib_id: lib._id, goods_id: res.id, name: lib.name, duplicated: false })
+        namesInActivity.add(String(lib.name || '').trim())
+        libIdsInActivity.add(lib._id)
       } catch (e) {
         // 部分失败不得显示整体成功，已成功的保留（GOODS_LIB_SPEC §9）
         failed.push({ lib_id: libId, errCode: e.errCode || 'INVALID_PARAM', errMsg: e.errMsg || e.message })
@@ -441,6 +465,8 @@ module.exports = {
     const agg = await this.db.collection('grouporder-goods-lib').aggregate()
       .match({ user_id: uid, deleted: 0 })
       .group({ _id: '$category_id', cnt: { $sum: 1 } })
+      // 显式上限：20 个分类 + 未分组共 21 组，可能超过平台默认返回条数
+      .limit(paging.AGG_LIMIT)
       .end()
     const cntMap = (agg.data || []).reduce((m, r) => { m[r._id || ''] = r.cnt; return m }, {})
 
