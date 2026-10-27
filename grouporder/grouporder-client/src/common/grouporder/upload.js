@@ -20,13 +20,165 @@ export function toItem(file) {
   return { file, localPath: '', preview: (file && file.url) || '' };
 }
 
-/** 选图，返回待上传的 item 列表 */
+// ---------------- 选图后压缩 ----------------
+// 1M 以内原图；1~3M 轻压；3~8M 重压；8M 以上最重压；压完仍超 5M 拒绝。GIF 不压（会丢动画），只校验上限
+const MB = 1024 * 1024;
+const LIGHT_OVER = 1 * MB;
+const HEAVY_OVER = 3 * MB;
+const HEAVIEST_OVER = 8 * MB;
+const MAX_SIZE = 5 * MB;
+const LIGHT_QUALITY = 0.85;
+const HEAVY_QUALITY = 0.7;
+const HEAVIEST_QUALITY = 0.5;
+
+// 只收常见位图格式；SVG 可内嵌脚本、HEIC 多数浏览器显示不了，一律不收
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+
+function extOf(name) {
+  const m = /\.(\w+)$/.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+
+/** 是否为允许的图片：H5 优先看 File 的 MIME / 文件名，其余端看临时路径扩展名 */
+function isImage(path, f) {
+  if (f.type) return IMAGE_MIMES.includes(f.type.toLowerCase());
+  const ext = extOf(f.name) || extOf(path);
+  if (ext) return IMAGE_EXTS.includes(ext);
+  // 判断不了类型：小程序 / App 的 chooseImage 只会给图片，放行；H5 拿不到类型的一律不收
+  // #ifdef H5
+  return false;
+  // #endif
+  // #ifndef H5
+  return true;
+  // #endif
+}
+// 普通图长边不超 2400；商品详情长图若按长边缩会变窄看不清，允许短边保 1600、长边放宽到 4096（手机 canvas 安全上限）
+const MAX_LONG = 2400;
+const LONG_IMG_SHORT = 1600;
+const LONG_IMG_MAX_LONG = 4096;
+
+/** 目标尺寸缩放比（≤1） */
+function scaleOf(w, h) {
+  const long = Math.max(w, h);
+  const short = Math.min(w, h);
+  if (!long || !short) return 1;
+  return Math.min(1, Math.max(MAX_LONG / long, Math.min(LONG_IMG_SHORT / short, LONG_IMG_MAX_LONG / long)));
+}
+
+function isGif(path, type) {
+  return (type && type.indexOf('gif') >= 0) || /\.gif$/i.test(path || '');
+}
+
+// #ifdef H5
+/** H5：canvas 重绘为 JPEG，返回 { path, size }；失败返回 null */
+function compressH5(path, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const s = scaleOf(img.naturalWidth, img.naturalHeight);
+        const w = Math.round(img.naturalWidth * s);
+        const h = Math.round(img.naturalHeight * s);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        // 先铺白底：透明 PNG 转 JPEG 时透明区域默认会变黑
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => resolve(blob ? { path: URL.createObjectURL(blob), size: blob.size } : null), 'image/jpeg', quality);
+      } catch (e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = path;
+  });
+}
+// #endif
+
+// #ifndef H5
+/** 小程序 / App：uni.compressImage，返回 { path, size }；失败返回 null */
+function compressNative(path, quality) {
+  return new Promise((resolve) => {
+    uni.getImageInfo({
+      src: path,
+      success: (info) => {
+        const s = scaleOf(info.width, info.height);
+        uni.compressImage({
+          src: path,
+          quality: Math.round(quality * 100),
+          compressedWidth: Math.round(info.width * s),
+          success: (r) => {
+            uni.getFileInfo({
+              filePath: r.tempFilePath,
+              success: (f) => resolve({ path: r.tempFilePath, size: f.size }),
+              fail: () => resolve(null),
+            });
+          },
+          fail: () => resolve(null),
+        });
+      },
+      fail: () => resolve(null),
+    });
+  });
+}
+// #endif
+
+/** 按大小分档压缩，返回最终本地路径；超上限返回空串 */
+async function shrink(path, size, type) {
+  if (!size || size <= LIGHT_OVER) return path;
+  if (isGif(path, type)) return size <= MAX_SIZE ? path : '';
+  const quality = size > HEAVIEST_OVER ? HEAVIEST_QUALITY : size > HEAVY_OVER ? HEAVY_QUALITY : LIGHT_QUALITY;
+  let out = null;
+  // #ifdef H5
+  out = await compressH5(path, quality);
+  // #endif
+  // #ifndef H5
+  out = await compressNative(path, quality);
+  // #endif
+  // 压缩失败或反而变大时用原图，仍按上限校验
+  const best = out && out.size < size ? out : { path, size };
+  return best.size <= MAX_SIZE ? best.path : '';
+}
+
+/** 选图，返回待上传的 item 列表（非图片过滤；按大小压缩，超 5M 的剔除；两类都提示） */
 export function pickImages(count) {
   return new Promise((resolve) => {
     uni.chooseImage({
       count,
       sizeType: ['compressed'],
-      success: (r) => resolve((r.tempFilePaths || []).map((p) => ({ file: null, localPath: p, preview: p }))),
+      // #ifdef H5
+      // 只限制系统选择框里可选的类型，用户仍可切到「所有文件」，所以下面还要逐个校验
+      extension: IMAGE_EXTS.map((e) => '.' + e),
+      // #endif
+      success: async (r) => {
+        const paths = r.tempFilePaths || [];
+        const files = r.tempFiles || [];
+        const needWork = files.some((f) => f && f.size > LIGHT_OVER);
+        if (needWork) uni.showLoading({ title: '图片处理中', mask: true });
+        const items = [];
+        let notImage = 0;
+        let tooLarge = 0;
+        try {
+          for (let i = 0; i < paths.length; i++) {
+            const f = files[i] || {};
+            if (!isImage(paths[i], f)) { notImage++; continue; }
+            const p = await shrink(paths[i], f.size, f.type);
+            if (p) items.push({ file: null, localPath: p, preview: p });
+            else tooLarge++;
+          }
+        } finally {
+          if (needWork) uni.hideLoading();
+        }
+        const tips = [];
+        if (notImage) tips.push(`${notImage} 个非图片文件已忽略`);
+        if (tooLarge) tips.push(`${tooLarge} 张图片超过 5M`);
+        if (tips.length) uni.showToast({ title: tips.join('，'), icon: 'none', duration: 2500 });
+        resolve(items);
+      },
       fail: () => resolve([]),
     });
   });
@@ -46,6 +198,12 @@ export function imageDir(createDate, activityId) {
 export function libImageDir() {
   const info = uniCloud.getCurrentUserInfo() || {};
   return `lib/${dayOf()}/${info.uid || 'anonymous'}/`;
+}
+
+/** 团长名片头像目录：leader-card/上传日期/用户ID/（D-109）*/
+export function leaderCardImageDir() {
+  const info = uniCloud.getCurrentUserInfo() || {};
+  return `leader-card/${dayOf()}/${info.uid || 'anonymous'}/`;
 }
 
 async function uploadOne(localPath, cloudPath) {

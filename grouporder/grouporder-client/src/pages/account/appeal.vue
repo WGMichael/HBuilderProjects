@@ -38,6 +38,8 @@
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
+import { fmtDateTime } from '@/common/grouporder/activity-time.js';
 import { ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 // @ts-ignore
@@ -50,7 +52,8 @@ const targetUid = ref('');
 const submitting = ref(false);
 const myAppeals = ref<any[]>([]);
 
-const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+// 统一格式 yyyy/mm/dd hh:mm（D-145）
+const fmt = (ts: number) => fmtDateTime(ts);
 const tagCls = (s: number) => (s === 3 ? 'tag--ok' : s === 4 ? 'tag--bad' : 'tag--wait');
 
 const loadMine = async () => {

@@ -3,11 +3,14 @@
 
   §4 约束 3：tab 恒为新建态，每次从其他 tab 切入都重置为空白，不残留上次内容。
   从子页（添加商品、商品库、复用、发布预览）返回不算「进入」，保留正在填写的表单（D-061）。
+  D-148：新建态进入且商品库为空时，弹出首次发起引导（go-create-guide）。
 -->
 <template>
   <view class="page">
     <activity-form ref="formRef" with-tabbar />
     <go-tabbar current="faqi" />
+    <!-- 首次发起引导（D-148）：商品库为空时建议先配商品 -->
+    <go-create-guide ref="guideRef" />
   </view>
 </template>
 
@@ -16,12 +19,14 @@ import { ref, nextTick } from 'vue';
 import { onShow, onReady } from '@dcloudio/uni-app';
 import ActivityForm from '@/components/activity-form/activity-form.vue';
 import GoTabbar from '@/components/go-tabbar/go-tabbar.vue';
+import GoCreateGuide from '@/components/go-create-guide/go-create-guide.vue';
 // @ts-ignore
 import { takeCopySource } from '@/common/grouporder/draft.js';
 // @ts-ignore
 import { consumeLoginReturn } from '@/common/grouporder/request.js';
 
 const formRef = ref<any>(null);
+const guideRef = ref<any>(null);
 
 /**
  * 每次显示时三选一：
@@ -42,6 +47,8 @@ const applyShow = () => {
     form.onChildReturn().catch(() => {});
   } else {
     form.reset();
+    // 从其他 tab 进入（新建态）时检查是否需要首次引导；复制预填与子页返回不弹
+    if (guideRef.value) guideRef.value.check();
   }
   return true;
 };

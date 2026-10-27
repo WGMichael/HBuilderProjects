@@ -70,7 +70,7 @@
 				// 【grouporder 修改】找回密码页依赖手机短信，本项目不采集手机号（D-029），首版无自助找回：如实说明，不跳不可用的页面
 				return uni.showModal({
 					title: '找回密码',
-					content: '暂不支持自助找回密码。如已绑定微信，可在微信小程序中用微信登录后修改密码；否则请联系平台客服协助处理。',
+					content: '暂不支持自助找回密码，请通过「我的 → 使用帮助」或用户服务协议末尾的联系方式联系我们协助处理。',
 					showCancel: false
 				})
 				// eslint-disable-next-line no-unreachable

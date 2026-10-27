@@ -7,13 +7,16 @@
  * grouporder-address 全表禁止客户端直读，只走本对象（DATA_MODEL §8.5）。
  */
 const {
-  auth, errors, paging, idempotent, state, bindMethods
+  auth, errors, paging, idempotent, state, leadercontact, membership, bindMethods
 } = require('grouporder-common')
+const { fileurl } = require('grouporder-common')
 
 const { throwBiz, assertParam, ok } = errors
 const { ACTIVITY, GOVERNANCE, ORDER, REVIEW_RESULT } = state
 
 const DAY_MS = 24 * 60 * 60 * 1000
+// 「已结束还有未收款 / 未取货」只提醒近这么多天结束的活动，更早的不再打扰（D-134）
+const CLOSED_PENDING_DAYS = 30
 
 // 待办四档优先级（DATA_MODEL §4.8 说明 3）
 const TODO = {
@@ -21,10 +24,13 @@ const TODO = {
   REVIEW_REJECTED: { key: 'review_rejected', level: 1 },
   JOINED_CANCELLED: { key: 'joined_cancelled', level: 2 },
   JOINED_OFFLINE: { key: 'joined_offline', level: 2 },
-  ACTIVITY_CLOSED_EXPORT: { key: 'activity_closed_export', level: 2 },
+  // D-134：去掉「待生成清单」（不是每个团长都要清单，且活动结束后会一直挂着）；
+  // 改为「已结束，还有未收款 / 未取货」——只对团长在该场标记过至少一单的活动提醒
+  CLOSED_PENDING: { key: 'closed_pending', level: 2 },
   ENDING_SOON_LEADER: { key: 'ending_soon_leader', level: 3 },
   ENDING_SOON_JOINER: { key: 'ending_soon_joiner', level: 3 },
-  DRAFT_STALE: { key: 'draft_stale', level: 4 },
+  // D-134：草稿一律进待办（不再等 24 小时）；审核未通过的草稿已有一档提醒，不重复
+  DRAFT: { key: 'draft', level: 3 },
   REPORT_RESULT: { key: 'report_result', level: 4 },
   APPEAL_RESULT: { key: 'appeal_result', level: 4 }
 }
@@ -37,10 +43,11 @@ module.exports = {
     this.dbCmd = this.ctx.db.command
   },
 
-  _after (error, result) {
+  async _after (error, result) {
     // 使用中自动续期登录（auth.attachNewToken）
     if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
-    return auth.attachNewToken(this.ctx, result)
+    // 图片地址以 fileID 为准换成新的访问地址（D-119，common/fileurl）
+    return auth.attachNewToken(this.ctx, await fileurl.refresh(result))
   },
 
   // ==========================================================================
@@ -440,7 +447,8 @@ module.exports = {
       paging.fetchAll(() => this.db.collection('grouporder-activity')
         .where({ leader_uid: uid, status: this.dbCmd.neq(ACTIVITY.CANCELLED) })
         .field({ _id: true, title: true, status: true, governance_status: true,
-                 review_result: true, review_reason: true, end_time: true, create_date: true })
+                 review_result: true, review_reason: true, end_time: true, actual_end_time: true,
+                 create_date: true, publish_date: true })
         .orderBy('_id', 'asc')),
       // 本人有效订单分批读完：历史订单只增不减，固定上限会漏掉新参与的活动
       paging.fetchAll(() => this.db.collection('grouporder-order')
@@ -484,11 +492,39 @@ module.exports = {
       if (a.status === ACTIVITY.ONGOING && a.end_time > ctx.now && a.end_time <= soon) {
         push(TODO.ENDING_SOON_LEADER, a._id, a.title, '活动将在 24 小时内截止', { time: a.end_time })
       }
-      if (a.status === ACTIVITY.CLOSED) {
-        push(TODO.ACTIVITY_CLOSED_EXPORT, a._id, a.title, '活动已截止，可生成接龙清单')
+      if (a.status === ACTIVITY.DRAFT && a.review_result !== REVIEW_RESULT.REJECT) {
+        push(TODO.DRAFT, a._id, a.title || '未命名草稿', a.publish_date ? '活动已撤回为草稿，修改后可重新提交审核' : '草稿还没发布，继续编辑后提交审核', { time: a.create_date })
       }
-      if (a.status === ACTIVITY.DRAFT && ctx.now - a.create_date > DAY_MS) {
-        push(TODO.DRAFT_STALE, a._id, a.title, '草稿超过 24 小时未提交发布', { time: a.create_date })
+    }
+
+    // 已结束但还有未收款 / 未取货（D-134）：只看近 CLOSED_PENDING_DAYS 天结束的活动，
+    // 且团长在该场至少标记过一单（说明在用收款 / 取货记录，D-100），没用这个功能的团长不打扰
+    const recentClosed = leadActs.filter(a => a.status === ACTIVITY.CLOSED &&
+      (a.actual_end_time || a.end_time || 0) >= ctx.now - CLOSED_PENDING_DAYS * DAY_MS)
+    if (recentClosed.length) {
+      const actMap = new Map(recentClosed.map(a => [a._id, a]))
+      for (const part of paging.chunk(recentClosed.map(a => a._id), 100)) {
+        const agg = await this.db.collection('grouporder-order').aggregate()
+          .match({ activity_id: this.dbCmd.in(part), status: ORDER.VALID })
+          .group({ _id: '$activity_id', total: { $sum: 1 }, paid: { $sum: '$leader_paid' }, delivered: { $sum: '$leader_delivered' } })
+          .limit(paging.AGG_LIMIT)
+          .end()
+        for (const r of (agg.data || [])) {
+          const paid = r.paid || 0
+          const delivered = r.delivered || 0
+          const unpaid = r.total - paid
+          const undelivered = r.total - delivered
+          if (paid + delivered === 0 || (unpaid <= 0 && undelivered <= 0)) continue
+          const a = actMap.get(r._id)
+          const parts = []
+          if (unpaid > 0) parts.push(`${unpaid} 单未收款`)
+          if (undelivered > 0) parts.push(`${undelivered} 单未取货`)
+          push(TODO.CLOSED_PENDING, r._id, a.title, '活动已结束，还有 ' + parts.join('、'), {
+            time: a.actual_end_time || a.end_time,
+            // 点开时预选的子 tab：先处理收款
+            mark: unpaid > 0 ? 'unpaid' : 'undelivered'
+          })
+        }
       }
     }
 
@@ -571,7 +607,7 @@ module.exports = {
     const ctx = this.ctx
     const uid = auth.requireLogin(ctx)
 
-    const [lead, joinedOrders, addrCount, libCount, todo] = await Promise.all([
+    const [lead, joinedOrders, addrCount, libCount, todo, member] = await Promise.all([
       this.db.collection('grouporder-activity')
         .where({ leader_uid: uid }).count(),
       this.db.collection('grouporder-order')
@@ -580,7 +616,8 @@ module.exports = {
         .where({ user_id: uid, deleted: 0 }).count(),
       this.db.collection('grouporder-goods-lib')
         .where({ user_id: uid, deleted: 0 }).count(),
-      this._todoList()
+      this._todoList(),
+      membership.getMember(ctx, uid)
     ])
 
     const ongoing = await this.db.collection('grouporder-activity')
@@ -594,7 +631,41 @@ module.exports = {
       address_count: addrCount.total || 0,
       goods_lib_count: libCount.total || 0,
       todo_count: todo.data ? todo.data.total : 0,
+      // 会员身份（D-106 预留）：首版前端不展示，会员上线后用于「我的」顶部
+      member: { is_member: member.is_member, expire: member.expire },
       asOf: ctx.now
     })
+  },
+
+  /**
+   * 团长名片（M-08 → 团长名片，D-103 / D-109）
+   * 账号级，显示在本人发起的所有活动页与参与者订单详情；未填的项为空串 / null。
+   * 从未保存过名片（has_card = false）时附带账号昵称与头像（account_*），供设置页预填。
+   */
+  async leaderContactGet () {
+    const ctx = this.ctx
+    const uid = auth.requireLogin(ctx)
+    const card = await leadercontact.getOwn(ctx, uid)
+    if (!card.has_card) {
+      const { data } = await this.db.collection('uni-id-users')
+        .where({ _id: uid })
+        .field({ nickname: true, username: true, avatar_file: true })
+        .limit(1).get()
+      const u = (data && data[0]) || {}
+      card.account_nickname = u.nickname || u.username || ''
+      card.account_avatar = u.avatar_file && u.avatar_file.url ? u.avatar_file : null
+    }
+    return ok(Object.assign(card, { asOf: ctx.now }))
+  },
+
+  /**
+   * 保存团长名片（D-103 / D-109）：{ nickname?, avatar?, mobile?, wechat? }，空串 / null 即清除该项。
+   * 电话、微信号只接受号码与微信号格式；昵称同步文本检测，不通过拒绝保存；头像写库后送图片检测。
+   */
+  async leaderContactSet (params = {}) {
+    const ctx = this.ctx
+    const uid = auth.requireLogin(ctx)
+    const card = await leadercontact.set(ctx, uid, leadercontact.normalize(params))
+    return ok(Object.assign(card, { asOf: ctx.now }))
   }
 }

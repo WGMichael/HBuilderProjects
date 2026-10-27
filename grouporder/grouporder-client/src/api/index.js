@@ -14,7 +14,7 @@
  */
 import { call } from './client'
 
-/** 活动与活动内商品（grouporder-activity-co，19 个方法） */
+/** 活动与活动内商品（grouporder-activity-co，24 个方法） */
 export const activity = {
   activityCreateDraft: (params, options) => call('grouporder-activity-co', 'activityCreateDraft', params, options),
   activityUpdateDraft: (params, options) => call('grouporder-activity-co', 'activityUpdateDraft', params, options),
@@ -29,15 +29,20 @@ export const activity = {
   activityGetShareEntry: (params, options) => call('grouporder-activity-co', 'activityGetShareEntry', params, options),
   activityCopySourceList: (params, options) => call('grouporder-activity-co', 'activityCopySourceList', params, options),
   activityCopy: (params, options) => call('grouporder-activity-co', 'activityCopy', params, options),
+  activityCopyAuthorize: (params, options) => call('grouporder-activity-co', 'activityCopyAuthorize', params, options),
+  activityCopyPreview: (params, options) => call('grouporder-activity-co', 'activityCopyPreview', params, options),
+  activityCopyByToken: (params, options) => call('grouporder-activity-co', 'activityCopyByToken', params, options),
   goodsCreate: (params, options) => call('grouporder-activity-co', 'goodsCreate', params, options),
   goodsUpdate: (params, options) => call('grouporder-activity-co', 'goodsUpdate', params, options),
   goodsDelete: (params, options) => call('grouporder-activity-co', 'goodsDelete', params, options),
   goodsSetOnSale: (params, options) => call('grouporder-activity-co', 'goodsSetOnSale', params, options),
   goodsAdjustStock: (params, options) => call('grouporder-activity-co', 'goodsAdjustStock', params, options),
   goodsSort: (params, options) => call('grouporder-activity-co', 'goodsSort', params, options),
+  activityFindByCode: (params, options) => call('grouporder-activity-co', 'activityFindByCode', params, options),
+  activityPosterCover: (params, options) => call('grouporder-activity-co', 'activityPosterCover', params, options),
 }
 
-/** 订单（grouporder-order-co，9 个方法） */
+/** 订单（grouporder-order-co，14 个方法） */
 export const order = {
   orderPreview: (params, options) => call('grouporder-order-co', 'orderPreview', params, options),
   orderCreate: (params, options) => call('grouporder-order-co', 'orderCreate', params, options),
@@ -48,6 +53,11 @@ export const order = {
   orderVoid: (params, options) => call('grouporder-order-co', 'orderVoid', params, options),
   orderLeaderStat: (params, options) => call('grouporder-order-co', 'orderLeaderStat', params, options),
   orderLeaderList: (params, options) => call('grouporder-order-co', 'orderLeaderList', params, options),
+  orderLeaderDetail: (params, options) => call('grouporder-order-co', 'orderLeaderDetail', params, options),
+  orderLeaderMark: (params, options) => call('grouporder-order-co', 'orderLeaderMark', params, options),
+  orderLeaderMarkAll: (params, options) => call('grouporder-order-co', 'orderLeaderMarkAll', params, options),
+  orderLeaderBrief: (params, options) => call('grouporder-order-co', 'orderLeaderBrief', params, options),
+  leaderStatOverview: (params, options) => call('grouporder-order-co', 'leaderStatOverview', params, options),
 }
 
 /** 商品库与分类（账号级）（grouporder-goods-co，10 个方法） */
@@ -64,7 +74,7 @@ export const goodsLib = {
   categorySort: (params, options) => call('grouporder-goods-co', 'categorySort', params, options),
 }
 
-/** 收货信息簿、绑定申诉、隐私请求、待办（grouporder-user-co，13 个方法） */
+/** 收货信息簿、绑定申诉、隐私请求、待办（grouporder-user-co，15 个方法） */
 export const user = {
   addressList: (params, options) => call('grouporder-user-co', 'addressList', params, options),
   addressCreate: (params, options) => call('grouporder-user-co', 'addressCreate', params, options),
@@ -79,6 +89,8 @@ export const user = {
   todoList: (params, options) => call('grouporder-user-co', 'todoList', params, options),
   todoDismiss: (params, options) => call('grouporder-user-co', 'todoDismiss', params, options),
   meOverview: (params, options) => call('grouporder-user-co', 'meOverview', params, options),
+  leaderContactGet: (params, options) => call('grouporder-user-co', 'leaderContactGet', params, options),
+  leaderContactSet: (params, options) => call('grouporder-user-co', 'leaderContactSet', params, options),
 }
 
 /** 清单预览、生成与下载（grouporder-export-co，3 个方法） */
@@ -95,8 +107,9 @@ export const report = {
   reportGetResult: (params, options) => call('grouporder-report-co', 'reportGetResult', params, options),
 }
 
-/** 运营后台（仅 admin 工程使用）（grouporder-ops-co，38 个方法） */
+/** 运营后台（仅 admin 工程使用）（grouporder-ops-co，39 个方法） */
 export const ops = {
+  devWipe: (params, options) => call('grouporder-ops-co', 'devWipe', params, options),
   activityDetail: (params, options) => call('grouporder-ops-co', 'activityDetail', params, options),
   activityGovernanceOff: (params, options) => call('grouporder-ops-co', 'activityGovernanceOff', params, options),
   goodsGovernanceOff: (params, options) => call('grouporder-ops-co', 'goodsGovernanceOff', params, options),
@@ -137,5 +150,5 @@ export const ops = {
   roleAssign: (params, options) => call('grouporder-ops-co', 'roleAssign', params, options),
 }
 
-/** 合计 95 个方法 */
+/** 合计 108 个方法 */
 export default { activity, order, goodsLib, user, exportList, report, ops }

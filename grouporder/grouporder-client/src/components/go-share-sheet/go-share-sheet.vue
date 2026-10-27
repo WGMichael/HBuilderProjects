@@ -1,5 +1,5 @@
 <!--
-  分享给好友接龙 · 底部弹窗（M-20 / M-13 / M-12 共用）
+  分享到微信 · 底部弹窗（M-20 / M-13 / M-12 共用）
 
   效果图：prototype/share-mockup.html B 组。规格：SHARE_SPEC（本版只做微信转发卡片）。
   - open(act) 时先向服务端复核活动状态（activityGetDetail，团长与参与者都可调；读时补截止后状态即时准确），
@@ -9,6 +9,9 @@
   - 卡片：标题「接龙丨」+ 活动标题，图片为封面（微信按 5:4 裁切，为空时由微信截取页面首屏），path 只带 activity_id（D-083）。
   - 非微信小程序（H5，D-095）：没有原生转发，改为「复制链接」，复制「标题 + 活动页链接」由用户自己粘贴发给好友；
     链接按当前页面地址拼出（hash 路由），不写死域名。复核规则与小程序一致。
+  - 生成海报（D-102、D-112，仅 H5）：不在弹窗里，由页面上与「分享到微信」并列的按钮调用 openPoster(act)；
+    同样先复核（loading 提示，未通过弹窗说明原因），通过后用同一份活动信息画海报，二维码为上述链接；
+    小程序版本待 AppID 下来后改用小程序码。
 -->
 <template>
   <uni-popup ref="popup" type="bottom" @change="onPopupChange">
@@ -24,7 +27,7 @@
       </block>
 
       <block v-else>
-        <view class="ss__title">分享给好友接龙</view>
+        <view class="ss__title">分享到微信</view>
 
         <view v-if="state === 'loading'" class="ss__loading">
           <view class="ss__spinner" />
@@ -45,6 +48,7 @@
           <!-- 链接预览：复制出去的内容 -->
           <view class="link-box">
             <view class="link-box__title">{{ card.title }}</view>
+            <view v-if="info.short_code" class="link-box__code">活动码：{{ info.short_code }}</view>
             <view class="link-box__url">{{ shareUrl }}</view>
           </view>
           <!-- #endif -->
@@ -65,14 +69,22 @@
       </block>
     </view>
   </uni-popup>
+  <!-- #ifdef H5 -->
+  <go-poster ref="poster" />
+  <!-- #endif -->
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
+import { fmtDateTime } from '@/common/grouporder/activity-time.js';
 import { computed, ref } from 'vue';
 // @ts-ignore
 import api from '@/common/grouporder/request.js';
 // @ts-ignore
 import { deliveryText } from '@/common/grouporder/dict.js';
+// #ifdef H5
+import GoPoster from '@/components/go-poster/go-poster.vue';
+// #endif
 
 const emit = defineEmits(['ready']);
 
@@ -82,7 +94,8 @@ const failReason = ref('');
 const info = ref<any>({});
 let seq = 0; // 连续打开时丢弃过期的复核结果
 
-const fmt = (ts: number) => (ts ? new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
+// 统一格式 yyyy/mm/dd hh:mm（D-145）
+const fmt = (ts: number) => fmtDateTime(ts);
 
 const card = computed(() => ({
   title: info.value.title ? '接龙丨' + info.value.title : '',
@@ -112,7 +125,7 @@ const metaText = computed(() => {
 /** 服务端状态 → 不能分享的原因；可分享返回空串（未开始也可分享，用于预热） */
 const reasonOf = (a: any) => {
   if (a.governance_status === 1) return '活动已被平台下架，暂不能分享。已转发出去的卡片，好友点开会看到「已下架」提示，不能下单。';
-  if (a.status === 3) return '活动已截止，不能再分享。';
+  if (a.status === 3) return '活动已结束，不能再分享。';
   if (a.status === 4) return '活动已取消，不能再分享。';
   if (a.status !== 2) return '活动审核通过后才能分享。';
   return '';
@@ -153,7 +166,8 @@ const onShareTap = () => { if (state.value === 'ready') setTimeout(close, 300); 
 const copyLink = () => {
   if (state.value !== 'ready') return;
   uni.setClipboardData({
-    data: card.value.title + '\n' + shareUrl.value,
+    // 带上活动码（D-104）：链接打不开时，好友可在「我参与的」按号查找
+    data: card.value.title + (info.value.short_code ? '\n活动码：' + info.value.short_code : '') + '\n' + shareUrl.value,
     success: () => {
       close();
       uni.showToast({ title: '已复制，去微信粘贴给好友', icon: 'none' });
@@ -163,7 +177,47 @@ const copyLink = () => {
 };
 const onPopupChange = (e: any) => { if (!e.show) seq++; };
 
-defineExpose({ open, close, card });
+// 生成海报（D-102、D-112，仅 H5）：页面上与「分享到微信」并列的按钮直接调用，不经分享弹窗。
+// 复核规则与 open 相同；复核期间 loading 遮罩，未通过弹窗说明原因
+const poster = ref<any>(null);
+let posterBusy = false;
+const openPoster = async (act: any) => {
+  const id = act && act._id;
+  if (!id || posterBusy || !poster.value) return;
+  posterBusy = true;
+  uni.showLoading({ title: '正在确认活动状态', mask: true });
+  try {
+    const a = (await api.activity.activityGetDetail({ activity_id: id }, { silent: true })) || {};
+    uni.hideLoading();
+    const reason = reasonOf(a);
+    if (reason) {
+      uni.showModal({ title: '暂时不能生成海报', content: reason, showCancel: false });
+      return;
+    }
+    // shareUrl 依赖 info（活动 id），先写入再取
+    info.value = a;
+    // 版式（D-117）：标题 + 截止时间一行、封面、二维码；不列商品与交付方式
+    poster.value.open({
+      title: a.title || '',
+      coverUrl: (a.cover_image && a.cover_image.url) || '',
+      // 封面直接加载跨域失败时，由云端代下载（仅团长可调；参与者侧调用失败即退回默认头图）
+      loadCoverData: async () => {
+        const r = (await api.activity.activityPosterCover({ activity_id: id }, { silent: true })) || {};
+        return r.data_url || '';
+      },
+      endTime: a.end_time,
+      url: shareUrl.value,
+      shortCode: a.short_code || '',
+    });
+  } catch (e: any) {
+    uni.hideLoading();
+    uni.showModal({ title: '暂时不能生成海报', content: (e && (e.errMsg || e.message)) || '暂时无法确认活动状态，请稍后重试。', showCancel: false });
+  } finally {
+    posterBusy = false;
+  }
+};
+
+defineExpose({ open, close, card, openPoster });
 </script>
 
 <style lang="scss" scoped>
@@ -181,6 +235,7 @@ defineExpose({ open, close, card });
 .wx-card__dot { width: 24rpx; height: 24rpx; border-radius: 50%; background: $go-primary; }
 .link-box { margin: 8rpx 0 0; border-radius: 20rpx; padding: 22rpx 24rpx; background: #f5f7f6; border: 1rpx solid #e6ebe8; }
 .link-box__title { font-size: 26rpx; font-weight: 600; color: $go-ink; margin-bottom: 10rpx; }
+.link-box__code { font-size: 24rpx; color: $go-text; margin-bottom: 8rpx; }
 .link-box__url { font-size: 22rpx; line-height: 1.5; color: $go-primary-dark; word-break: break-all; user-select: text; }
 .ss__hint { text-align: center; font-size: 22rpx; color: $go-muted; margin-top: 16rpx; }
 .ss__meta { text-align: center; font-size: 22rpx; color: $go-muted; margin-top: 20rpx; }

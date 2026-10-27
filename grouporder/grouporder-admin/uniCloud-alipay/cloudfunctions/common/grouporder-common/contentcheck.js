@@ -13,12 +13,14 @@
 
 const CONTENT_TYPE = { TEXT: 'text', IMAGE: 'image' }
 // goods_lib：商品库记录（libCreate / libUpdate 送检时 object_id 是库记录 id，不是活动商品 id）
-const OBJECT_TYPE = { ACTIVITY: 'activity', GOODS: 'goods', GOODS_LIB: 'goods_lib' }
+// leader_card：团长名片（D-109），object_id 是 grouporder-user-ext 记录 id，回调回写其 img_check_status
+const OBJECT_TYPE = { ACTIVITY: 'activity', GOODS: 'goods', GOODS_LIB: 'goods_lib', LEADER_CARD: 'leader_card' }
 // 送检对象类型 → 对象所在集合（回写 img_check_status、回调处置都按它找表）
 const OBJECT_COLLECTION = {
   [OBJECT_TYPE.ACTIVITY]: 'grouporder-activity',
   [OBJECT_TYPE.GOODS]: 'grouporder-goods',
-  [OBJECT_TYPE.GOODS_LIB]: 'grouporder-goods-lib'
+  [OBJECT_TYPE.GOODS_LIB]: 'grouporder-goods-lib',
+  [OBJECT_TYPE.LEADER_CARD]: 'grouporder-user-ext'
 }
 
 /** 送检对象所在集合；未知类型返回空串，由调用方决定是否忽略 */

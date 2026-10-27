@@ -32,8 +32,9 @@ export default {
   ],
   // 政策协议
   agreements: {
-    serviceUrl: 'https://xxx', // 用户服务协议链接
-    privacyUrl: 'https://xxx', // 隐私政策条款链接
+    // 群接龙：改为本项目原生页面路径（D-099），uni-id-pages-agreements 遇到以 / 开头的地址直接打开页面
+    serviceUrl: '/pages/common/legal?type=service', // 用户服务协议
+    privacyUrl: '/pages/common/legal?type=privacy', // 隐私政策
     huaweiConsumerPrivacyUrl: 'https://privacy.consumer.huawei.com/legal/id/authentication-terms.htm?code=CN&language=zh-CN', // 华为账号用户认证协议
     // 哪些场景下显示，1.注册（包括登录并注册，如：微信登录、苹果登录、短信验证码登录）、2.登录（如：用户名密码登录）
     scope: [

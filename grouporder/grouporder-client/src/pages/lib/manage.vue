@@ -5,11 +5,13 @@
   分类快捷整理（D-066：一件商品至多属于一个分类）：
     - 每件商品的分类标签可点，弹出分类列表直接改（单件）；
     - 选中某个分类时，可把商品「移出分类」（回到未分组，商品本身保留），只改 category_id。
-  「＋ 添加商品」= 在商品库直接新建一件商品（libCreate，D-088），默认归入当前选中的分类
-  （「全部」「未分组」下默认未分组），弹窗内可改。
+  「＋ 添加商品」= 在商品库直接新建一件商品（libCreate，D-088）。选中真实大类时，分类只列该大类下的小类，
+  默认归入与大类同名的小类（D-151，新建大类自带）；小类标题旁的「＋」默认归入该小类；选中「未分类」时可选全部小类。
+  大类栏末尾「＋ 大类」可直接新建大类（D-151）；没有商品的小类也列出（只显示小标题与「暂无商品」）。
   换图（D-084）：编辑弹窗里选图只记本地路径，点「保存」才上传到 lib/上传日期/用户ID/，取消不产生云端文件；
   被换下的旧图由 libUpdate 按三表引用回收。
   红线⑥：lib_id 只用于治理定位，这里不联表读活动商品；商品库是独立于活动的模板集合。
+  D-143 修订：编辑已有商品时，名称、说明、图片的改动由服务端自动同步到本人未结束活动里的同一商品，保存后提示同步结果。
   商品库不设数量上限，列表分页加载。
 -->
 <template>
@@ -20,47 +22,58 @@
         <text class="mini-btn" @click="goCategory">管理分类</text>
       </view>
 
-      <!-- 分类 tab：全部 / 各分类（按用户排序）/ 未分组（有商品时才显示）-->
-      <scroll-view class="chips" scroll-x>
-        <text v-for="t in tabs" :key="t.id" class="chip" :class="{ 'chip--on': categoryId === t.id }" @click="pickTab(t.id)">{{ t.name }} {{ t.count }}</text>
+      <!-- 大类横向筛选（无「全部」）：真实大类 + 末尾「未分类」大类；切大类是纯前端重分组 -->
+      <scroll-view v-if="parentChips.length" class="chips" scroll-x>
+        <text v-for="p in parentChips" :key="p._id" class="chip" :class="{ 'chip--on': parentId === p._id, 'chip--uncat': p._id === '__uncat__' }" @click="pickParent(p._id)">{{ p.name }} {{ p.goods_count }}</text>
+        <text class="chip chip--add" @click="createParent">＋ 大类</text>
       </scroll-view>
 
-      <!-- 新建商品：默认归入当前分类（D-088） -->
       <view class="cat-bar">
-        <text class="meta">{{ categoryId ? '「' + catNameOf(categoryId === UNGROUPED ? '' : categoryId) + '」' : '全部' }}共 {{ total }} 件</text>
+        <text class="meta">共 {{ totalAll }} 件商品</text>
         <text class="mini-btn mini-btn--primary" @click="openCreate">＋ 添加商品</text>
       </view>
 
-      <view v-for="g in list" :key="g._id" class="card" :class="{ 'card--blocked': g.governance_blocked === 1 }">
-        <view class="thumb">
-          <image v-if="g.cover_image && g.cover_image.url" class="thumb__img" :src="g.cover_image.url" mode="aspectFill" />
-          <text v-else class="thumb__txt">{{ g.name.slice(0, 4) }}</text>
-        </view>
-        <view class="card__main">
-          <view class="card__title">
-            <text class="card__name">{{ g.name }}</text>
-            <!-- 点分类标签快捷改分类 -->
-            <text class="tag tag--cat" :class="{ 'tag--dis': g.governance_blocked === 1 }" @click="openCatSheet(g)">{{ catNameOf(g.category_id) }} ›</text>
-            <text v-if="g.governance_blocked === 1" class="tag tag--red">禁止复用</text>
+      <!-- 竖式分段：每个小类一个小标题，其下为该小类商品；未分类放最后 -->
+      <view v-for="sec in sections" :key="sec.key" class="sec">
+        <view class="sec__head">
+          <text class="sec__name" :class="{ 'sec__name--none': sec.key === '__none__' }">{{ sec.name }}</text>
+          <view class="sec__right">
+            <text class="sec__count">{{ sec.goods.length }} 件</text>
+            <text v-if="sec.key !== '__none__'" class="sec__add" @click="openCreate(sec.key)">＋</text>
           </view>
-          <block v-if="g.governance_blocked !== 1">
-            <view class="meta card__line">默认 ¥{{ fen2yuan(g.last_price) }}{{ g.unit ? ' / ' + g.unit : '' }} · 库存 {{ g.last_total_stock > 0 ? g.last_total_stock : '不限' }} · {{ g.last_per_user_limit > 0 ? '限购 ' + g.last_per_user_limit : '不限购' }}</view>
-            <view class="meta card__line2">用过 {{ g.use_count }} 次{{ g.last_used_time ? ' · 最近 ' + md(g.last_used_time) : '' }}</view>
-          </block>
-          <view v-else class="meta meta--red card__line">曾被平台下架，不可编辑或复用</view>
-          <view class="btn-row">
-            <text class="mini-btn" :class="{ 'mini-btn--dis': g.governance_blocked === 1 }" @click="openEdit(g)">编辑</text>
-            <text v-if="isRealCat" class="mini-btn" :class="{ 'mini-btn--dis': g.governance_blocked === 1 }" @click="moveOut(g)">移出分类</text>
-            <text class="mini-btn" @click="del(g)">删除</text>
+        </view>
+        <view v-if="!sec.goods.length" class="sec__empty">{{ finished ? '暂无商品' : '暂无已加载的商品，上滑加载更多' }}</view>
+        <view v-for="g in sec.goods" :key="g._id" class="card" :class="{ 'card--blocked': g.governance_blocked === 1 }">
+          <view class="thumb">
+            <image v-if="g.cover_image && g.cover_image.url" class="thumb__img" :src="g.cover_image.url" mode="aspectFill" />
+            <text v-else class="thumb__txt">{{ g.name.slice(0, 4) }}</text>
+          </view>
+          <view class="card__main">
+            <view class="card__title">
+              <text class="card__name">{{ g.name }}</text>
+              <!-- 点分类标签快捷改分类 -->
+              <text class="tag tag--cat" :class="{ 'tag--dis': g.governance_blocked === 1, 'tag--none': catNameOf(g.category_id) === '未分组' }" @click="openCatSheet(g)">{{ catNameOf(g.category_id) }} ›</text>
+              <text v-if="g.governance_blocked === 1" class="tag tag--red">禁止复用</text>
+            </view>
+            <block v-if="g.governance_blocked !== 1">
+              <view class="meta card__line">默认 ¥{{ fen2yuan(g.last_price) }}{{ g.unit ? ' / ' + g.unit : '' }} · 库存 {{ g.last_total_stock > 0 ? g.last_total_stock : '不限' }} · {{ g.last_per_user_limit > 0 ? '限购 ' + g.last_per_user_limit : '不限购' }}</view>
+              <view class="meta card__line2">用过 {{ g.use_count }} 次{{ g.last_used_time ? ' · 最近 ' + md(g.last_used_time) : '' }}</view>
+            </block>
+            <view v-else class="meta meta--red card__line">曾被平台下架，不可编辑或复用</view>
+            <view class="btn-row">
+              <text class="mini-btn" :class="{ 'mini-btn--dis': g.governance_blocked === 1 }" @click="openEdit(g)">编辑</text>
+              <text v-if="catNameOf(g.category_id) !== '未分组'" class="mini-btn" :class="{ 'mini-btn--dis': g.governance_blocked === 1 }" @click="moveOut(g)">移出分类</text>
+              <text class="mini-btn" @click="del(g)">删除</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <view v-if="!list.length && !loading" class="empty">{{ categoryId ? '这个分类下还没有商品' : '商品库为空。挑商品时点「加入本次接龙」会自动沉淀到这里。' }}</view>
-      <view v-else-if="list.length" class="more">{{ loading ? '加载中…' : finished ? '没有更多了' : '' }}</view>
+      <view v-if="!sections.length && !loading" class="empty">{{ parentId === UNCAT ? '没有未分类的商品' : '这个大类下还没有小类，可在「管理分类」里新建' }}</view>
+      <view v-else-if="!finished" class="more">{{ loading ? '加载中…' : '上滑加载更多' }}</view>
     </view>
 
-    <view class="notice">分类是你自己的收纳方式，<text class="b">参与者永远看不到</text>，也不进入清单。修改模板只影响以后的复用。</view>
+    <view class="notice">商品按小类归类；发起接龙时，<text class="b">所选小类会作为买家详情里的分组小标题</text>。大类只给你自己归类用，不展示给买家；分类不进入清单。</view>
 
     <!-- 编辑弹窗 -->
     <uni-popup ref="popup" type="bottom">
@@ -78,6 +91,7 @@
           <view class="f f--row"><text class="f__k">推荐商品</text><switch :checked="editing.is_recommend === 1" @change="onRecommend" color="#168a55" /></view>
           <view class="f"><text class="f__k">分类</text>
             <picker :range="catNames" :value="catIndex" @change="onCat"><text class="f__v">{{ catNames[catIndex] || '未分组' }} ›</text></picker>
+            <text v-if="createScope" class="f__scope">仅列出「{{ createScope.name }}」下的小类</text>
           </view>
           <view class="f f--col">
             <text class="f__k">封面图 <text class="req">*</text></text>
@@ -98,6 +112,8 @@
             </view>
           </view>
         </scroll-view>
+        <!-- D-143：编辑已有商品时提示自动同步 -->
+        <view v-if="editing && editing._id" class="sync-tip">保存后，名称、说明、图片会同步到你未结束活动里的这个商品；进行中的活动会因此重新审核。</view>
         <view class="sheet__act">
           <button class="btn" @click="closeEdit">取消</button>
           <button class="btn btn--primary" :loading="saving" @click="saveEdit">保存</button>
@@ -123,6 +139,8 @@
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
+import { fmtDate } from '@/common/grouporder/activity-time.js';
 import { ref, computed } from 'vue';
 import { onShow, onReachBottom } from '@dcloudio/uni-app';
 // @ts-ignore
@@ -134,18 +152,17 @@ import { toItem, pickImages, libImageDir, uploadPending } from '@/common/groupor
 
 const MAX_IMAGES = 9;
 
-const UNGROUPED = '__none__'; // 与 grouporder-goods-co 的未分组筛选标识一致，不是一条分类记录
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 100; // 一页尽量多取，减少加载次数（服务端上限 100）
 
-const categories = ref<any[]>([]);
+const tree = ref<any[]>([]);     // 两级树：大类→小类，含虚拟「未分类」
+const leafCats = ref<any[]>([]); // 扁平小类（带 parent_name），供改分类 / 编辑选择器
 const ungroupedCount = ref(0);
-const categoryId = ref(''); // '' = 全部
-const list = ref<any[]>([]);
+const parentId = ref('');        // 当前选中的大类；切大类是纯前端重分组，不重新请求
+const list = ref<any[]>([]);     // 全部商品的分页池（不按分类过滤，按小类在前端分段）
 const page = ref(1);
-const total = ref(0);
 const loading = ref(false);
 const finished = ref(false);
-let reqSeq = 0; // 快速切 tab 时丢弃过期响应
+let reqSeq = 0; // 快速翻页时丢弃过期响应
 
 const popup = ref<any>(null);
 const editing = ref<any>(null);
@@ -157,10 +174,34 @@ const cover = ref<any[]>([]);
 const details = ref<any[]>([]);
 let eventChannel: any = null;
 
-// —— 分类快捷整理 ——
-// 选中的是一条真实分类（不是「全部」也不是「未分组」）时，才出现添加 / 移出
-const isRealCat = computed(() => !!categoryId.value && categoryId.value !== UNGROUPED);
-const catOptions = computed(() => [{ id: '', name: '未分组' }, ...categories.value.map((c) => ({ id: c._id, name: c.name }))]);
+// —— 分类分组 ——
+const UNCAT = '__uncat__'; // 「未分类」作为一个大类的标识
+const realParents = computed(() => tree.value.filter((p: any) => !p.is_virtual)); // 真实大类（不含虚拟「未分类」）
+const curParent = computed(() => realParents.value.find((p: any) => p._id === parentId.value) || null);
+const validLeafIds = computed(() => { const s = new Set<string>(); leafCats.value.forEach((c: any) => s.add(c._id)); return s; });
+// 未分类商品 = 全部 − 落在各真实小类里的；含真未分组与指向无效小类的迁移孤儿
+const uncatCount = computed(() => Math.max(0, totalAll.value - realParents.value.reduce((s: number, p: any) => s + (p.goods_count || 0), 0)));
+// 大类栏：真实大类 + 末尾一个「未分类」大类（有未分类商品时才出现）
+const parentChips = computed(() => {
+  const chips = realParents.value.map((p: any) => ({ _id: p._id, name: p.name, goods_count: p.goods_count }));
+  chips.push({ _id: UNCAT, name: '未分类', goods_count: uncatCount.value }); // 始终显示，哪怕 0 件
+  return chips;
+});
+// 选中「未分类」大类 → 只显示未分组商品；选中真实大类 → 只显示它的小类分段（不再全局追加未分类）
+const sections = computed(() => {
+  if (parentId.value === UNCAT) {
+    const none = list.value.filter((g: any) => !g.category_id || !validLeafIds.value.has(g.category_id));
+    return none.length ? [{ key: '__none__', name: '未分类', goods: none }] : [];
+  }
+  const secs: any[] = [];
+  const children = curParent.value ? curParent.value.children || [] : [];
+  // 没有商品的小类也列出（只显示小标题与「暂无商品」），新建的小类返回后能立刻看到
+  for (const c of children) {
+    secs.push({ key: c._id, name: c.name, goods: list.value.filter((g: any) => g.category_id === c._id) });
+  }
+  return secs;
+});
+const catOptions = computed(() => [{ id: '', name: '未分组' }, ...leafCats.value.map((c: any) => ({ id: c._id, name: c.parent_name + ' / ' + c.name }))]);
 
 /** 只改分类：libUpdate 只带 category_id，其余字段不动 */
 const setCategory = (libId: string, catId: string) => api.goodsLib.libUpdate({ lib_id: libId, category_id: catId });
@@ -189,7 +230,7 @@ const moveOut = (g: any) => {
   if (g.governance_blocked === 1) { uni.showToast({ title: '封禁记录不可修改', icon: 'none' }); return; }
   uni.showModal({
     title: '移出分类',
-    content: `把「${g.name}」移出「${catNameOf(categoryId.value)}」？商品仍保留在商品库，归入未分组。`,
+    content: `把「${g.name}」移出「${catNameOf(g.category_id)}」？商品仍保留在商品库，归入未分组。`,
     success: async (r) => {
       if (!r.confirm) return;
       try { await guarded(setCategory(g._id, '')); refreshAll(); notifyOpener(); } catch (e) {}
@@ -198,32 +239,34 @@ const moveOut = (g: any) => {
 };
 
 
-const totalAll = computed(() => categories.value.reduce((s, c) => s + (c.goods_count || 0), 0) + ungroupedCount.value);
-const tabs = computed(() => {
-  const t = [{ id: '', name: '全部', count: totalAll.value }];
-  categories.value.forEach((c) => t.push({ id: c._id, name: c.name, count: c.goods_count || 0 }));
-  if (ungroupedCount.value > 0 || categoryId.value === UNGROUPED) t.push({ id: UNGROUPED, name: '未分组', count: ungroupedCount.value });
-  return t;
+// 「全部」用服务端权威总数（含迁移遗留、未归入任何小类的商品），不靠分类树累加
+const totalAll = ref(0);
+// 编辑 / 新建弹窗的分类选项（catIndex 指向这里）：
+// 在真实大类下新建 → 只列该大类的小类（D-151）；其余情况 → 未分组 + 全部小类（显示「大类 / 小类」）
+const createScope = ref<any>(null); // 新建时限定的大类（含 children），null = 不限
+const editOptions = computed(() => {
+  const scope = createScope.value;
+  if (scope && scope.children && scope.children.length) return scope.children.map((c: any) => ({ id: c._id, name: c.name }));
+  return [{ id: '', name: '未分组' }, ...leafCats.value.map((c: any) => ({ id: c._id, name: c.parent_name + ' / ' + c.name }))];
 });
-const catNames = computed(() => ['未分组', ...categories.value.map((c) => c.name)]);
+const catNames = computed(() => editOptions.value.map((o: any) => o.name));
 const catNameOf = (id: string) => {
-  const c = id ? categories.value.find((x) => x._id === id) : null;
+  const c = id ? leafCats.value.find((x: any) => x._id === id) : null;
   return c ? c.name : '未分组';
 };
-const md = (ts: number) => {
-  const d = new Date(ts);
-  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+// 统一日期格式 yyyy/mm/dd（D-145）
+const md = (ts: number) => fmtDate(ts);
 
 const loadCategories = async () => {
   const data = (await guarded(api.goodsLib.categoryList())) || {};
-  categories.value = data.list || [];
+  tree.value = data.tree || [];
+  leafCats.value = data.list || [];
   ungroupedCount.value = data.ungrouped_count || 0;
-  // 当前分类已被删除，或未分组已清空时，回到「全部」
-  const id = categoryId.value;
-  if ((id === UNGROUPED && !ungroupedCount.value) || (id && id !== UNGROUPED && !categories.value.some((c) => c._id === id))) {
-    categoryId.value = '';
-  }
+  totalAll.value = data.total_goods || 0;
+  // 当前选中的大类不存在（没选过/被删/未分类已清空）时，落到第一个可用大类（真实大类优先，否则未分类）
+  const allowed = realParents.value.map((p: any) => p._id);
+  allowed.push(UNCAT); // 未分类大类始终可选
+  if (!allowed.includes(parentId.value)) parentId.value = allowed[0] || UNCAT;
 };
 
 const loadPage = async (reset: boolean) => {
@@ -232,13 +275,13 @@ const loadPage = async (reset: boolean) => {
   const p = reset ? 1 : page.value + 1;
   loading.value = true;
   try {
-    const data = (await guarded(api.goodsLib.libList({ page: p, pageSize: PAGE_SIZE, category_id: categoryId.value }))) || {};
+    // 不按分类过滤，取全部商品的分页；大类/小类分段在前端按 category_id 完成
+    const data = (await guarded(api.goodsLib.libList({ page: p, pageSize: PAGE_SIZE }))) || {};
     if (seq !== reqSeq) return;
     const rows = data.list || [];
     list.value = reset ? rows : list.value.concat(rows);
     page.value = p;
-    total.value = data.total || 0;
-    finished.value = list.value.length >= total.value || rows.length < PAGE_SIZE;
+    finished.value = (data.total ? list.value.length >= data.total : false) || rows.length < PAGE_SIZE;
   } catch (e) {
     /* guarded 已处理提示 */
   } finally {
@@ -251,48 +294,69 @@ const refreshAll = async () => {
   reload();
 };
 
-const pickTab = (id: string) => {
-  if (categoryId.value === id) return;
-  categoryId.value = id;
-  list.value = [];
-  finished.value = false;
-  reload();
-};
+// 切大类纯前端重分组，不重新请求（全部商品已在池中）
+const pickParent = (id: string) => { parentId.value = id; };
 
 const openEdit = (g: any) => {
   if (g.governance_blocked === 1) { uni.showToast({ title: '封禁记录不可编辑', icon: 'none' }); return; }
   editing.value = { ...g };
   editPrice.value = fen2yuan(g.last_price);
-  const idx = categories.value.findIndex((c) => c._id === g.category_id);
-  catIndex.value = idx >= 0 ? idx + 1 : 0;
+  createScope.value = null; // 编辑已有商品可改到任意小类
+  const idx = editOptions.value.findIndex((o: any) => o.id === g.category_id);
+  catIndex.value = idx >= 0 ? idx : 0;
   cover.value = g.cover_image ? [toItem(g.cover_image)] : [];
   details.value = (g.detail_images || []).map(toItem);
   popup.value.open();
 };
 
 // —— 图片：只记本地路径，点保存时才上传 ——
+// 手机上选图会打开系统相册，返回时触发本页 onShow；不跳过的话会整页重载列表（回到第一页、滚动位置丢失），
+// 编辑弹窗里的内容虽不丢，但体验差。选图期间打标记，onShow 见到就跳过一次；
+// H5 等不触发 onShow 的平台，选完稍等自动清标记，不影响之后正常返回时的刷新。
+let pickingImage = false;
+const pickKeepingList = async (count: number) => {
+  pickingImage = true;
+  try {
+    return await pickImages(count);
+  } finally {
+    setTimeout(() => { pickingImage = false; }, 800);
+  }
+};
 const chooseCover = async () => {
-  const picked = await pickImages(1);
+  const picked = await pickKeepingList(1);
   if (picked.length) cover.value = picked;
 };
 const chooseDetails = async () => {
-  const picked = await pickImages(MAX_IMAGES - details.value.length);
+  const picked = await pickKeepingList(MAX_IMAGES - details.value.length);
   details.value = details.value.concat(picked);
 };
 const onCat = (e: any) => { catIndex.value = Number(e.detail.value); };
 const onRecommend = (e: any) => { editing.value.is_recommend = e.detail.value ? 1 : 0; };
 
-/** 新建：复用编辑弹窗，分类默认取当前 tab（全部 / 未分组 → 未分组） */
-const openCreate = () => {
+/**
+ * 新建：复用编辑弹窗。childId 来自小类标题旁的「＋」。
+ * 选中真实大类且有小类时，分类只列该大类的小类，默认 childId → 与大类同名的小类 → 第一个小类；
+ * 选中「未分类」或大类下还没有小类时，默认未分组、可选全部小类。
+ */
+const openCreate = (childId?: any) => {
   editing.value = { _id: '', name: '', unit: '份', last_total_stock: 0, last_per_user_limit: 0, description: '', is_recommend: 0 };
   editPrice.value = '';
-  const idx = isRealCat.value ? categories.value.findIndex((c) => c._id === categoryId.value) : -1;
-  catIndex.value = idx >= 0 ? idx + 1 : 0;
+  const p = curParent.value;
+  createScope.value = p && p.children && p.children.length ? p : null;
+  let idx = 0;
+  if (createScope.value) {
+    const opts = editOptions.value;
+    const want = typeof childId === 'string' ? childId : '';
+    idx = opts.findIndex((o: any) => o.id === want);
+    if (idx < 0) idx = opts.findIndex((o: any) => o.name === p.name);
+    if (idx < 0) idx = 0;
+  }
+  catIndex.value = idx;
   cover.value = [];
   details.value = [];
   popup.value.open();
 };
-const closeEdit = () => { popup.value.close(); editing.value = null; cover.value = []; details.value = []; };
+const closeEdit = () => { popup.value.close(); editing.value = null; createScope.value = null; cover.value = []; details.value = []; };
 const notifyOpener = () => { if (eventChannel && eventChannel.emit) eventChannel.emit('changed'); };
 
 const saveEdit = async () => {
@@ -319,7 +383,8 @@ const saveEdit = async () => {
       // 要在保存请求之前关：小程序 loading 与 toast 共用一个层，晚关会把接口的错误提示一起关掉
       uni.hideLoading();
     }
-    const catId = catIndex.value === 0 ? '' : categories.value[catIndex.value - 1]._id;
+    const opt = editOptions.value[catIndex.value];
+    const catId = opt ? opt.id : '';
     const body = {
       name: String(editing.value.name).trim(),
       unit: editing.value.unit,
@@ -333,7 +398,18 @@ const saveEdit = async () => {
       category_id: catId,
     };
     if (editing.value._id) {
-      await guarded(api.goodsLib.libUpdate(Object.assign({ lib_id: editing.value._id }, body)));
+      const r = (await guarded(api.goodsLib.libUpdate(Object.assign({ lib_id: editing.value._id }, body)))) || {};
+      // 内容改动已自动同步到未结束活动里的同一商品（D-143），告诉团长结果
+      const sy = r.synced || {};
+      if (sy.goods_count) {
+        uni.showModal({
+          title: '已同步到活动',
+          content: `名称、说明、图片的改动已同步到 ${sy.activity_count} 个未结束的活动。` + (sy.recheck_count ? `其中 ${sy.recheck_count} 个进行中的活动因内容改动转入审核中，审核通过前参与者暂时不能下单。` : ''),
+          showCancel: false,
+        });
+      } else {
+        uni.showToast({ title: '已保存', icon: 'none' });
+      }
     } else {
       await guarded(api.goodsLib.libCreate(body));
       uni.showToast({ title: '已添加到「' + catNameOf(catId) + '」', icon: 'none' });
@@ -346,17 +422,36 @@ const saveEdit = async () => {
 
 const del = (g: any) => {
   uni.showModal({
-    title: '删除商品', content: '软删后不再出现在选择列表；历史活动里已复制的商品不受影响（复制不是引用）。',
+    title: '删除商品', content: '删除后不再出现在选择列表；已经加进活动的商品不受影响。',
     success: async (r) => { if (!r.confirm) return; try { await guarded(api.goodsLib.libDelete({ lib_id: g._id })); refreshAll(); notifyOpener(); } catch (e) {} },
   });
 };
 
 const goCategory = () => uni.navigateTo({ url: '/pages/lib/category', events: { changed: () => refreshAll() } });
 
+/** 直接新建大类（D-151）：服务端同时建同名小类；建好后切到这个大类 */
+const createParent = () => {
+  if (realParents.value.length >= 50) { uni.showToast({ title: '最多 50 个大类', icon: 'none' }); return; }
+  uni.showModal({
+    title: '新建大类', editable: true, placeholderText: '大类名称（1–10 字）',
+    success: async (r: any) => {
+      if (!r.confirm || !String(r.content || '').trim()) return;
+      try {
+        const res = (await guarded(api.goodsLib.categoryCreate({ name: String(r.content).trim() }))) || {};
+        if (res.category_id) parentId.value = res.category_id;
+        await refreshAll();
+        notifyOpener();
+      } catch (e) {}
+    },
+  });
+};
+
 onShow(() => {
   const pages = getCurrentPages();
   const cur: any = pages[pages.length - 1];
   if (cur && cur.getOpenerEventChannel) eventChannel = cur.getOpenerEventChannel();
+  // 从系统相册返回：保留当前列表与滚动位置，不重载
+  if (pickingImage) { pickingImage = false; return; }
   refreshAll();
 });
 onReachBottom(() => loadPage(false));
@@ -373,6 +468,21 @@ onReachBottom(() => loadPage(false));
 .chips { white-space: nowrap; padding-bottom: 22rpx; }
 .chip { display: inline-block; margin-right: 14rpx; padding: 12rpx 26rpx; border-radius: 30rpx; background: #fff; border: 1rpx solid $go-line; font-size: 25rpx; color: #6b746f; }
 .chip--on { background: $go-primary-soft; border-color: $go-primary; color: $go-primary-dark; font-weight: 600; }
+.chip--uncat { color: $go-orange; } /* 「未分类」大类用橙色区分 */
+.chip--uncat.chip--on { background: $go-orange-soft; border-color: $go-orange; color: $go-orange-text; }
+.chip--add { color: $go-primary-dark; border-style: dashed; border-color: #bed5c7; }
+
+/* 竖式分段：小类小标题 */
+.sec { margin-bottom: 8rpx; }
+.sec__head { display: flex; align-items: center; justify-content: space-between; margin: 20rpx 4rpx 14rpx; }
+.sec__name { font-size: 27rpx; font-weight: 700; color: $go-ink; display: flex; align-items: center; }
+.sec__name::before { content: ''; width: 6rpx; height: 26rpx; background: $go-primary; border-radius: 4rpx; margin-right: 14rpx; }
+.sec__name--none::before { background: $go-orange; }
+.sec__count { font-size: 22rpx; color: $go-muted; }
+.sec__right { display: flex; align-items: center; }
+.sec__add { margin-left: 16rpx; width: 44rpx; height: 44rpx; line-height: 40rpx; text-align: center; border-radius: 50%; border: 1rpx solid $go-primary; color: $go-primary; font-size: 30rpx; }
+.sec__empty { margin: 0 4rpx 20rpx; padding: 22rpx; text-align: center; font-size: 23rpx; color: $go-placeholder; background: #fff; border: 1rpx dashed $go-line; border-radius: 20rpx; }
+.f__scope { display: block; font-size: 20rpx; color: $go-muted; margin-left: 12rpx; }
 
 .card { display: flex; background: #fff; border: 1rpx solid $go-line; border-radius: 32rpx; padding: 30rpx; margin-bottom: 24rpx; box-shadow: 0 8rpx 28rpx rgba(37, 55, 45, 0.03); }
 .card--blocked { opacity: 0.6; }
@@ -391,6 +501,7 @@ onReachBottom(() => loadPage(false));
 .cat-bar { display: flex; justify-content: space-between; align-items: center; margin: 0 4rpx 22rpx; }
 .mini-btn--primary { background: $go-primary; border-color: $go-primary; color: #fff; }
 .tag--cat { background: $go-primary-soft; color: $go-primary-dark; }
+.tag--none { background: $go-orange; color: #fff; } /* 未分组用实心橙色区分于真实分类（绿色），更醒目 */
 .tag--dis { background: $go-tag-bg; color: $go-tag-text; }
 .btn-row { display: flex; margin-top: 20rpx; }
 .mini-btn { display: inline-block; border: 1rpx solid $go-border; color: $go-ink; background: #fff; border-radius: 18rpx; padding: 12rpx 20rpx; font-size: 22rpx; }
@@ -426,4 +537,5 @@ onReachBottom(() => loadPage(false));
 .sheet__act { display: flex; gap: 16rpx; margin-top: 32rpx; }
 .btn { flex: 1; margin: 0; font-size: 30rpx; background: $go-soft; color: $go-text; }
 .btn--primary { background: $go-primary; color: #fff; }
+.sync-tip { font-size: 22rpx; color: $go-orange-text; background: $go-orange-soft; padding: 12rpx 24rpx; line-height: 1.5; }
 </style>

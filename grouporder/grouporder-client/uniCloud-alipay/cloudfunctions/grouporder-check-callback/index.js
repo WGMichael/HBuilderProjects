@@ -179,6 +179,12 @@ exports.main = async (event, context) => {
     return { errCode: 0, data: { trace_id: traceId, lib_img_blocked: true } }
   }
 
+  // 团长名片头像（D-109）：没有治理下架概念，img_check_status = 已拦截（上面已回写）即不再对外展示头像，
+  // 团长换图后重新送检；不能落到下面的 governance_status 下架逻辑
+  if (record.object_type === contentcheck.OBJECT_TYPE.LEADER_CARD) {
+    return { errCode: 0, data: { trace_id: traceId, leader_avatar_blocked: true } }
+  }
+
   if (target.governance_status === GOVERNANCE.OFF) {
     return { errCode: 0, data: { trace_id: traceId, already_off: true } }
   }

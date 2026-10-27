@@ -12,7 +12,7 @@
  *   或在 HBuilderX 中右键该云对象「管理依赖」安装。
  */
 const XLSX = require('xlsx')
-const { auth, errors, state, exportlog, paging, bindMethods } = require('grouporder-common')
+const { auth, errors, state, exportlog, paging, leadercontact, bindMethods } = require('grouporder-common')
 
 const { throwBiz, assertParam, ok } = errors
 const { ACTIVITY, ORDER, DELIVERY } = state
@@ -35,7 +35,7 @@ module.exports = {
   // 内部工具
   // ==========================================================================
 
-  /** 仅团长本人、仅已截止活动才能出清单 */
+  /** 仅团长本人、仅已结束活动才能出清单 */
   async _requireClosedOwnActivity (activityId) {
     const ctx = this.ctx
     const activity = await auth.requireLeader(ctx, activityId)
@@ -67,6 +67,35 @@ module.exports = {
     return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`
   },
 
+  /** 时间戳 → 北京时间 YYYY-MM-DD HH:mm（云函数运行在 UTC，不能直接用本地时区）；dateOnly 只要 YYYYMMDD */
+  _time (ts, dateOnly) {
+    if (!ts) return ''
+    const d = new Date(Number(ts) + 8 * 3600 * 1000)
+    const p = n => String(n).padStart(2, '0')
+    const ymd = [d.getUTCFullYear(), p(d.getUTCMonth() + 1), p(d.getUTCDate())]
+    if (dateOnly) return ymd.join('')
+    return `${ymd.join('-')} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`
+  },
+
+  /** 清单「类别」列：大类-小类；老数据只有小类时只显示小类（D-149） */
+  _categoryText (g) {
+    const sub = g.category_name || ''
+    const parent = g.category_parent_name || ''
+    if (!sub) return '未分类'
+    return parent ? `${parent}-${sub}` : sub
+  },
+
+  /** 团长名称：优先团长名片昵称，其次账号昵称 */
+  async _leaderInfo (activity) {
+    const card = (await leadercontact.get(this.ctx, activity.leader_uid)) || {}
+    let name = card.nickname || ''
+    if (!name) {
+      const { data } = await this.db.collection('uni-id-users').doc(activity.leader_uid).field({ nickname: true }).get()
+      name = (data && data[0] && data[0].nickname) || ''
+    }
+    return { name, mobile: card.mobile || '', wechat: card.wechat || '' }
+  },
+
   /** 汇总数据：商品汇总 + 参与者明细，两处共用，保证预览与导出口径一致 */
   async _collect (activity) {
     // 商品汇总排序与活动详情页一致：sort ASC, create_date ASC
@@ -86,12 +115,14 @@ module.exports = {
       .end()
     const aggMap = new Map((agg.data || []).map(r => [r._id, r]))
 
-    // 停售与被下架的商品，已有明细继续保留并进入清单（D-019、D-050）
+    // 停售与被下架的商品，已有明细继续保留并进入清单（D-019、D-050）；
+    // 没人买的商品（0 份）不进清单，预览与 Excel 同口径（D-149）
     const goodsSummary = (goodsList || []).map(g => {
       const r = aggMap.get(g._id)
       return {
         goods_id: g._id,
         goods_name: g.name,
+        category_text: this._categoryText(g),
         unit: g.unit,
         price: g.price,
         sold_qty: r ? r.qty : 0,
@@ -99,7 +130,7 @@ module.exports = {
         on_sale: g.on_sale,
         governance_status: g.governance_status
       }
-    })
+    }).filter(g => g.sold_qty > 0)
 
     // 有效订单与明细分批读完，不设条数上限：清单少一行就是团长漏发一单
     const orders = await paging.fetchAll(() => this.db.collection('grouporder-order')
@@ -119,6 +150,8 @@ module.exports = {
       const deliveryType = state.orderDeliveryTypeOf(o, activity)
       return {
         order_no: o.order_no || '',
+        // 接龙码（D-115）：参与者取货时报的 4 位码；从未被查看过的老订单可能还没有
+        order_code: o.order_code || '',
         delivery_type: deliveryType,
         consignee_name: o.consignee_name || '',
         consignee_mobile: o.consignee_mobile || '',
@@ -129,6 +162,9 @@ module.exports = {
         price: it.price_snapshot,
         qty: it.qty,
         amount: it.amount,
+        // 团长记录（D-100）：仅团长自己的对账记录，不影响清单口径
+        leader_paid: o.leader_paid === 1 ? 1 : 0,
+        leader_delivered: o.leader_delivered === 1 ? 1 : 0,
         create_date: o.create_date || 0
       }
     }).sort((a, b) => a.create_date - b.create_date || a.order_no.localeCompare(b.order_no))
@@ -211,64 +247,94 @@ module.exports = {
       const collected = await this._collect(activity)
       const withAddress = state.supportsDelivery(activity, DELIVERY.HOME)
 
-      // Sheet 1 商品汇总：每个商品一行（D-053）
-      const sheet1 = [
-        ['商品名称', '单位', '单价(元)', '已购买份数', '预计金额(元)', '备注'].map(h => this._cell(h))
+      const leader = await this._leaderInfo(activity)
+      const DELIVERY_TEXT = { [DELIVERY.HOME]: '送货上门', [DELIVERY.SELF_PICK]: '自提' }
+      const c = v => this._cell(v)
+      // 单表三段（D-149）：活动信息 → 商品汇总 → 参与者明细，段与段之间空一行
+      const rows = []
+
+      // 一、活动信息：两列「项目 | 内容」
+      rows.push([c('活动信息')])
+      const info = [
+        ['活动名称', activity.title],
+        ['活动短码', activity.short_code],
+        ['团长', leader.name],
+        ['团长电话', leader.mobile],
+        ['团长微信', leader.wechat],
+        ['开始时间', this._time(state.startTimeOf(activity))],
+        ['截止时间', this._time(activity.actual_end_time || activity.end_time)],
+        ['交付方式', state.deliveryTypesOf(activity).map(t => DELIVERY_TEXT[t] || '').filter(Boolean).join('、')]
       ]
+      if (state.supportsDelivery(activity, DELIVERY.SELF_PICK) && activity.pickup_address) {
+        info.push(['自提地址', activity.pickup_address])
+      }
+      info.push(
+        ['有效订单数', collected.valid_order_count],
+        ['总份数', collected.valid_total_qty],
+        ['预计金额(元)', this._money(collected.estimated_amount)],
+        ['清单生成时间', this._time(ctx.now)]
+      )
+      for (const [k, v] of info) rows.push([c(k), c(v)])
+      rows.push([])
+
+      // 二、商品汇总：每个有人买的商品一行（D-053、D-149）
+      rows.push([c('商品汇总')])
+      rows.push(['商品名称', '类别', '单位', '单价(元)', '已购买份数', '预计金额(元)', '备注'].map(c))
       for (const g of collected.goodsSummary) {
         const marks = []
         if (g.on_sale !== 1) marks.push('已停售')
         if (g.governance_status === 1) marks.push('已下架')
-        sheet1.push([
-          this._cell(g.goods_name),
-          this._cell(g.unit),
-          this._cell(this._money(g.price)),
-          this._cell(g.sold_qty),
-          this._cell(this._money(g.amount)),
-          this._cell(marks.join('、'))
+        rows.push([
+          c(g.goods_name),
+          c(g.category_text),
+          c(g.unit),
+          c(this._money(g.price)),
+          c(g.sold_qty),
+          c(this._money(g.amount)),
+          c(marks.join('、'))
         ])
       }
-      sheet1.push([
-        this._cell('合计'), this._cell(''), this._cell(''),
-        this._cell(collected.valid_total_qty),
-        this._cell(this._money(collected.estimated_amount)),
-        this._cell('')
-      ])
+      rows.push([c('合计'), c(''), c(''), c(''), c(collected.valid_total_qty), c(this._money(collected.estimated_amount)), c('')])
+      rows.push([])
 
-      // Sheet 2 参与者明细：每条商品明细一行；「交付方式」列按订单自身（D-086）
-      const DELIVERY_TEXT = { [DELIVERY.HOME]: '送货上门', [DELIVERY.SELF_PICK]: '自提' }
-      const header2 = ['订单号', '交付方式', '收货人', '联系电话']
-      if (withAddress) header2.push('收货地址')
-      header2.push('商品名称', '单位', '单价(元)', '数量', '小计(元)', '买家备注')
-      const sheet2 = [header2.map(h => this._cell(h))]
+      // 三、参与者明细：每条商品明细一行；「交付方式」列按订单自身（D-086）。
+      // 不输出订单号：接龙码同活动内唯一且是取货时报的号；老订单没有接龙码时用订单号兜底，保证同一订单的几行能对上（D-149）
+      rows.push([c('参与者明细')])
+      const header = ['接龙码', '交付方式', '收货人', '联系电话']
+      if (withAddress) header.push('收货地址')
+      header.push('商品名称', '单位', '单价(元)', '数量', '小计(元)', '买家备注', '收款记录', '取货记录')
+      rows.push(header.map(c))
       for (const d of collected.detail) {
         const row = [
-          this._cell(d.order_no),
-          this._cell(DELIVERY_TEXT[d.delivery_type] || ''),
-          this._cell(d.consignee_name),
-          this._cell(d.consignee_mobile)
+          c(d.order_code || d.order_no),
+          c(DELIVERY_TEXT[d.delivery_type] || ''),
+          c(d.consignee_name),
+          c(d.consignee_mobile)
         ]
-        if (withAddress) row.push(this._cell(d.consignee_address))
+        if (withAddress) row.push(c(d.consignee_address))
         row.push(
-          this._cell(d.goods_name),
-          this._cell(d.unit),
-          this._cell(this._money(d.price)),
-          this._cell(d.qty),
-          this._cell(this._money(d.amount)),
-          this._cell(d.buyer_remark)   // 用户自由输入，文本型写入
+          c(d.goods_name),
+          c(d.unit),
+          c(this._money(d.price)),
+          c(d.qty),
+          c(this._money(d.amount)),
+          c(d.buyer_remark),   // 用户自由输入，文本型写入
+          // 团长记录以生成清单时为准（D-100）；记录变化不使清单版本失效，需要最新记录时重新生成
+          c(d.leader_paid ? '已收款' : ''),
+          c(d.leader_delivered ? '已取货' : '')
         )
-        sheet2.push(row)
+        rows.push(row)
       }
 
       const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet1), '商品汇总')
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet2), '参与者明细')
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), '接龙清单')
       const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
 
-      const stamp = new Date(ctx.now)
-      const ymd = `${stamp.getFullYear()}${String(stamp.getMonth() + 1).padStart(2, '0')}${String(stamp.getDate()).padStart(2, '0')}`
+      // 文件名「日期_活动名」（D-149），下载时浏览器取路径最后一段作文件名；
+      // 同一天可多次生成，每个版本单独一层目录（生成时间戳）避免同名覆盖
+      const safeTitle = String(activity.title || '接龙清单').replace(/[\\/:*?"<>|#%\s]+/g, '_').slice(0, 40) || '接龙清单'
       const upload = await uniCloud.uploadFile({
-        cloudPath: `grouporder/export/${activity._id}/${ymd}_${ctx.now}.xlsx`,
+        cloudPath: `grouporder/export/${activity._id}/${ctx.now}/${this._time(ctx.now, true)}_${safeTitle}.xlsx`,
         fileContent: buffer
       })
 

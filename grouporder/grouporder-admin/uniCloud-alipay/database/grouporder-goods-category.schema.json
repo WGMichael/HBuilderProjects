@@ -10,7 +10,7 @@
     "update": false,
     "delete": false
   },
-  "description": "用户商品库分类。用户私有，仅用于商品库筛选，不进入活动展示与清单（D-066）",
+  "description": "用户商品库分类，固定两级。用户私有，仅用于商品库筛选，不进入活动展示与清单（D-066）",
   "properties": {
     "_id": {
       "description": "存储文档 ID（分类 ID），系统自动生成"
@@ -20,6 +20,12 @@
       "title": "归属用户",
       "foreignKey": "uni-id-users._id",
       "description": "归属用户 ID。分类为用户私有，任何读写必须校验归属"
+    },
+    "parent_id": {
+      "bsonType": "string",
+      "title": "所属大类",
+      "description": "空=大类（一级）；非空=小类（二级），指向所属大类的 _id。固定两级，商品只能挂在小类下（D-066）",
+      "defaultValue": ""
     },
     "name": {
       "bsonType": "string",

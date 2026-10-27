@@ -221,11 +221,28 @@
 
 - **[严重] 运营禁区·测试数据清理（2026-10-12 产品负责人授权加入，上线前必须移除）**：为开发/测试期重置数据加了一套物理清库能力，违反 OPS §2.2「运营不得代替团长经营」与 D-035 留存，属**临时禁区**，正式上线前需整套删除：① 云对象方法 `grouporder-ops-co.devWipe` / `_wipeCollection` 与常量 `DEV_WIPE_GROUPS`；② 前端 `pages/system/devzone/index.vue`、`pages.json` 的 `pages/system/devzone/index` 路由、`js_sdk/grouporder-api/index.js` 的 `ops.devWipe`；③ 菜单 `opendb-admin-menus.init_data.json` 的 `system_devzone`（权限点 `ops-sys-config`）；④ 独立开发函数 `cloudfunctions/grouporder-dev-cleanup/`（产品负责人 2026-10-15 决定保留至正式上线后；已加防护：拒绝客户端调用 `context.SOURCE === 'client'`、必须传清库密钥 `secret`（代码常量 `SECRET`）、密钥错误延迟 3 秒返回）。现有防护：devWipe 要求 `ops-sys-config` 鉴权 + 逐字输入 `WIPE` + 二次确认 + 全程审计（`action_type=dev_data_wipe`，该取值未登记 DATA_MODEL §10.8，随能力一并移除故不补）。运营使用由产品负责人培训把关
 
+## 3.5 上线前必须填写 / 复核的资料
+
+- **[严重] 用户服务协议与隐私政策的占位信息（D-099，2026-10-16 产品负责人决定先留空）**：正文已写入 `grouporder-client/src/common/grouporder/legal.js`，以下三项仍是占位符，**上线前必须填写**，否则协议页会直接显示「【运营者名称】」等字样：
+  ① `LEGAL_INFO.operator` 运营者名称——个人姓名或个体工商户名称，须与微信小程序注册主体一致（PRD：正式上线优先个体工商户）；
+  ② `LEGAL_INFO.contact` 联系方式——邮箱或微信号，用于隐私请求、投诉与举报，须有人能在 15 个工作日内答复（隐私政策第六条承诺）；
+  ③ `LEGAL_INFO.effectiveDate` 生效日期——一般填上线当天。
+  另：(a) 正文为参照通用结构的原创草稿，建议上线前由合规人员复核；(b) 隐私政策中「举报、申诉及处置记录按法律法规要求的期限保存」待 P1-07 确定具体期限后改写；(c) 隐私政策第三条写明了内容安全检测，接入真实检测服务后如需写明服务商名称，一并补充；(d) 微信小程序提审时「用户隐私保护指引」需按本政策第一条的收集项填写，两边须一致（RELEASE_AUDIT_CHECKLIST）。
+
+- **[中] 分享海报的小程序码（D-102，等 AppID）**：H5 海报的二维码是活动页 H5 链接；微信小程序版本应改为小程序码——需 AppID / AppSecret、服务端调用 `wxacode.getUnlimited`（scene 带 activity_id，页面 `pages/activity/detail`）并缓存生成的图片，`poster.js` 只换二维码来源。小程序端目前不显示「生成海报」按钮。届时「分享海报」改用 `wx.showShareImageMenu`（D-118）一键调起微信图片分享（发送给朋友 / 朋友圈 / 保存）。
+- **[中] H5 新功能需真机确认（D-100～D-102）**：① 海报在微信内长按能否出现「保存图片 / 识别二维码」，识别后能否打开活动页；② 有封面的活动，海报是否带出封面——带不出说明云存储未开放跨域，可在云存储（或 CDN）配置 `Access-Control-Allow-Origin` 为 H5 域名，或接受无封面样式；③ 复制文字清单粘贴到微信群的换行显示；④ 老订单（无团长记录字段）在 M-21「未收款」筛选里能否列出（依赖 `neq(1)` 匹配缺失字段）；⑤ 团长联系方式（D-103）在 H5 点「拨号」能否唤起电话、「复制」微信号是否成功；⑥ 按活动码查找（D-104）：新建活动的活动码应为 6 位，老活动 4 位也能查到；同一账号当天第 51 次「没查到」后应提示次数用完（查到的不计数），次日恢复。⑦ 活动管理新版（D-115）：新下单的订单应立即有 4 位接龙码；老订单在团长打开接龙记录或参与者打开订单详情后补上；同一活动内不应出现重复接龙码；搜索框输入接龙码、电话尾号、姓名都能筛出；切换 tab 后接龙记录的列表与滚动位置保留；吸顶 tab 在 H5 不被导航栏遮住。⑧ 图片地址刷新（D-119）：打开活动页、商品库、管理页时，图片地址里的 `expire_at` 应为当前时间之后约 10 分钟（不再是上传时的旧值）；海报封面应能直接画出；云函数日志不应出现 `[fileurl] 刷新图片地址失败`。
+- **[中] 注销执行时清除团长联系方式（D-103）**：账号注销目前由运营按隐私事项人工处理（A-16），执行清单需加上「清空 `grouporder-user-ext.leader_contact_mobile / leader_contact_wechat`」，否则注销后其历史活动页仍显示联系方式。
+
+- **[中] 会员通道（D-106，上线稳定后）**：① 运营后台「设置会员」页 + ops-co 接口（写 `member_level / member_expire / member_source=admin / member_update`，记审计日志）；② 微信购买（需小程序商户号与微信支付，`member_source=wxpay`），上线前须在服务协议补收费、退款条款，并调整「平台不收款」的表述以区分会员服务费与接龙货款（D-005）；③ 开闸：在 `grouporder-config` 写 `member_gate = { leader_stats: true }`。
+- **[低] 团长统计性能（D-106）**：`leaderStatOverview` 实时读取本人全部有效订单与明细；单个团长订单达数万张时响应会变慢，届时改为定时任务预计算到汇总表，出参不变。
+
+- **[严重] 提审前恢复「注销账号」入口（D-108）**：M-08 的注销入口目前隐藏，用户只能经协议联系方式申请。微信小程序有账号体系时平台要求提供应用内注销功能，提审前须在 `pages/hall/my.vue` 恢复入口（`deactivate` 函数仍在），并把隐私政策 6.3、服务协议 9.1、使用帮助改回应用内路径。
+
 ## 4. 建议处理顺序
 
 1. **安全与不可逆项（当天）**：轮换 `passwordSecret` / `tokenSecret`；`git rm --cached` 备份 tar 与确认密钥文件不再跟踪，根目录加 `.gitignore`；删除两处 `grouporder-ops-verify` schema/index；在真实服务空间验证 `uploadFile` 返回的 fileID 是否公网可读，决定 export-co 改造方案。
 2. **文档收尾**：三份 UX 文档回扫完成后重做 UX_REVIEW_GATE §7 自审；§1.2 措辞与格式整理放最后一次做。
 3. **服务端并发三件事**：限购计数文档 + 条件 inc；`orderUpdate` 版本闸门 + 差量明细；订单号扩位 + 冲突重试。随后补 `errors.normalize` 白名单与 `filters` 白名单。
 4. **小程序四个阻断项**：faqi `reset` 时机、`onShareAppMessage` + `short_code` 落地、「我参与的」分组、订单详情字段。都是局部改动。
-5. **D-078 代码落地与前置配置**：角色初始数据、A-15 列显示与角色映射；AppID、服务空间绑定证据、协议地址、隐私弹窗。
+5. **D-078 代码落地与前置配置**：角色初始数据、A-15 列显示与角色映射；AppID、服务空间绑定证据、隐私弹窗；协议页占位信息见 §3.5。
 6. 其余中低项按文件归并处理；格式与措辞整理放最后一次做，避免与规则修订产生冲突 diff。

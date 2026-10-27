@@ -26,7 +26,7 @@ export const ACTIVITY_STATUS_OPTIONS = [
   { value: 0, text: '草稿' },
   { value: 1, text: '审核中' },
   { value: 2, text: '进行中' },
-  { value: 3, text: '已截止' },
+  { value: 3, text: '已结束' },
   { value: 4, text: '已取消' },
 ];
 export const ACTIVITY_STATUS = toMap(ACTIVITY_STATUS_OPTIONS);
@@ -133,10 +133,12 @@ export const TODO_TYPE_LABEL = {
   review_rejected: '审核未通过',
   joined_cancelled: '活动已取消',
   joined_offline: '已下架',
-  activity_closed_export: '待生成清单',
-  ending_soon_leader: '即将截止',
-  ending_soon_joiner: '即将截止',
-  draft_stale: '草稿未发布',
+  // D-134：已结束但还有未收款 / 未取货（只对标记过的活动）
+  closed_pending: '待收款取货',
+  // 24 小时内截止的提醒：标签仍按活动状态显示「进行中」，剩余时间由说明文字给出
+  ending_soon_leader: '进行中',
+  ending_soon_joiner: '进行中',
+  draft: '草稿',
   report_result: '举报结果',
   appeal_result: '申诉结果',
 };
@@ -144,7 +146,7 @@ export const TODO_TYPE_LABEL = {
 export const TODO_LEVEL_LABEL = {
   1: '需尽快处理',
   2: '待跟进',
-  3: '即将截止',
+  3: '提醒',
   4: '结果通知',
 };
 
@@ -152,6 +154,24 @@ export const TODO_LEVEL_LABEL = {
 export function fen2yuan(fen) {
   if (fen === undefined || fen === null || fen === '') return '—';
   return (Number(fen) / 100).toFixed(2);
+}
+
+/**
+ * 本单某商品最多可选几份（M-13 / M-37 共用）：取「库存上限」与「限购余量」的较小者。
+ * @param g        activityGetDetail 的商品（total_stock / remain_qty / per_user_limit）
+ * @param ownQty   改单时本单原有数量（已计入已购与已售），新下单为 0
+ * @param bought   本人在本活动该商品的有效已购份数（activityGetDetail.my_bought_qty，含本单）
+ * @returns { max, reason }；不受限时 max 为 Infinity。reason：'stock' 库存 / 'limit' 限购
+ */
+export function maxBuyQty(g, ownQty = 0, bought = 0) {
+  let max = Infinity;
+  let reason = '';
+  if (g.total_stock > 0) { max = (g.remain_qty || 0) + ownQty; reason = 'stock'; }
+  if (g.per_user_limit > 0) {
+    const byLimit = Math.max(0, g.per_user_limit - Math.max(0, bought - ownQty)); // 限购 − 其他订单已购
+    if (byLimit < max) { max = byLimit; reason = 'limit'; }
+  }
+  return { max: Math.max(0, max), reason };
 }
 
 export default {

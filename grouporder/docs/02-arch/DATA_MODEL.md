@@ -1,6 +1,6 @@
 # 数据模型设计
 
-- 文档版本：v1.32
+- 文档版本：v1.42
 - 文档状态：**已落地**。18 张 `.schema.json` 与 `.index.json` 已生成至 `grouporder-admin/uniCloud-alipay/database/`；上传状态由产品负责人在 HBuilderX 确认
 - 适用产品版本：见 `docs/README.md` 版本总表
 - 覆盖范围：核心业务与平台配置 9 张表 + 运营治理 9 张表，共 18 张自建表
@@ -59,7 +59,7 @@
 | `grouporder-config` | 平台配置，首版用于发布审核模式 | |
 | `grouporder-goods-lib` | 用户商品库，商品保存时自动沉淀，创建活动时可复用 | |
 | `grouporder-todo-dismiss` | 待办事项的「用户已关闭」状态，待办本身为派生视图不建表 | |
-| `grouporder-goods-category` | 商品库分类，用户私有，仅用于商品库筛选 | |
+| `grouporder-goods-category` | 商品库分类（固定两级：大类→小类），用户私有，仅用于商品库筛选 | |
 
 **第二批：运营治理（9 张，详见 §10）**
 
@@ -73,7 +73,7 @@
 | `grouporder-privacy-case` | 注销、删除与匿名化事项登记 |
 | `grouporder-export-log` | Excel 生成与下载事件 |
 | `grouporder-oplog` | 统一操作日志，15 个字段（9 个必填）覆盖 14 类事件（含团长客户端的商品经营变动；运营登录事件归 `uni-id-log`） |
-| `grouporder-user-ext` | 平台用户业务扩展，存发布限制当前状态 |
+| `grouporder-user-ext` | 平台用户业务扩展，存发布限制当前状态、团长联系方式（D-103） |
 
 **复用不新建且不修改**：`uni-id-users`（含运营账号）、`uni-id-roles`、`uni-id-permissions`。本项目自有的用户级状态一律放入 `grouporder-user-ext`，不改动 uni-id 模块。
 
@@ -130,7 +130,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | `description` | string | | | 活动说明，≤500 字 |
 | `cover_image` | file | ✓ | | 封面图。用于微信分享卡片与活动详情。发布前必填，草稿阶段可为空，由 `activitySubmitReview` 校验（D-084） |
 | `images` | array&lt;file&gt; | | `[]` | 轮播图，用于活动详情页顶部，**maxLength 9** |
-| `short_code` | string | ✓ | 生成 | 4 位大写字母数字，**全局唯一**。用于订单号拼装与口头引用 |
+| `short_code` | string | ✓ | 生成 | 活动码：大写字母数字，**全局唯一**。用于订单号拼装、口头引用与按号查找活动（D-104）。D-104 起新活动 6 位、此前的活动保留 4 位 |
 | `idempotent_key` | string | ✓ | | 创建幂等键，**唯一索引**。客户端为每次「新建草稿 / 复制」意图生成一次，重试复用同键时返回已有活动（D-081） |
 | `delivery_types` | int[] | ✓ | [1] | **支持的交付方式** [1]、[2] 或 [1, 2]（1送货上门 2自提）。创建时至少选一种，**发布后不可修改**（D-060、D-086） |
 | `delivery_type` | int | | | **已废弃**（D-086 起不再写入）。仅旧活动带有此单值字段，读取时按 `[delivery_type]` 兼容（`common/state.deliveryTypesOf`），不做数据迁移 |
@@ -166,6 +166,8 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | `create_date` | timestamp | ✓ | 自动 | |
 | `retention_expire_date` | timestamp | | | 截止或取消之日 +3 年（D-035） |
 | `anonymized` | int | | 0 | 0否 1已匿名化 |
+| `copy_token` | string | | '' | 授权复制令牌（D-155）：24 位随机十六进制，放在复制链接里；空串 = 未授权；取消授权即清空。只对团长本人返回。**非唯一索引**（未授权的都是空串） |
+| `copy_auth_time` | timestamp | | | 最近一次开启授权复制的时间（D-155） |
 
 **设计说明**
 
@@ -184,6 +186,9 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | `_id` | objectId | - | 自动 | |
 | `activity_id` | string | ✓ | | 外键 → 活动 |
 | `lib_id` | string | | | 来源商品库记录 ID，手工新增为空。**仅用于治理反写定位**（D-064），见下方说明 6 |
+| `copy_origin` | int | | 0 | 1 = 经授权复制（D-155）从他人活动复制来的商品：`lib_id` 已清空，复制者编辑保存、调整库存限购时都不写入其商品库；本人再复制时沿用。0 / 缺失 = 普通商品 |
+| `category_name` | string | | `""` | **展示小类**：小类名快照，买家详情按它分组（小类当小标题）。复制/保存时从团长商品库小类带入，空=未分类（买家端归「其他」组）。团长改名/删小类不影响已存快照（D-066 2026-10-17 修订） |
+| `category_parent_name` | string | | `""` | **大类快照**：小类所属大类名，与 `category_name` 同时写入（从商品库复制、新增 / 编辑商品改分类、复制活动）。仅用于 Excel 清单「类别」列（大类-小类），不向买家展示；字段上线前的老商品为空，清单只显示小类（D-149） |
 | `is_recommend` | int | | 0 | 0普通 1推荐。团长在本活动内的自荐标识（D-065），见下方说明 7 |
 | `name` | string | ✓ | | 商品名称，1–50 字 |
 | `description` | string | | | 商品说明，≤500 字 |
@@ -242,6 +247,12 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | `retention_expire_date` | timestamp | | | 所属活动截止或取消之日 +3 年（D-035） |
 | `anonymized` | int | | 0 | 0否 1已匿名化 |
 | `editing_until` | timestamp | | | **订单编辑锁**（并发控制，2026-10-15）：下单写明细期间与改单期间置为「当前时间 + 30 秒」，结束后置 0；字段不存在或小于当前时间即未锁。改单、取消、作废都以「未锁」为条件更新，抢不到返回 `STATE_CHANGED`「订单正在处理中」；异常退出时到期自动失效。老数据无需迁移 |
+| `order_code` | string | | | **接龙码**（D-115）：同一活动内唯一的 4 位数字（1000～9999，加密随机），取货 / 付款时参与者报码、团长按码搜索核销。下单落库后立即分配，老订单在任何人查看时补发；不建唯一索引（老订单缺失该字段），服务端写前查重、写后复核、撞号换号。索引 `activity_order_code`（activity_id + order_code，非唯一） |
+| `leader_paid` | int | | 0 | **团长记录·已收款**（D-100）：0/缺失 未标记，1 已收款。团长自己的线下对账记录，平台不收款、不核实；不影响库存、限购、统计口径与清单版本。仅本人活动的有效订单可标记或撤销；参与者只读。统计只计单数，不汇总已收金额（红线⑧）。老数据无此字段按未标记处理，筛选「未收款」用 `neq(1)` 兼容 |
+| `leader_paid_time` | timestamp | | | 标记已收款的时间；撤销时置 0 |
+| `leader_paid_amount` | int | | | 标记收款时本单 `total_amount` 的快照（分）；之后参与者改单使金额不同时，M-21 提示团长核对。撤销时置 0 |
+| `leader_delivered` | int | | 0 | **团长记录·已取货**（D-100；D-115 起界面称「已取货」）：0/缺失 未标记，1 已取货（送达或已自提）。规则同 `leader_paid` |
+| `leader_delivered_time` | timestamp | | | 标记已交付的时间；撤销时置 0 |
 
 🔒 标记为敏感字段，权限规则见 §8。
 
@@ -379,26 +390,28 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 
 ### 4.9 `grouporder-goods-category` 商品库分类
 
-团长自建的商品库分类（D-066）。**分类为用户私有，只用于在商品库中「找得到」**，不进入活动展示、不进入 Excel 清单、参与者永远不可见。
+团长自建的商品库分类（D-066），**固定两级：大类 → 小类**。**分类记录为用户私有**（买家从不读这张表），不进入 Excel 清单。〔2026-10-17 修订：**小类名**会快照到活动商品 `grouporder-goods.category_name` 供买家详情分组展示，详见 §4.2；分类记录与 `category_id` 归属仍不进活动。〕
 
 | 字段 | bsonType | 必填 | 默认 | 说明 |
 |---|---|---|---|---|
 | `_id` | objectId | - | 自动 | |
 | `user_id` | string | ✓ | | 归属用户，外键 `uni-id-users._id` |
-| `name` | string | ✓ | | 分类名称，1–10 字 |
-| `sort` | int | | 0 | 用户自定义顺序，正序 |
+| `parent_id` | string | | `""` | 空=大类（一级）；非空=小类（二级），指向所属大类 `_id` |
+| `name` | string | ✓ | | 分类名称，1–10 字，同级内唯一 |
+| `sort` | int | | 0 | 用户自定义顺序，正序，按层级分别排 |
 | `create_date` | timestamp | | 自动 | |
 
-**索引**：`(user_id, sort)`，非唯一。
+**索引**：`(user_id, sort)` 与 `(user_id, parent_id, sort)`，均非唯一。
 
 **设计说明**
 
-1. **活动商品表不携带分类字段**。分类只服务于商品库的检索，一旦进入活动就失去意义——参与者看到的是商品，不是团长的收纳方式。
-2. **分类名不需要内容安全检测**。它只对用户本人可见、不对外展示，送检是白花一次接口调用。实现时不要出于保险默认送检。
-3. **「未分组」不是一条分类记录**，而是 `category_id` 为空的商品集合，不建默认分类记录，也不能重命名或删除。
-4. **删除分类不删除商品**，其下商品的 `category_id` 置空，归入未分组。
-5. **分类在 M-28 仅用于筛选**，不提供「按分类批量加入」——整组重复的场景由 D-067 复用历史接龙覆盖，两条路径都做会造成功能重叠。
-6. **分类数上限 20 个，由服务端校验**（GOODS_LIB_SPEC §5.6、AC-GL-023）。分类名 1–10 字。
+1. **活动商品只快照小类名、不带分类归属**（D-066 2026-10-17 修订）。`grouporder-goods.category_name` 存小类名字符串供买家分组展示;分类归属 `category_id` 和分类记录本身仍不进活动——买家看到的是按小类归拢的商品,读不到团长的分类体系。
+2. **固定两级，商品只挂小类**。`parent_id` 自引用区分大类/小类；`grouporder-goods-lib.category_id` 始终指向小类或为空。大类下不能直接放商品。选品按大类→小类→商品级联。
+3. **分类名不需要内容安全检测**。它只对用户本人可见、不对外展示，送检是白花一次接口调用。实现时不要出于保险默认送检。
+4. **「未分类/未分组」不是记录**，而是 `category_id` 为空的商品集合，界面上呈现为虚拟「未分类」大类→「未分组」小类；新建商品默认归入这里。
+5. **删除分类都不删商品。** 删小类：其下商品 `category_id` 置空归入未分组，小类记录硬删；删大类：连同其下小类一并硬删，这些小类里的商品同样归入未分组（商品一件不删，与删小类同义）。
+6. **分类在 M-28 用于筛选**，另提供「全选当前大类」（D-152，前端批量勾选，受 50 件上限约束）；整场照搬仍推荐 D-067 复用历史接龙。
+7. **上限：大类 50 个、每个大类下小类 100 个，由服务端校验**（GOODS_LIB_SPEC §3.5、AC-GL-023）。分类名 1–10 字、同级唯一。
 
 ---
 
@@ -586,6 +599,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 | todo-dismiss   | `user_id + todo_key`（唯一）                    | 待办关闭状态查询，唯一约束保证重复关闭幂等            |
 | goods-lib      | `user_id + category_id + last_used_time`    | M-28 按分类筛选商品库                    |
 | goods-category | `user_id + sort`                            | 分类列表，按用户自定义顺序                    |
+| goods-category | `user_id + parent_id + sort`                | 按层级取大类 / 某大类下的小类              |
 | goods          | `activity_id + governance_status + sort`    | 活动内可展示商品及管理列表                    |
 | order          | `order_no`（唯一）                              | 订单号查询、重复兜底                       |
 | order          | `idempotent_key`（唯一）                        | **幂等拦截**                         |
@@ -600,7 +614,7 @@ uni-id 1.1.28 的官方 schema 中 `status` 的 `enum` 只到 `3`，但其 `uni-
 
 ## 7. 订单号与短码
 
-**活动短码** `activity.short_code`：4 位大写字母与数字（排除易混的 `0O1I`），创建活动时生成，全局唯一。
+**活动短码（活动码）** `activity.short_code`：大写字母与数字（排除易混的 `0O1I`），创建活动时用加密随机数生成，全局唯一，冲突重试。**D-104 起新活动 6 位**（约 10.7 亿种），此前的活动保留 4 位、不改写。可在登录后按号查找活动（`activityFindByCode`，每账号每天最多 50 次「没查到」，查到不计数）。
 
 **订单号** `order.order_no`：`YYMMDD-{short_code}-{4位随机}`
 
@@ -913,6 +927,17 @@ OPS §13 要求一种操作日志，含 **9 个必含字段**，覆盖其列举�
 | `publish_restriction` | int | | 0 | 当前发布权限 0正常 1临时限制发布 2永久限制发布 |
 | `restriction_expire` | timestamp | | | 临时限制到期时间。读取时若当前时间已超过该值即视为正常，不依赖定时任务准点执行 |
 | `restriction_case_no` | string | | | 产生当前限制的处置编号，可回溯到 `grouporder-restriction` 的具体记录 |
+| `leader_contact_mobile` 🔒 | string | | | 团长自愿填写的联系电话（D-103），≤20 字，只接受号码格式；空串未填。账号级，公开显示在本人发起的活动页（被下架的活动除外）与参与者订单详情。注销时随账号资料删除 |
+| `leader_contact_wechat` 🔒 | string | | | 团长自愿填写的微信号（D-103），字母开头 6～20 位或手机号；展示范围同上 |
+| `leader_card_nickname` | string | | | 团长名片昵称（D-109），≤20 字，与账号昵称分开维护；保存时同步文本检测，不通过拒绝保存；空串未填。展示范围同上 |
+| `leader_card_avatar` | file | | | 团长名片头像（D-109），与账号头像分开维护；null 未设置。保存后送图片检测，`img_check_status` 为 3 已拦截时不对外展示 |
+| `img_check_status` | int | | 0 | 名片头像检测状态（D-109），枚举同 `grouporder-goods.img_check_status`；回调按 `object_type = leader_card` 回写，**不做治理下架** |
+| `code_search_day` | string | | | 按活动码查找活动的计数日期（UTC+8，YYYY-MM-DD，D-104） |
+| `code_search_count` | int | | | 当天「没查到」的次数（查到的不计），每天上限 50（防枚举，D-104） |
+| `member_level` | int | | 0 | **会员等级**（D-106 预留）：0/缺失 普通，1 会员。会员功能是否只对会员开放由 `grouporder-config.member_gate` 决定，首版全部开放 |
+| `member_expire` | timestamp | | | 会员到期时间；0/缺失 长期有效；过期读时按普通处理 |
+| `member_source` | string | | | 会员来源：`admin` 后台设置 / `wxpay` 微信购买（两条通道首版均未实现） |
+| `member_update` | timestamp | | | 会员信息更新时间 |
 | `create_date` | timestamp | | 自动 | |
 | `update_date` | timestamp | | | |
 
@@ -995,6 +1020,16 @@ uni-id-users.schema.json         1 个   覆盖版，补回 status = 4（见 §3
 
 | 日期 | 版本 | 变化 |
 |---|---|---|
+| 2026-10-23 | v1.42 | 授权复制可修改（D-155 修订）：`grouporder-goods` 新增 `copy_origin`；docs 备份补齐 `grouporder-goods` 的 `category_name` / `category_parent_name`（与 admin 对齐） |
+| 2026-10-21 | v1.41 | 授权复制（D-155）：`grouporder-activity` 新增 `copy_token` / `copy_auth_time`，新增 `copy_token` 非唯一索引 |
+| 2026-10-17 | v1.40 | Excel 清单「类别」列（D-149）：`grouporder-goods` 新增 `category_parent_name`（大类快照）；不新增索引，老数据不迁移 |
+| 2026-10-16 | v1.39 | file 字段口径（D-119）：`url` 仅为写入时的访问地址，可能是会过期的临时地址；**读取以 `fileID` 为准**，云对象出参统一换成新地址 |
+| 2026-10-16 | v1.38 | 接龙码（D-115）：`grouporder-order` 新增 `order_code` 与非唯一索引 `activity_order_code`；`leader_delivered` 界面改称「已取货」 |
+| 2026-10-16 | v1.37 | 团长名片（D-109）：`grouporder-user-ext` 新增 `leader_card_nickname` / `leader_card_avatar` / `img_check_status`；不新增索引 |
+| 2026-10-16 | v1.36 | 会员预留（D-106）：`grouporder-user-ext` 新增 `member_level` / `member_expire` / `member_source` / `member_update`；`grouporder-config` 新增配置键 `member_gate`（会员功能闸门） |
+| 2026-10-16 | v1.35 | 活动码（D-104）：`activity.short_code` 新活动改 6 位、老活动保留 4 位（schema 长度 4～6），用于按号查找；`grouporder-user-ext` 新增 `code_search_day` / `code_search_count`（每日落空计数）；`short_code` 已有唯一索引，查询直接命中 |
+| 2026-10-16 | v1.34 | `grouporder-user-ext` 新增 `leader_contact_mobile` / `leader_contact_wechat`（D-103）；按 `user_id` 唯一索引读取，不新增索引 |
+| 2026-10-16 | v1.33 | `grouporder-order` 新增团长记录字段 `leader_paid` / `leader_paid_time` / `leader_paid_amount` / `leader_delivered` / `leader_delivered_time`（D-100）；不新增索引——按活动 + 状态的既有索引 `activity_status` 已能收窄到单个活动 |
 | 2026-10-15 | v1.32 | 上线前 Review 修复：`grouporder-order` 新增 `editing_until`（订单编辑锁）；`grouporder-export-log` 新增 `file_cleaned` / `file_clean_date`（清理任务不再反复选中已删记录）；`content-check.object_type` 增加 `goods_lib`；新增索引 report `reporter_uid+create_date`、bind-appeal `applicant_uid+create_date`、privacy-case `target_uid+create_date`、export-log `event_type+create_date`；图片回收的引用检查纳入举报与内容检测快照（common `files.js`）|
 | 2026-10-12 | v1.31 | §5.1 补充到期截止的两条路径（定时任务 + 读时补截止，common `lifecycle.js`）与前端到点更新规则 |
 | 2026-10-12 | v1.30 | 按 **D-092**：§4.7 说明 2、§4.10 复制字段表、`last_price` 说明去掉「须逐项确认」；AC-AC-009 废止 |

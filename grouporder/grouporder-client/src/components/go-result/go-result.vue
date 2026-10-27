@@ -1,7 +1,7 @@
 <!--
   M-26 统一状态结果态组件
 
-  六类结果态：不存在 / 无权 / 已截止 / 已取消 / 已下架 / 网络或结果未知。
+  六类结果态：不存在 / 无权 / 已结束 / 已取消 / 已下架 / 网络或结果未知。
   各业务页遇到对象级错误统一跳到 M-26（见 common/grouporder/request.js），不各页自画。
 -->
 <template>
@@ -31,7 +31,7 @@ const emit = defineEmits(['retry']);
 const MAP = {
   not_found: { symbol: '∅', color: '#6f7974', title: '内容不存在', desc: '该活动或订单不存在，或已被删除。' },
   forbidden: { symbol: '⊘', color: '#c7463f', title: '无权访问', desc: '你没有查看该内容的权限。敏感数据仅对相关方可见。' },
-  closed: { symbol: '⏱', color: '#d96a28', title: '活动已截止', desc: '该活动已截止，不能再新建或扩大订单，但仍可查看。' },
+  closed: { symbol: '⏱', color: '#d96a28', title: '活动已结束', desc: '该活动已结束，不能再新建或扩大订单，但仍可查看。' },
   cancelled: { symbol: '⊗', color: '#d96a28', title: '活动已取消', desc: '该活动已被团长取消。' },
   offline: { symbol: '⚠', color: '#c7463f', title: '已被平台下架', desc: '该活动或商品已被平台下架，不能继续接龙。' },
   unknown: { symbol: '↻', color: '#6f7974', title: '网络异常或结果未知', desc: '没能确认操作结果。请勿重复提交，稍后重试以确认状态。' },

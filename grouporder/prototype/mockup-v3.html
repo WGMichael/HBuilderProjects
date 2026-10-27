@@ -633,6 +633,150 @@ button { cursor: pointer; }
   .cat-row { display: grid; grid-template-columns: 20px 1fr auto; gap: 11px; align-items: center; padding: 13px; border-bottom: 1px solid var(--line); }
   .cat-row:last-child { border-bottom: 0; }
 
+/* 我的（M-08，D-105 / D-106 / D-108） */
+.me-stat { display: grid; grid-template-columns: repeat(4, 1fr); padding: 12px 0; text-align: center; }
+.me-stat b { display: block; color: var(--green); font-size: 17px; }
+.me-stat span { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+.me-row { display: flex; align-items: center; gap: 10px; }
+.me-ic { width: 19px; height: 19px; flex: none; color: var(--green); }
+.me-vip { margin-left: 6px; font-size: 9px; font-weight: 500; color: #9a6a12; background: #fdf3dc; padding: 1px 5px; border-radius: 4px; vertical-align: middle; }
+.me-logout { margin-top: 18px; text-align: center; color: var(--red); font-size: 14px; padding: 13px; }
+/* 活动管理新版（D-115） */
+.mg-head { background: #fff; padding: 14px 16px; }
+.mg-row { display: flex; align-items: flex-start; gap: 8px; }
+.mg-main { flex: 1; font-size: 16px; line-height: 1.5; }
+.mg-main .tag { margin-left: 6px; vertical-align: 2px; }
+.mg-more { font-size: 18px; color: var(--muted); line-height: 1; padding: 2px 4px; }
+.mg-act { font-size: 11px; color: var(--red); border: 1px solid var(--red); border-radius: 14px; padding: 3px 10px; white-space: nowrap; }
+.mg-meta { font-size: 11.5px; color: var(--muted); line-height: 1.8; }
+.mg-meta b { color: var(--ink, #17231d); letter-spacing: 1px; }
+.mg-copy { margin-left: 8px; font-size: 10px; color: var(--green); border: 1px solid var(--green); border-radius: 10px; padding: 0 7px; }
+.mg-stat { background: #fff; margin-top: 1px; padding: 6px 16px; font-size: 11.5px; color: #4b5650; }
+.mg-stat b { color: var(--green); }
+.mg-share { display: flex; gap: 10px; padding: 12px 16px 4px; }
+.mg-btn { flex: 1; border: 0; border-radius: 14px; background: var(--green); color: #fff; font-size: 14px; font-weight: 700; padding: 9px 0; }
+.mg-btn small { display: block; font-size: 10px; font-weight: 500; opacity: .85; }
+.mg-btn.ghost { background: #fff; color: var(--green-dark); border: 1.5px solid var(--green); }
+.mg-tabs { display: flex; background: #fff; margin-top: 10px; border-bottom: 1px solid #e3e9e5; }
+.mg-tabs span { flex: 1; text-align: center; font-size: 13.5px; color: #4b5650; padding: 10px 0; }
+.mg-tabs .on { color: var(--green); font-weight: 700; box-shadow: inset 0 -2px 0 var(--green); }
+.mg-search { margin: 10px 16px 0; background: #fff; border: 1px solid #e3e9e5; border-radius: 18px; padding: 7px 12px; font-size: 11.5px; color: #b5bdb9; }
+.mg-sub { display: flex; gap: 8px; padding: 10px 16px 4px; }
+.mg-sub span { font-size: 11px; color: #4b5650; border: 1px solid #ccd5d0; border-radius: 14px; padding: 2px 10px; }
+.mg-sub .on { color: var(--green); border-color: var(--green); background: var(--green-soft); }
+.mg-order { background: #fff; margin: 8px 16px 0; border-radius: 12px; padding: 10px 12px; }
+.mg-o1 { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.mg-code { color: var(--green-dark); margin-right: 4px; }
+.mg-o2 { font-size: 11.5px; color: #4b5650; margin-top: 4px; }
+.mg-o3 { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.mg-marks { display: flex; gap: 8px; margin-top: 8px; }
+.mk { font-size: 11px; color: #4b5650; border: 1px solid #ccd5d0; border-radius: 14px; padding: 2px 10px; }
+.mk.on { color: #fff; background: var(--green); border-color: var(--green); }
+/* 活动管理新版补充（D-116 ～ D-124） */
+.mg-more2 { flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 25px; border-radius: 13px; background: var(--green-soft); border: 1px solid var(--green); color: var(--green-dark); font-weight: 700; font-size: 16px; line-height: 1; }
+.mg-searchrow { display: flex; gap: 8px; align-items: center; padding: 10px 16px 0; }
+.mg-searchrow .mg-search { flex: 1; margin: 0; }
+.mg-qbtn { border: 0; border-radius: 16px; background: var(--green); color: #fff; font-size: 12px; padding: 7px 14px; }
+.mg-order2 { position: relative; background: #fff; margin: 8px 16px 0; border-radius: 12px; padding: 10px 32px 10px 12px; }
+.mg-dlv { position: absolute; top: 0; right: 0; color: #fff; font-size: 10.5px; font-weight: 600; padding: 3px 10px; border-radius: 0 12px 0 12px; }
+.mg-dlv.pick { background: var(--green); }
+.mg-dlv.home { background: #d96a28; }
+.mg-o1 { display: flex; align-items: baseline; gap: 8px; font-size: 13px; padding-right: 40px; }
+.mg-time { font-size: 10.5px; color: var(--muted); }
+.mg-marks2 { display: flex; gap: 6px; margin-top: 6px; }
+.mst { font-size: 10px; padding: 1px 7px; border-radius: 4px; background: #eef1ef; color: #758079; }
+.mst.on { background: var(--green-soft); color: var(--green); }
+.mg-arrow { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #b5bdb9; font-size: 16px; }
+.mg-popmask { position: absolute; inset: 0; z-index: 5; }
+.mg-pop { position: absolute; top: 58px; right: 12px; z-index: 6; background: #fff; border-radius: 10px; box-shadow: 0 8px 24px rgba(23,35,29,.18); padding: 4px 0; min-width: 120px; }
+.mg-pop::before { content: ''; position: absolute; top: -5px; right: 14px; width: 10px; height: 10px; background: #fff; transform: rotate(45deg); }
+.mg-pop div { padding: 10px 16px; font-size: 13px; }
+.mg-pop div + div { border-top: 1px solid #f5f7f5; }
+.mg-pop .danger { color: var(--red); }
+.mg-add { text-align: center; border: 1.5px dashed var(--green); color: var(--green-dark); background: #fff; border-radius: 10px; padding: 8px 0; font-size: 13px; }
+.mg-tip { font-size: 11px; color: var(--muted); margin: 8px 2px 0; }
+.mg-goods { background: #fff; margin: 8px 16px 0; border-radius: 10px; padding: 10px 12px; }
+.mg-goods.drag { background: #f5f7f5; box-shadow: 0 8px 22px rgba(23,35,29,.2); transform: translateY(-6px) scale(1.01); position: relative; z-index: 2; }
+.mg-g1 { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.mg-g1 b { flex: 1; }
+.mg-handle { color: #c3ccc7; font-size: 15px; }
+.mg-g2 { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.mg-g3 { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: var(--green); }
+.mg-g3 .del { color: var(--red); }
+.od-top { display: flex; align-items: baseline; gap: 8px; background: #fff; margin: 10px 12px 0; border-radius: 10px; padding: 12px 14px; }
+.od-l { font-size: 11px; color: var(--muted); }
+.od-code { font-size: 24px; color: var(--green-dark); letter-spacing: 4px; flex: 1; }
+.od-card { background: #fff; margin: 10px 12px 0; border-radius: 10px; padding: 10px 14px; }
+.od-title { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+.od-title small { font-size: 10.5px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.od-mk { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid #f5f7f5; font-size: 12.5px; }
+.od-mk:nth-of-type(2) { border-top: 0; }
+.od-k { width: 34px; color: var(--muted); }
+.od-mk b.on { color: var(--green); }
+.od-t { font-size: 10.5px; color: var(--muted); flex: 1; }
+.od-btn { border: 0; border-radius: 14px; background: var(--green); color: #fff; font-size: 11px; padding: 4px 10px; }
+.od-btn.undo { background: #f5f7f5; color: #4b5650; }
+.od-kv { display: flex; gap: 8px; font-size: 12.5px; padding: 4px 0; }
+.od-kv span { width: 60px; color: var(--muted); flex: none; }
+.od-kv b { flex: 1; font-weight: 500; }
+.od-kv em { font-style: normal; color: var(--green); font-size: 11.5px; }
+.od-line { display: flex; gap: 8px; font-size: 12.5px; padding: 5px 0; }
+.od-line span:first-child { flex: 1; }
+.od-line span:nth-child(2) { color: var(--muted); }
+.od-total { text-align: right; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.od-total b { color: var(--red); font-size: 15px; }
+/* 统计 / 发布预览 / 商品详情（D-126 ～ D-147） */
+.pin { width: 13px; height: 13px; flex: none; vertical-align: -2px; margin-right: 3px; color: var(--green); }
+.st-ov { background: #fff; padding: 8px 16px; font-size: 11.5px; color: var(--muted); }
+.st-ov b { color: var(--green); }
+.st-block { background: #fff; margin-top: 8px; padding: 10px 14px; }
+.st-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.st-h b { font-size: 14.5px; } .st-h small { font-size: 10.5px; color: var(--muted); font-weight: 400; }
+.st-h span { font-size: 11px; color: var(--green); border: 1px solid var(--green); border-radius: 12px; padding: 1px 9px; }
+.st-sub { font-size: 10.5px; color: var(--muted); margin-bottom: 4px; }
+.st-g { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f5f7f5; font-size: 13px; }
+.st-g b { color: var(--green-dark); } .st-g.tot { border: 0; } .st-g.tot span { color: var(--muted); font-size: 11.5px; }
+.st-drow { padding: 8px 0; border-bottom: 1px solid #f5f7f5; }
+.st-l1 { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; }
+.st-no { color: var(--muted); min-width: 18px; } .st-ph { color: #4b5650; font-size: 11.5px; }
+.st-tags { margin-left: auto; display: flex; gap: 4px; }
+.st-tags i { font-style: normal; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: #eef1ef; color: #758079; }
+.st-tags i.on { background: var(--green-soft); color: var(--green); }
+.st-tags i.dl.pick { background: var(--green-soft); color: var(--green); } .st-tags i.dl.home { background: #fff1e7; color: #d96a28; }
+.st-l2 { font-size: 11px; color: var(--muted); margin: 4px 0 0 24px; } .st-l2 b { color: var(--green-dark); letter-spacing: 1px; }
+.st-l3 { font-size: 11.5px; color: #4b5650; margin: 3px 0 0 24px; line-height: 1.5; }
+.st-l4 { font-size: 11.5px; color: #4b5650; margin: 3px 0 0 24px; }
+.sec2 { display: flex; align-items: baseline; gap: 8px; margin: 14px 16px 8px; padding-left: 9px; border-left: 4px solid var(--green); }
+.sec2 b { font-size: 15px; } .sec2 span { font-size: 10.5px; color: var(--muted); }
+.chk { background: #fff; margin: 0 16px; border-radius: 14px; padding: 6px 12px; font-size: 12px; }
+.chk div { padding: 6px 0; } .chk .ok { color: #4b5650; } .chk .bad { color: var(--red); } .chk .opt { color: var(--muted); }
+.chk em { font-style: normal; color: var(--green); margin-left: 4px; }
+.pv-head { margin-top: 4px; padding: 14px 16px; color: #fff; background: linear-gradient(135deg, #168a55, #0f6b41); }
+.pv-row { display: flex; align-items: center; gap: 8px; font-size: 16px; } .pv-row .tag { background: rgba(255,255,255,.2); color: #fff; }
+.pv-meta { font-size: 11.5px; opacity: .92; line-height: 1.7; } .pv-copy { font-size: 10px; border: 1px solid currentColor; border-radius: 10px; padding: 0 6px; margin-left: 6px; }
+.pv-pick { display: flex; align-items: flex-start; } .pv-pick .pin { color: #fff; margin-top: 3px; }
+.pv-g { position: relative; display: flex; gap: 10px; background: #fff; margin: 10px 16px 0; border-radius: 14px; padding: 12px; border: 1px solid #e3e9e5; overflow: hidden; }
+.pv-g.rec { border-color: #f0c48a; }
+.pv-rec { position: absolute; top: 0; right: 0; font-size: 10px; font-weight: 700; color: #fff; background: linear-gradient(135deg,#f39b2f,#e2701a); padding: 2px 8px; border-radius: 0 14px 0 8px; }
+.pv-thumb { width: 64px; height: 64px; border-radius: 10px; background: linear-gradient(135deg,#f7d9a8,#f2a65a); flex: none; }
+.pv-info { flex: 1; min-width: 0; padding-right: 24px; }
+.pv-t { font-size: 14px; } .pv-price { font-size: 11.5px; font-weight: 700; color: #d96a28; margin-left: 9px; }
+.pv-m { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+.pv-d { font-size: 11px; color: #4b5650; margin-top: 3px; } .pv-d.nodesc { color: #b5bdb9; }
+.pv-ctrl { text-align: right; margin-top: 4px; } .pv-ctrl span { font-size: 10px; background: #eef1ef; color: #758079; padding: 2px 8px; border-radius: 10px; }
+.gd-img { position: relative; height: 300px; background: linear-gradient(135deg,#f7d9a8,#f2a65a); }
+.gd-rec { position: absolute; top: 0; right: 0; font-size: 11px; font-weight: 700; color: #fff; background: linear-gradient(135deg,#f39b2f,#e2701a); padding: 3px 10px; border-radius: 0 0 0 10px; }
+.gd-idx { position: absolute; right: 12px; bottom: 12px; font-size: 11px; color: #fff; background: rgba(0,0,0,.4); padding: 2px 8px; border-radius: 10px; }
+.gd-card { background: #fff; margin-top: 8px; padding: 12px 14px; }
+.gd-price { color: #d96a28; font-weight: 700; font-size: 14px; } .gd-price b { font-size: 24px; } .gd-price small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.gd-name { font-size: 16.5px; font-weight: 600; margin-top: 4px; }
+.gd-t { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.gd-desc { font-size: 13px; color: #4b5650; line-height: 1.7; }
+.gd-dimg { height: 140px; background: linear-gradient(135deg,#e9f3d9,#c4dd9b); } .gd-dimg.b { background: linear-gradient(135deg,#fde6c8,#f6c27e); }
+.gd-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: space-between; background: #fff; border-top: 1px solid #e3e9e5; padding: 8px 14px; }
+.gd-step { display: inline-flex; align-items: center; border: 1px solid #ccd5d0; border-radius: 18px; overflow: hidden; }
+.gd-step i { font-style: normal; width: 32px; text-align: center; line-height: 28px; } .gd-step i.p { background: var(--green); color: #fff; } .gd-step b { min-width: 30px; text-align: center; }
+.gd-bar button { border: 0; border-radius: 18px; background: var(--green); color: #fff; font-size: 13px; padding: 7px 22px; }
 </style>
 </head>
 <body>
@@ -684,14 +828,14 @@ button { cursor: pointer; }
                 <article class="card">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
                     <div><span class="tag orange">待生成清单</span><h4 style="margin:8px 0 5px;font-size:15px">八月坚果团</h4>
-                    <div class="meta">已截止 3 小时 · 共 42 张订单</div></div>
+                    <div class="meta">已结束 3 小时 · 共 42 张订单</div></div>
                     <span class="chevron">›</span>
                   </div>
                 </article>
 
                 <article class="card">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-                    <div><span class="tag gray">即将截止</span><h4 style="margin:8px 0 5px;font-size:15px">社区蔬菜周三团</h4>
+                    <div><span class="tag gray">进行中</span><h4 style="margin:8px 0 5px;font-size:15px">社区蔬菜周三团</h4>
                     <div class="meta">明天 20:00 截止 · 你有 1 张订单可修改</div></div>
                     <span class="chevron">›</span>
                   </div>
@@ -732,8 +876,8 @@ button { cursor: pointer; }
                 </article>
                 <article class="card event-card">
                   <div class="event-thumb">坚果<br/>团</div>
-                  <div><h4>八月坚果团</h4><div class="meta">09-30 已截止 · 42 张订单</div>
-                  <div style="margin-top:7px"><span class="tag gray">已截止</span></div></div>
+                  <div><h4>八月坚果团</h4><div class="meta">09-30 已结束 · 42 张订单</div>
+                  <div style="margin-top:7px"><span class="tag gray">已结束</span></div></div>
                   <span class="chevron">›</span>
                 </article>
                 <article class="card event-card">
@@ -773,9 +917,9 @@ button { cursor: pointer; }
                 </article>
                 <article class="card">
                   <h4 style="margin:0 0 6px;font-size:15px">八月坚果团</h4>
-                  <div class="meta">团长 陈师傅 · 09-30 已截止</div>
+                  <div class="meta">团长 陈师傅 · 09-30 已结束</div>
                   <div class="card table-list" style="padding:0;margin:11px 0 0">
-                    <div class="table-row"><div><strong>订单 #93C1</strong><small>碧根果 ×2 · 预计 ¥98</small></div><span class="tag gray">已截止</span></div>
+                    <div class="table-row"><div><strong>订单 #93C1</strong><small>碧根果 ×2 · 预计 ¥98</small></div><span class="tag gray">已结束</span></div>
                   </div>
                 </article>
               </section>
@@ -801,25 +945,41 @@ button { cursor: pointer; }
               <section class="page-pad">
                 <article class="card" style="display:grid;grid-template-columns:52px 1fr auto;gap:13px;align-items:center">
                   <div class="empty-mark" style="margin:0;width:52px;height:52px;font-size:20px;border-radius:16px">☻</div>
-                  <div><strong style="font-size:16px">梁哥</strong><div class="meta" style="margin-top:3px">微信账号 · 点击查看个人资料</div></div>
-                  <span class="chevron">›</span>
+                  <div><strong style="font-size:16px">梁哥</strong></div>
+                  <span></span>
                 </article>
 
-                <div class="section-head"><h3>接龙工具</h3><span class="meta">账号级</span></div>
-                <div class="card table-list" style="padding:0">
-                  <div class="table-row"><div><strong>我的商品库</strong><small>24 件商品 · 发起活动时可直接复用</small></div><span class="chevron">›</span></div>
-                  <div class="table-row"><div><strong>我的接龙清单</strong><small>已截止活动的配货清单与 Excel 导出</small></div><span class="chevron">›</span></div>
+                <!-- 数据概览：可点，跳对应子页 -->
+                <div class="card me-stat">
+                  <div><b>12</b><span>发起的</span></div><div><b>36</b><span>参与订单</span></div><div><b>24</b><span>商品库</span></div><div><b>4</b><span>待办</span></div>
                 </div>
 
-                <div class="section-head"><h3>资料与设置</h3></div>
+                <div class="section-head"><h3>个人资料</h3></div>
                 <div class="card table-list" style="padding:0">
-                  <div class="table-row"><div><strong>收货信息</strong><small>3 条 · 默认「家 · 李阿姨」</small></div><span class="chevron">›</span></div>
-                  <div class="table-row"><div><strong>账号与微信绑定</strong></div><span class="chevron">›</span></div>
-                  <div class="table-row"><div><strong>用户协议与隐私指引</strong></div><span class="chevron">›</span></div>
-                  <div class="table-row"><div><strong>举报与反馈</strong></div><span class="chevron">›</span></div>
-                  <div class="table-row"><div><strong>使用说明</strong></div><span class="chevron">›</span></div>
-                  <div class="table-row"><div><strong>注销账号</strong></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13.5h3"/></svg><div><strong>团长名片</strong><small>显示在你发起的所有活动页</small></div></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg><div><strong>收货信息</strong><small>3 条 · 默认「家 · 李阿姨」</small></div></div><span class="chevron">›</span></div>
                 </div>
+
+                <div class="section-head"><h3>商品管理</h3></div>
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5 5.5 4.5h13L20 9.5M4 9.5h16M4 9.5c0 1.5 1.2 2.5 2.7 2.5s2.6-1 2.6-2.5c0 1.5 1.2 2.5 2.7 2.5s2.7-1 2.7-2.5c0 1.5 1.1 2.5 2.6 2.5S20 11 20 9.5M5.5 12v7.5h13V12M10 19.5v-4h4v4"/></svg><div><strong>商品库管理</strong><small>24 件商品 · 发起活动时可直接添加</small></div></div><span class="chevron">›</span></div>
+                </div>
+
+                <div class="section-head"><h3>工具</h3></div>
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg><div><strong>团长统计<span class="me-vip">会员</span></strong><small>跨活动订单、趋势、待收款与排行</small></div></div><span class="chevron">›</span></div>
+                </div>
+
+                <div class="section-head"><h3>帮助与客服</h3></div>
+                <div class="card table-list" style="padding:0">
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6M12 17.2v.1"/></svg><div><strong>使用帮助</strong></div></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg><div><strong>举报 / 反馈</strong></div></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h5"/></svg><div><strong>用户服务协议</strong></div></div><span class="chevron">›</span></div>
+                  <div class="table-row"><div class="me-row"><svg class="me-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/></svg><div><strong>隐私政策</strong></div></div><span class="chevron">›</span></div>
+                </div>
+
+                <!-- 只保留退出登录；注销账号入口隐藏，经协议联系方式申请（D-108） -->
+                <div class="card me-logout">退出登录</div>
               </section>
               <nav class="bottom-nav raised">
                 <button><i>▤</i>接龙<span class="nav-badge">4</span></button>
@@ -829,7 +989,7 @@ button { cursor: pointer; }
             </div>
           </section>
         </div>
-        <figcaption><b><span class="pill lg-nav">改结构</span><span class="pill lg-new">新入口</span>我的</b><small>「我的接龙清单」只是跳转已有清单页的快捷入口，不新增跨活动指标；「我的商品库」为本轮新增。</small></figcaption>
+        <figcaption><b><span class="pill lg-nav">改结构</span><span class="pill lg-new">新入口</span>我的</b><small>四类：个人资料 / 商品管理 / 工具 / 帮助与客服，每项带图标（D-105、D-106）。账号类入口不再提供，底部只留「退出登录」，注销入口隐藏（D-108）；「团长统计」为会员功能，首版对所有人开放。</small></figcaption>
       </figure>
     </div>
   </section>
@@ -1158,13 +1318,13 @@ button { cursor: pointer; }
                   <div class="pick-row single">
                     <span class="box on"></span>
                     <div class="thumb">蔬菜<br/>周三团</div>
-                    <div><strong>社区蔬菜周三团</strong><small>已截止 09-10 · 8 件商品 · 42 张订单</small><small>送货上门 · 开团时长 2 天 18 小时</small></div>
+                    <div><strong>社区蔬菜周三团</strong><small>已结束 09-10 · 8 件商品 · 42 张订单</small><small>送货上门 · 开团时长 2 天 18 小时</small></div>
                   </div>
 
                   <div class="pick-row single">
                     <span class="box"></span>
                     <div class="thumb">八月<br/>坚果团</div>
-                    <div><strong>八月坚果团</strong><small>已截止 08-28 · 5 件商品 · 31 张订单</small><small>自提 · 开团时长 3 天</small></div>
+                    <div><strong>八月坚果团</strong><small>已结束 08-28 · 5 件商品 · 31 张订单</small><small>自提 · 开团时长 3 天</small></div>
                   </div>
 
                   <div class="pick-row single">
@@ -1191,7 +1351,7 @@ button { cursor: pointer; }
             </div>
           </section>
         </div>
-        <figcaption><b><span class="pill lg-new">新增</span><span class="pill lg-core">核心</span>历史接龙选择 M-31</b><small>D-067。<b>单选</b>，可选范围为已截止、已取消与进行中三类。进行中的活动带「进行中」标签与明确提示——团长常在本场还没结束时就排下一场。草稿与被平台下架的活动不可作为源（后者是与 D-064 同类的绕过路径）。</small></figcaption>
+        <figcaption><b><span class="pill lg-new">新增</span><span class="pill lg-core">核心</span>历史接龙选择 M-31</b><small>D-067。<b>单选</b>，可选范围为已结束、已取消与进行中三类。进行中的活动带「进行中」标签与明确提示——团长常在本场还没结束时就排下一场。草稿与被平台下架的活动不可作为源（后者是与 D-064 同类的绕过路径）。</small></figcaption>
       </figure>
 
       <!-- C2 复制结果草稿（新增） -->
@@ -1368,6 +1528,277 @@ button { cursor: pointer; }
           </section>
         </div>
         <figcaption><b><span class="pill lg-new">新增分支</span>确认订单 · 自提</b><small>自提活动只要姓名与电话，地址簿不参与。敏感数据面与隐私指引的收集范围同步缩小。</small></figcaption>
+      </figure>
+    </div>
+  </section>
+
+
+  <!-- ============ E 组：活动管理与商品（D-115 ～ D-147） ============ -->
+  <section class="group">
+    <h2>E · 活动管理与商品（D-115 ～ D-147）</h2>
+    <p>草稿只给一个大按钮「继续编辑草稿」。其他状态：标题行右侧是显眼的「⋯」操作按钮（编辑活动、发布预览、修改自提点、结束活动都在里面），下面三个 tab——<b>接龙记录</b>（全部 / 未收款 / 未取货，接龙码 / 姓名 / 电话尾号查询，点订单进详情核销）、<b>商品</b>（长按拖动排序）、<b>统计</b>。</p>
+    <div class="shots">
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>活动管理</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="mg-head">
+                <div class="mg-row"><div class="mg-main"><b>社区蔬菜周三团</b><span class="tag">进行中</span></div><span class="mg-more2">⋯</span></div>
+                <div class="mg-meta">活动码：<b>RXMHUX</b><span class="mg-copy">复制</span></div>
+                <div class="mg-meta">2026/10/14 09:00 - 2026/10/16 20:00</div>
+                <div class="mg-meta">送货上门 / 自提</div>
+              </div>
+              <div class="mg-stat">👥 接龙数：<b>42</b></div>
+              <div class="mg-share"><button class="mg-btn">分享到微信<small>复制链接发给好友</small></button><button class="mg-btn ghost">生成海报<small>保存图片发朋友圈</small></button></div>
+              <div class="mg-tabs"><span class="on">接龙记录</span><span class="">商品</span><span class="">统计</span></div>
+              <div class="mg-searchrow"><div class="mg-search">🔍 输入接龙码 / 姓名 / 电话尾号</div><button class="mg-qbtn">查询</button></div>
+              <div class="mg-sub"><span class="on">全部 42</span><span>未收款 23</span><span>未取货 41</span></div>
+              <div class="mg-order2">
+                <span class="mg-dlv pick">自提</span>
+                <div class="mg-o1"><b>zhangsan123</b><span class="mg-time">2026/10/15 18:32</span></div>
+                <div class="mg-marks2"><span class="mst on">已收款</span><span class="mst">未取货</span></div>
+                <div class="mg-o2">接龙码：<b class="mg-code">3829</b></div>
+                <div class="mg-o2">苹果×2斤、梨×1箱</div>
+                <span class="mg-arrow">›</span>
+              </div>
+              <div class="mg-order2">
+                <span class="mg-dlv home">送货上门</span>
+                <div class="mg-o1"><b>liayi_88</b><span class="mg-time">2026/10/15 19:05</span></div>
+                <div class="mg-marks2"><span class="mst">未收款</span><span class="mst">未取货</span></div>
+                <div class="mg-o2">接龙码：<b class="mg-code">0571</b></div>
+                <div class="mg-o2">有机白菜×3份</div>
+                <span class="mg-arrow">›</span>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改结构</span>进行中 · 接龙记录</b><small>卡片三行：下单账号 · 时间 / 收款取货状态 / 接龙码，下接商品；右上角实色角标区分自提（绿）与送货上门（橙）；点卡片进订单详情（D-116）。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>活动管理</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="mg-head">
+                <div class="mg-row"><div class="mg-main"><b>社区蔬菜周三团</b><span class="tag">进行中</span></div><span class="mg-more2">⋯</span></div>
+                <div class="mg-meta">活动码：<b>RXMHUX</b><span class="mg-copy">复制</span></div>
+                <div class="mg-meta">2026/10/14 09:00 - 2026/10/16 20:00</div>
+                <div class="mg-meta">送货上门 / 自提</div>
+              </div>
+              <div class="mg-popmask"></div>
+              <div class="mg-pop"><div>编辑活动</div><div>发布预览</div><div>修改自提点</div><div class="danger">结束活动</div></div>
+              <div class="mg-stat">👥 接龙数：<b>42</b></div>
+              <div class="mg-share"><button class="mg-btn">分享到微信<small>复制链接发给好友</small></button><button class="mg-btn ghost">生成海报<small>保存图片发朋友圈</small></button></div>
+              <div class="mg-tabs"><span class="on">接龙记录</span><span class="">商品</span><span class="">统计</span></div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">新交互</span>「⋯」操作菜单</b><small>贴在按钮下方的小弹框；末项红字「结束活动」（开始前为「取消活动」），确认后完成（D-121、D-123）。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>活动管理</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="mg-head">
+                <div class="mg-row"><div class="mg-main"><b>社区蔬菜周三团</b><span class="tag">进行中</span></div><span class="mg-more2">⋯</span></div>
+                <div class="mg-meta">活动码：<b>RXMHUX</b><span class="mg-copy">复制</span></div>
+                <div class="mg-meta">2026/10/14 09:00 - 2026/10/16 20:00</div>
+                <div class="mg-meta">送货上门 / 自提</div>
+              </div>
+              <div class="mg-stat">👥 接龙数：<b>42</b></div>
+              <div class="mg-share"><button class="mg-btn">分享到微信<small>复制链接发给好友</small></button><button class="mg-btn ghost">生成海报<small>保存图片发朋友圈</small></button></div>
+              <div class="mg-tabs"><span class="">接龙记录</span><span class="on">商品</span><span class="">统计</span></div>
+              <div style="padding:10px 16px 0"><div class="mg-add">＋ 添加商品</div><div class="mg-tip">长按商品拖动调整顺序，参与者看到的顺序同步变化</div></div>
+              <div class="mg-goods">
+                <div class="mg-g1"><span class="mg-handle">⠿</span><b>海南金煌芒果</b><span class="tag">在售</span></div>
+                <div class="mg-g2">￥39.9 / 箱 · 已购 18 · 库存 50</div>
+                <div class="mg-g3"><span>编辑</span><span>调库存</span><span>调限购</span><span>停售</span><span class="del">删除</span></div>
+              </div>
+              <div class="mg-goods drag">
+                <div class="mg-g1"><span class="mg-handle">⠿</span><b>烟台红富士</b><span class="tag">在售</span></div>
+                <div class="mg-g2">￥12.5 / 斤 · 已购 64 · 库存不限</div>
+                <div class="mg-g2">每人限购 10 斤</div>
+                <div class="mg-g3"><span>编辑</span><span>调库存</span><span>调限购</span><span>停售</span><span class="del">删除</span></div>
+              </div>
+              <div class="mg-goods">
+                <div class="mg-g1"><span class="mg-handle">⠿</span><b>爱媛果冻橙</b><span class="tag">在售</span></div>
+                <div class="mg-g2">￥28 / 箱 · 已购 9 · 库存 30</div>
+                <div class="mg-g3"><span>编辑</span><span>调库存</span><span>调限购</span><span>停售</span><span class="del">删除</span></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">新功能</span>商品 · 拖动排序</b><small>长按卡片拿起，上下拖动换位，松手即保存；排序不重新审核，参与者看到的顺序同步变化（D-124）。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>订单详情</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="od-top"><span class="od-l">接龙码</span><b class="od-code">3829</b><span class="tag">有效</span></div>
+              <div class="od-card">
+                <div class="od-title">收款与取货<small>你自己的记录，平台不收款</small></div>
+                <div class="od-mk"><span class="od-k">收款</span><b class="on">已收款</b><span class="od-t">10-15 20:10</span><button class="od-btn undo">撤销</button></div>
+                <div class="od-mk"><span class="od-k">取货</span><b>未取货</b><span class="od-t"></span><button class="od-btn">标记已取货</button></div>
+              </div>
+              <div class="od-card">
+                <div class="od-kv"><span>下单账号</span><b>zhangsan123</b></div>
+                <div class="od-kv"><span>下单时间</span><b>2026/10/15 18:32</b></div>
+                <div class="od-kv"><span>交付方式</span><b>自提</b></div>
+                <div class="od-kv"><span>收货人</span><b>张三</b></div>
+                <div class="od-kv"><span>电话</span><b>13812341234</b><em>拨号</em></div>
+                <div class="od-kv"><span>备注</span><b>傍晚来取</b></div>
+              </div>
+              <div class="od-card">
+                <div class="od-title">商品</div>
+                <div class="od-line"><span>苹果</span><span>×2斤</span><b>￥25</b></div>
+                <div class="od-line"><span>梨</span><span>×1箱</span><b>￥31</b></div>
+                <div class="od-total">共 3 份 · 预计 <b>￥56</b></div>
+              </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">新页面</span>订单详情（团长）</b><small>接龙码、收款 / 取货状态与标记时间、下单账号、收货信息、商品明细；截止后底部可作废（D-116）。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>活动管理</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="mg-head">
+                <div class="mg-row"><div class="mg-main"><b>社区蔬菜周三团</b><span class="tag orange">草稿</span></div></div>
+                <div class="mg-meta">活动码：<b>RXMHUX</b><span class="mg-copy">复制</span></div>
+                <div class="mg-meta">2026/10/14 09:00 - 2026/10/16 20:00</div>
+                <div class="mg-meta">送货上门 / 自提</div>
+              </div>
+              <div class="form-tip" style="margin:12px 16px">草稿未发布，参与者看不到。继续编辑完成后提交审核。</div>
+              <div style="padding:8px 16px"><button class="primary-button" style="width:100%;padding:14px 0;font-size:15px">继续编辑草稿</button></div>
+              <div style="text-align:center;font-size:12px;color:var(--red);margin-top:8px">删除草稿</div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改结构</span>草稿</b><small>草稿只需继续编辑；商品、发布都在编辑页里完成。从未发布过的草稿可删除（D-090）。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>活动管理</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="mg-head">
+                <div class="mg-row"><div class="mg-main"><b>社区蔬菜周三团</b><span class="tag">进行中</span></div><span class="mg-more2">⋯</span></div>
+                <div class="mg-meta">活动码：<b>RXMHUX</b><span class="mg-copy">复制</span></div>
+                <div class="mg-meta">2026/10/14 09:00 - 2026/10/16 20:00</div>
+                <div class="mg-meta">送货上门 / 自提</div>
+              </div>
+              <div class="mg-stat">👥 接龙数：<b>42</b></div>
+              <div class="mg-share"><button class="mg-btn">分享到微信<small>复制链接发给好友</small></button><button class="mg-btn ghost">生成海报<small>保存图片发朋友圈</small></button></div>
+              <div class="mg-tabs"><span>接龙记录</span><span>商品</span><span class="on">统计</span></div>
+              <div class="st-ov">有效订单 <b>42</b> · 有效份数 <b>136</b> · 预计 <b>￥2,140</b></div>
+              <div class="st-block"><div class="st-h"><b>备货信息</b><span>复制备货清单</span></div>
+                <div class="st-sub">送货上门 30 单 / 98 份 · 自提 12 单 / 38 份</div>
+                <div class="st-g"><span>海南金煌芒果</span><b>18 箱</b></div><div class="st-g"><span>烟台红富士</span><b>64 斤</b></div><div class="st-g"><span>爱媛果冻橙</span><b>9 箱</b></div>
+                <div class="st-g tot"><span>合计</span><b>136 份</b></div></div>
+              <div class="st-block"><div class="st-h"><b>接龙明细<small>（42 单）</small></b><span>复制接龙名单</span></div>
+                <div class="st-drow">
+                  <div class="st-l1"><span class="st-no">1.</span><b>zhangsan123</b><span class="st-ph">13812341234</span><span class="st-tags"><i class="on">已收款</i><i class="">未取货</i><i class="dl pick">自提</i></span></div>
+                  <div class="st-l2">接龙码：<b>3829</b></div>
+                  <div class="st-l3"><svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg><b>张三 13812341234</b> 自提点：幸福小区东门便利店</div>
+                  <div class="st-l4">苹果×2斤、梨×1箱</div>
+                </div>
+                <div class="st-drow">
+                  <div class="st-l1"><span class="st-no">2.</span><b>liayi_88</b><span class="st-ph">13956785678</span><span class="st-tags"><i class="">未收款</i><i class="">未取货</i><i class="dl home">送货上门</i></span></div>
+                  <div class="st-l2">接龙码：<b>0571</b></div>
+                  <div class="st-l3"><svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg><b>李阿姨 13956785678</b> 幸福小区 3 栋 1 单元 1201 室</div>
+                  <div class="st-l4">有机白菜×3份</div>
+                </div>
+              </div>
+              <div style="padding:12px 16px"><button class="primary-button" style="width:100%;padding:12px 0;font-size:14px;opacity:.5">导出 Excel 清单</button><div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px">活动结束后可导出 Excel 清单</div></div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改版</span>统计 · 备货与接龙明细</b><small>概览一行 → 备货信息（不列 0 份）→ 接龙明细（账号 · 电话 · 收款 / 取货 · 交付方式 / 接龙码 / 📍收货人 电话 完整地址 / 商品）→ 导出 Excel（结束后可用）。D-126 ～ D-133。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>发布预览</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="sec2"><b>发布前检查</b><span>标红的项需要先补充</span></div>
+              <div class="chk"><div class="ok">✓ 活动封面图</div><div class="bad">! 商品「爱媛果冻橙」缺少封面图 <em>去补充 ›</em></div><div class="ok">✓ 截止时间晚于当前时间</div><div class="opt">i 团长名片未填联系电话或微信（选填）<em>去设置 ›</em></div></div>
+              <div class="sec2"><b>用户预览</b><span>参与者打开活动后看到的样子</span></div>
+              <div class="pv-head"><div class="pv-row"><b>社区蔬菜周三团</b><span class="tag">待发布</span></div>
+                <div class="pv-meta">活动码：RXMHUX <span class="pv-copy">复制</span></div>
+                <div class="pv-meta">2026/10/14 09:00 - 2026/10/16 20:00</div>
+                <div class="pv-meta">送货上门 / 自提</div>
+                <div class="pv-meta pv-pick"><svg class="pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>自提点：李姐 13900001111 幸福小区东门便利店（时间不限）</div></div>
+                <div class="pv-g rec"><span class="pv-rec">推荐</span>
+                  <div class="pv-thumb"></div>
+                  <div class="pv-info"><div class="pv-t"><b>烟台红富士</b><span class="pv-price">¥12.5/斤</span></div>
+                    <div class="pv-m">库存不限 · 每人限购 10 斤</div>
+                    <div class="pv-d">脆甜多汁，产地直发</div>
+                    <div class="pv-ctrl"><span>预览</span></div></div>
+                </div>
+                <div class="pv-g">
+                  <div class="pv-thumb"></div>
+                  <div class="pv-info"><div class="pv-t"><b>海南金煌芒果</b><span class="pv-price">¥39.9/箱</span></div>
+                    <div class="pv-m">库存 50</div>
+                    <div class="pv-d nodesc">未填写商品说明</div>
+                    <div class="pv-ctrl"><span>预览</span></div></div>
+                </div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改版</span>发布预览 · 两个分区</b><small>「发布前检查」「用户预览」分区标题隔开；商品卡：名称 + 小号价格、推荐角标在右上、第三行商品说明（预览时未填有提示）；自提点在标题区一行带图标，时间不填即「时间不限」。D-136 ～ D-145。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>烟台红富士</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef;position:relative">
+              <div class="gd-img"><span class="gd-rec">推荐</span><span class="gd-idx">1/4</span></div>
+              <div class="gd-card"><div class="gd-price">¥<b>12.5</b><small> / 斤</small></div><div class="gd-name">烟台红富士</div></div>
+              <div class="gd-card"><div class="gd-t">商品说明</div><div class="gd-desc">脆甜多汁，产地直发。每箱约 5 斤，坏果包赔。</div></div>
+              <div class="gd-card" style="padding:12px 0 0"><div class="gd-t" style="padding:0 14px">商品详情</div><div class="gd-dimg"></div><div class="gd-dimg b"></div></div>
+              <div class="gd-bar"><span class="gd-step"><i>－</i><b>2</b><i class="p">＋</i></span><button>选好了</button></div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">新页面</span>商品详情</b><small>点商品卡片进入：图片轮播、价格、名称、商品说明、详情图；不展示已购 / 库存 / 活动信息；底部加减数量实时回传活动页。D-146、D-147。</small></figcaption>
+      </figure>
+    </div>
+  </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改结构</span>进行中 · 接龙记录</b><small>接龙码为同一活动内唯一的 4 位数字，参与者订单详情可见；取货时报码，团长搜索后点「标记已取货」。</small></figcaption>
+      </figure>
+      <figure class="shot">
+        <div class="phone-frame">
+          <div class="phone-status"><strong>9:41</strong><div class="status-icons"><i></i><i></i><i></i></div></div>
+          <header class="mini-header"><button class="icon-button back-button">‹</button><strong>活动管理</strong><span class="capsule"><b>•••</b><i></i></span></header>
+          <section class="mini-screen">
+            <div class="page" style="background:#eef2ef">
+              <div class="mg-head">
+                <div class="mg-row"><div class="mg-main"><b>社区蔬菜周三团</b><span class="tag orange">草稿</span></div></div>
+                <div class="mg-meta">活动码：<b>RXMHUX</b><span class="mg-copy">复制</span></div>
+                <div class="mg-meta">2026-10-14 09:00 - 2026-10-16 20:00</div>
+                <div class="mg-meta">送货上门 / 自提</div>
+              </div>
+              <div class="form-tip" style="margin:12px 16px">草稿未发布，参与者看不到。继续编辑完成后提交审核。</div>
+              <div style="padding:8px 16px"><button class="primary-button" style="width:100%;padding:14px 0;font-size:15px">继续编辑草稿</button></div>
+              <div style="text-align:center;font-size:12px;color:var(--red);margin-top:8px">删除草稿</div>
+            </div>
+          </section>
+        </div>
+        <figcaption><b><span class="pill lg-nav">改结构</span>草稿</b><small>草稿只需继续编辑；商品、发布都在编辑页里完成。从未发布过的草稿可删除（D-090）。</small></figcaption>
       </figure>
     </div>
   </section>

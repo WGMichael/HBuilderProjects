@@ -1,7 +1,7 @@
 <!--
   M-31 历史接龙选择
 
-  职责：单选本人已截止的活动（自动截止与提前截止均可）作为复制源；
+  职责：单选本人已结束的活动（自动截止与提前截止均可）作为复制源；
   草稿、审核中、进行中、已取消与被平台下架的活动不可作为源（D-085，取代 D-080）。
   D-091：本页只选源，点「复制生成新的活动」后切到「发起接龙」预填（不生成记录），
   团长保存草稿 / 确认发布或首次操作商品时才按源生成草稿（activityCopy）。
@@ -10,7 +10,7 @@
 -->
 <template>
   <view class="page">
-    <view class="hint">选择一场已截止的接龙，复制它的活动资料与全部商品生成新的活动，不影响原活动。进入发起页后可继续修改，由你决定保存草稿还是确认发布。</view>
+    <view class="hint">选择一场已结束的接龙，复制它的活动资料与全部商品生成新的活动，不影响原活动。进入发起页后可继续修改，由你决定保存草稿还是确认发布。</view>
     <view class="list">
       <view v-for="a in list" :key="a._id" class="a" :class="{ 'a--on': selectedId === a._id }" @click="select(a)">
         <image v-if="a.cover_image && a.cover_image.url" class="a__cover" :src="a.cover_image.url" mode="aspectFill" />
@@ -23,7 +23,7 @@
         </view>
         <view class="a__radio" :class="{ 'a__radio--on': selectedId === a._id }"></view>
       </view>
-      <view v-if="!list.length" class="empty">没有已截止的接龙可作为复制源</view>
+      <view v-if="!list.length" class="empty">没有已结束的接龙可作为复制源</view>
     </view>
 
     <view class="footer">

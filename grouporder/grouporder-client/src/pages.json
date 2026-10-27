@@ -21,8 +21,16 @@
       "style": { "navigationBarTitleText": "商品编辑" }
     },
     {
+      "path": "pages/activity/goods-sort",
+      "style": { "navigationBarTitleText": "管理排序" }
+    },
+    {
       "path": "pages/activity/publish",
       "style": { "navigationBarTitleText": "发布预览" }
+    },
+    {
+      "path": "pages/activity/copy",
+      "style": { "navigationBarTitleText": "复制接龙" }
     },
     {
       "path": "pages/activity/detail",
@@ -35,6 +43,14 @@
     {
       "path": "pages/activity/pickup-edit",
       "style": { "navigationBarTitleText": "修改自提点" }
+    },
+    {
+      "path": "pages/activity/goods-detail",
+      "style": { "navigationBarTitleText": "商品详情" }
+    },
+    {
+      "path": "pages/activity/order-manage",
+      "style": { "navigationBarTitleText": "订单详情" }
     },
     {
       "path": "pages/activity/order-stat",
@@ -93,6 +109,10 @@
       "style": { "navigationBarTitleText": "账号与微信绑定" }
     },
     {
+      "path": "pages/account/contact",
+      "style": { "navigationBarTitleText": "团长名片" }
+    },
+    {
       "path": "pages/account/appeal",
       "style": { "navigationBarTitleText": "账号申诉" }
     },
@@ -102,6 +122,22 @@
     },
     {
       "path": "pages/common/result",
+      "style": { "navigationBarTitleText": "" }
+    },
+    {
+      "path": "pages/tools/leader-stat",
+      "style": { "navigationBarTitleText": "团长统计", "enablePullDownRefresh": true }
+    },
+    {
+      "path": "pages/common/guide-create",
+      "style": { "navigationBarTitleText": "发起接龙指南" }
+    },
+    {
+      "path": "pages/common/help",
+      "style": { "navigationBarTitleText": "使用帮助" }
+    },
+    {
+      "path": "pages/common/legal",
       "style": { "navigationBarTitleText": "" }
     },
     {

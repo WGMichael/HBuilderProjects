@@ -7,6 +7,7 @@
  * content_snapshot 必须是举报时的内容，不能用当前内容替换历史证据。
  */
 const { auth, errors, paging, idempotent, bindMethods } = require('grouporder-common')
+const { fileurl } = require('grouporder-common')
 
 const { throwBiz, assertParam, ok } = errors
 
@@ -35,10 +36,11 @@ module.exports = {
     this.dbCmd = this.ctx.db.command
   },
 
-  _after (error, result) {
+  async _after (error, result) {
     // 使用中自动续期登录（auth.attachNewToken）
     if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
-    return auth.attachNewToken(this.ctx, result)
+    // 图片地址以 fileID 为准换成新的访问地址（D-119，common/fileurl）
+    return auth.attachNewToken(this.ctx, await fileurl.refresh(result))
   },
 
   /**

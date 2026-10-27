@@ -102,5 +102,17 @@
       ],
       "MgoIsUnique": false
     }
+  },
+  {
+    "IndexName": "copy_token",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "copy_token",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
   }
 ]

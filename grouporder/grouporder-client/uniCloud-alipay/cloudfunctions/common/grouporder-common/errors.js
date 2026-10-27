@@ -16,7 +16,7 @@ const COMMON = {
 
 // 客户端业务码
 const CLIENT = {
-  ACTIVITY_CLOSED: '活动已截止',
+  ACTIVITY_CLOSED: '活动已结束',
   ACTIVITY_NOT_STARTED: '活动尚未开始，到开始时间后才能下单',
   ACTIVITY_CANCELLED: '活动已被团长取消',
   ACTIVITY_OFFLINE: '活动已被平台下架',
@@ -30,7 +30,7 @@ const CLIENT = {
 
 // 后台业务码：通用码加 OPS_ 前缀，另加 OPS_TARGET_CLOSED
 const OPS_EXTRA = {
-  OPS_TARGET_CLOSED: '目标活动已截止或已被取消，本次处置中止'
+  OPS_TARGET_CLOSED: '目标活动已结束或已被取消，本次处置中止'
 }
 
 const MESSAGES = Object.assign({}, COMMON, CLIENT, OPS_EXTRA)

@@ -66,5 +66,21 @@
       ],
       "MgoIsUnique": false
     }
+  },
+  {
+    "IndexName": "activity_order_code",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "activity_id",
+          "Direction": "1"
+        },
+        {
+          "Name": "order_code",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
   }
 ]

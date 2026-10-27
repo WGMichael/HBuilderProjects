@@ -14,6 +14,8 @@
   复制预填（D-091）：从 M-31 选源后进入本表单，内容按源活动预填但【不生成记录】；
   保存草稿 / 下一步，或首次对商品编辑 / 删除 / 添加时，才按源生成草稿（activityCopy），
   再用表单内容覆盖。被平台下架的商品预先提示且不会复制。
+  编辑已发布的活动（D-120，M-20「⋯ → 编辑活动」进入）：底部只有「保存修改」，交付方式锁定；
+  服务端只认真正变化的字段——改标题、说明、图片会转入审核中，改截止时间、自提点即时生效、不重新审核。
 -->
 <template>
   <view class="af" :class="{ 'af--tabbar': withTabbar }">
@@ -47,54 +49,26 @@
       </view>
     </view>
 
-    <!-- 商品列表 -->
-    <view class="af__block">
-      <view class="af__block-head">
-        <text class="af__block-title">商品列表（{{ goods.length }}）</text>
-        <text class="af__link" @click="goLibManage">管理商品库 ›</text>
-      </view>
-
-      <!-- 复制预填（D-091）：尚未生成活动 -->
-      <view v-if="copyMode" class="af__copy-tip">复制自「{{ copySourceTitle }}」。点「保存草稿」或「下一步」后才会生成新的活动；在此之前编辑商品也会先生成草稿。</view>
-      <view v-if="excludedGoods.length" class="af__pending-tip">以下 {{ excludedGoods.length }} 件商品因违规已被平台下架，不会复制：{{ excludedGoods.map((g) => g.name).join('、') }}</view>
-      <view v-for="(g, i) in goods" :key="g._id || i" class="goods-row">
-        <view class="goods-row__main">
-          <text class="goods-row__name">{{ g.name }}</text>
-          <text class="goods-row__meta">￥{{ fen2yuan(g.price) }} / {{ g.unit || '份' }} · 库存 {{ g.total_stock > 0 ? g.total_stock : '不限' }} · {{ g.per_user_limit > 0 ? '每人限 ' + g.per_user_limit : '不限购' }}</text>
-        </view>
-        <text class="goods-row__edit" @click="editGoods(g)">编辑</text>
-        <text class="goods-row__del" @click="removeGoods(g)">删除</text>
-      </view>
-
-      <view class="af__actions">
-        <!-- 按主次区分：新建为主操作，从商品库挑选为次操作，整场照搬为辅助操作 -->
-        <button class="af__btn af__btn--primary" size="mini" @click="addGoods">＋ 添加新商品</button>
-        <button class="af__btn af__btn--outline" size="mini" @click="reuseGoods">从商品库添加</button>
-        <button class="af__btn af__btn--plain" size="mini" @click="reuseActivity">↺ 复用历史接龙</button>
-      </view>
-      <view class="af__hint">添加新商品＝现填一件；从商品库添加＝从你保存过的商品里挑几件；复用历史接龙＝整场照搬，含活动资料与全部商品</view>
-    </view>
-
     <!-- 本次接龙设置 -->
     <view class="af__block">
       <view class="af__block-title">本次接龙设置</view>
       <!-- 起止时间（D-087）：精确到分钟。已发布且已开始的活动，起始时间只读 -->
       <view class="af__set-row">
         <text class="af__set-k">起始时间</text>
-        <view v-if="startLocked" class="af__set-v">{{ startDate }} {{ startTime }}（已开始）</view>
+        <view v-if="startLocked" class="af__set-v">{{ slash(startDate) }} {{ startTime }}（已开始）</view>
         <view v-else class="af__dt">
-          <picker mode="date" :value="startDate" @change="onStartDate"><text class="af__set-v">{{ startDate }}</text></picker>
+          <picker mode="date" :value="startDate" :start="startDateMin" :end="startDateMax" @change="onStartDate"><text class="af__set-v">{{ slash(startDate) }}</text></picker>
           <picker mode="time" :value="startTime" @change="onStartTime"><text class="af__set-v af__dt-time">{{ startTime }} ›</text></picker>
         </view>
       </view>
       <view class="af__set-row">
         <text class="af__set-k">截止时间</text>
         <view class="af__dt">
-          <picker mode="date" :value="endDate" @change="onEndDate"><text class="af__set-v">{{ endDate || '选择日期' }}</text></picker>
+          <picker mode="date" :value="endDate" :start="endDateMin" :end="endDateMax" @change="onEndDate"><text class="af__set-v">{{ endDate ? slash(endDate) : '选择日期' }}</text></picker>
           <picker mode="time" :value="endTime" @change="onEndTime"><text class="af__set-v af__dt-time">{{ endTime }} ›</text></picker>
         </view>
       </view>
-      <view class="af__hint">起始时间默认现在；设在以后即为提前发布，开始前参与者能看到活动但不能下单。发布后未开始可改起始时间，开始后不可改。</view>
+      <view class="af__hint">起始时间默认现在，截止时间默认起始后 3 天；设在以后即为提前发布，开始前参与者能看到活动但不能下单。发布后未开始可改起始时间，开始后不可改。起始时间最多设在 7 天之内，截止时间距起始时间不超过 7 天。</view>
       <view class="af__set-row">
         <text class="af__set-k">交付方式（可多选）</text>
         <view class="af__radio-group">
@@ -112,7 +86,7 @@
         </view>
         <view class="af__set-row af__set-row--col">
           <text class="af__set-k">自提时间</text>
-          <input class="af__input" v-model="form.pickup_time_desc" placeholder="如「周六 9:00–18:00」" maxlength="100" />
+          <input class="af__input" v-model="form.pickup_time_desc" placeholder="如「周六 9:00–18:00」，不填表示时间不限" maxlength="100" />
         </view>
         <view class="af__set-row af__set-row--col">
           <text class="af__set-k">现场联系人</text>
@@ -126,10 +100,49 @@
       </block>
     </view>
 
+    <!-- 商品列表（放在设置下面，可能较长）：按小类竖式分段，带排序入口 -->
+    <view class="af__block">
+      <view class="af__block-head">
+        <text class="af__block-title">商品列表（{{ goods.length }}）</text>
+        <view class="af__block-ops">
+          <text v-if="draftId && goods.length > 1" class="af__link" @click="goSort">≡ 管理排序</text>
+          <text class="af__link" @click="goLibManage">管理商品库 ›</text>
+        </view>
+      </view>
+
+      <!-- 复制预填（D-091）：尚未生成活动 -->
+      <view v-if="copyMode" class="af__copy-tip">复制自「{{ copySourceTitle }}」。点「保存草稿」或「下一步」后才会生成新的活动；在此之前编辑商品也会先生成草稿。</view>
+      <view v-if="excludedGoods.length" class="af__pending-tip">以下 {{ excludedGoods.length }} 件商品因违规已被平台下架，不会复制：{{ excludedGoods.map((g) => g.name).join('、') }}</view>
+
+      <!-- 按小类竖式分段；未分类放最后；全部无小类则平铺不显示小标题 -->
+      <view v-for="grp in goodsGroups" :key="grp.key" class="goods-sec" :class="{ 'goods-sec--named': grp.name }">
+        <view v-if="grp.name" class="goods-sec__head" :class="{ 'goods-sec__head--none': grp.key === '__none__' }">{{ grp.name }}<text class="goods-sec__cnt">{{ grp.goods.length }} 件</text></view>
+        <view v-for="g in grp.goods" :key="g._id || g.name" class="goods-row">
+          <view class="goods-row__main">
+            <text class="goods-row__name">{{ g.name }}</text>
+            <text class="goods-row__meta">￥{{ fen2yuan(g.price) }} / {{ g.unit || '份' }} · 库存 {{ g.total_stock > 0 ? g.total_stock : '不限' }} · {{ g.per_user_limit > 0 ? '每人限 ' + g.per_user_limit : '不限购' }}</text>
+          </view>
+          <text class="goods-row__edit" @click="editGoods(g)">编辑</text>
+          <text class="goods-row__del" @click="removeGoods(g)">删除</text>
+        </view>
+      </view>
+
+      <view class="af__actions">
+        <!-- 按主次区分：新建为主操作，从商品库挑选为次操作，整场照搬为辅助操作 -->
+        <button class="af__btn af__btn--primary" @click="addGoods">＋ 添加新商品</button>
+        <button class="af__btn af__btn--outline" @click="reuseGoods">从商品库添加</button>
+      </view>
+      <view class="af__hint">添加新商品＝现填一件；从商品库添加＝从你保存过的商品里挑几件</view>
+    </view>
+
     <!-- tab 页底部有 fixed 的 go-tabbar，按钮栏不能再 fixed 贴底，否则被盖住；改为跟随内容排在末尾 -->
     <view class="af__footer" :class="{ 'af__footer--inline': withTabbar }">
-      <button class="af__save" size="default" :loading="saving" @click="saveDraft">保存草稿</button>
-      <button class="af__next" size="default" type="primary" :loading="publishing" @click="goPublish">下一步：确认发布</button>
+      <!-- 已发布的活动（审核中 / 进行中，D-120）：只保存修改；改标题、说明、图片、商品会重新审核，改截止时间、自提点不会 -->
+      <button v-if="published" class="af__next" size="default" type="primary" :loading="saving" @click="saveChanges">保存修改</button>
+      <block v-else>
+        <button class="af__save" size="default" :loading="saving" @click="saveDraft">保存草稿</button>
+        <button class="af__next" size="default" type="primary" :loading="publishing" @click="goPublish">下一步：确认发布</button>
+      </block>
     </view>
   </view>
 </template>
@@ -140,6 +153,8 @@ import { computed, ref } from 'vue';
 import api, { guarded, ensureLogin } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { fen2yuan } from '@/common/grouporder/dict.js';
+// @ts-ignore
+import { safeBack } from '@/common/grouporder/nav.js';
 // @ts-ignore
 import { toItem, pickImages, imageDir, uploadPending } from '@/common/grouporder/upload.js';
 
@@ -158,6 +173,24 @@ const cover = ref<any[]>([]);
 const images = ref<any[]>([]);
 const goods = ref<any[]>([]);
 const draftId = ref(props.activityId || '');
+
+// 商品按小类竖式分段：小类作小标题，未分类放最后；全部无小类则平铺不显示标题（与买家详情口径一致）
+const goodsGroups = computed(() => {
+  const list = goods.value || [];
+  const order: string[] = [];
+  const buckets: Record<string, any[]> = {};
+  const other: any[] = [];
+  for (const g of list) {
+    const name = String(g.category_name || '').trim();
+    if (!name) { other.push(g); continue; }
+    if (!buckets[name]) { buckets[name] = []; order.push(name); }
+    buckets[name].push(g);
+  }
+  if (!order.length) return [{ key: '__all__', name: '', goods: list }];
+  const groups = order.map((n) => ({ key: n, name: n, goods: buckets[n] }));
+  if (other.length) groups.push({ key: '__none__', name: '未分类', goods: other });
+  return groups;
+});
 // 活动创建日期，决定图片的云存储目录
 const createDate = ref<number>(0);
 // 建草稿幂等键（D-081）：每次新建意图生成一次，建草稿请求的重试复用同一个，reset 时换新
@@ -165,6 +198,8 @@ const newCreateKey = () => 'ac_' + Date.now() + '_' + Math.floor(Math.random() *
 let createKey = newCreateKey();
 const saving = ref(false);
 const publishing = ref(false);
+// 已发布（审核中 / 进行中）的活动：编辑页改为「保存修改」模式（D-120）
+const published = ref(false);
 
 // —— 复制预填（D-091）——
 const copySourceId = ref('');
@@ -174,9 +209,17 @@ const excludedGoods = ref<any[]>([]);
 const copyMode = computed(() => !!copySourceId.value && !draftId.value);
 // 时间戳 ↔ 选择器的「YYYY-MM-DD」「HH:mm」
 const pad2 = (n: number) => String(n).padStart(2, '0');
+// 选择器的值必须是 yyyy-mm-dd，显示统一用 yyyy/mm/dd（D-145）
+const slash = (d: string) => String(d || '').replace(/-/g, '/');
 const toDate = (ts: number) => { const d = new Date(ts); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
 const toTime = (ts: number) => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
 const toTs = (date: string, time: string) => new Date(`${date}T${time}:00`).getTime();
+
+// —— 起止时间窗口（D-135）：起始最多 7 天之内，截止距起始不超过 7 天；服务端同样校验 ——
+const WINDOW_MS = 7 * 24 * 3600 * 1000;
+const SLACK_MS = 60 * 1000;
+/** 计算用的起始时间：可编辑时取表单值，已开始（只读）时也取表单里回显的起始值，没有则按现在 */
+const effectiveStart = () => (startDate.value ? startTimestamp() : Date.now());
 
 // 起始时间（D-087）：新建默认当前时间
 const startDate = ref(toDate(Date.now()));
@@ -185,8 +228,19 @@ const startTime = ref(toTime(Date.now()));
 const sendStart = ref(true);
 // 已发布且已开始：起始时间只读
 const startLocked = ref(false);
-const endDate = ref('');
-const endTime = ref('18:00');
+// 截止时间：新建默认「起始时间 + 3 天」；团长没动过截止时间时，改起始会带着截止一起平移
+const DEFAULT_END_MS = 3 * 24 * 3600 * 1000;
+const initStart = Date.now();
+const endDate = ref(toDate(initStart + DEFAULT_END_MS));
+const endTime = ref(toTime(initStart + DEFAULT_END_MS));
+// 截止时间是否由团长或已有数据确定（加载已有活动 / 复制预填 / 手动选择）；为 false 时随起始时间联动
+const endTouched = ref(false);
+/** 按当前起始时间重算默认截止（起始 + 3 天） */
+const applyDefaultEnd = () => {
+  const end = effectiveStart() + DEFAULT_END_MS;
+  endDate.value = toDate(end);
+  endTime.value = toTime(end);
+};
 
 const hasDelivery = (t: number) => form.value.delivery_types.includes(t);
 const isSelfPick = computed(() => hasDelivery(2));
@@ -198,7 +252,7 @@ const missingForPublish = () => {
   if (!goods.value.length) return '请至少添加一个商品';
   if (isSelfPick.value && !form.value.pickup_address.trim()) return '请填写自提地址';
   if (sendStart.value && startTimestamp() >= endTimestamp()) return '起始时间必须早于截止时间';
-  return '';
+  return timeWindowError();
 };
 
 // —— 编辑模式：载入已有草稿 ——
@@ -216,9 +270,11 @@ const loadDraft = async () => {
   images.value = (data.images || []).map(toItem);
   createDate.value = data.create_date || 0;
   goods.value = data.goods || [];
+  published.value = (data.status === 1 || data.status === 2) && !!data.publish_date;
   if (data.end_time) {
     endDate.value = toDate(data.end_time);
     endTime.value = toTime(data.end_time);
+    endTouched.value = true;
   }
   if (data.start_time) {
     startDate.value = toDate(data.start_time);
@@ -233,9 +289,34 @@ const loadDraft = async () => {
 };
 
 const startTimestamp = () => toTs(startDate.value, startTime.value);
-const onStartDate = (e: any) => { startDate.value = e.detail.value; sendStart.value = true; };
-const onStartTime = (e: any) => { startTime.value = e.detail.value; sendStart.value = true; };
-const onEndTime = (e: any) => { endTime.value = e.detail.value; };
+// 改了起始时间后，截止时间若超出「起始 + 7 天」就自动收回到边界，并提示
+const clampEnd = () => {
+  if (!endDate.value) return;
+  const maxEnd = effectiveStart() + WINDOW_MS;
+  if (endTimestamp() > maxEnd + SLACK_MS) {
+    endDate.value = toDate(maxEnd);
+    endTime.value = toTime(maxEnd);
+    uni.showToast({ title: '截止时间已调整到起始后 7 天内', icon: 'none' });
+  }
+};
+const onStartDate = (e: any) => { startDate.value = e.detail.value; sendStart.value = true; endTouched.value ? clampEnd() : applyDefaultEnd(); };
+const onStartTime = (e: any) => { startTime.value = e.detail.value; sendStart.value = true; endTouched.value ? clampEnd() : applyDefaultEnd(); };
+// 日期选择器的可选范围
+const startDateMin = computed(() => toDate(Date.now()));
+const startDateMax = computed(() => toDate(Date.now() + WINDOW_MS));
+const endDateMin = computed(() => toDate(Math.max(Date.now(), effectiveStart())));
+const endDateMax = computed(() => toDate(effectiveStart() + WINDOW_MS));
+/** 时间窗口不满足时返回提示，否则空串 */
+const timeWindowError = () => {
+  const now = Date.now();
+  const s = effectiveStart();
+  if (sendStart.value && !startLocked.value && s - now > WINDOW_MS + SLACK_MS) return '起始时间最多只能设在 7 天之内';
+  // 已开始（只读）按实际起始算，与服务端改单口径一致；未发布的按「起始与现在取较晚者」，与提交审核口径一致
+  const base = startLocked.value ? s : Math.max(s, now);
+  if (endTimestamp() - base > WINDOW_MS + SLACK_MS) return '截止时间距起始时间不能超过 7 天';
+  return '';
+};
+const onEndTime = (e: any) => { endTime.value = e.detail.value; endTouched.value = true; };
 
 const endTimestamp = () => {
   if (!endDate.value) {
@@ -245,9 +326,13 @@ const endTimestamp = () => {
   return toTs(endDate.value, endTime.value);
 };
 
-const onEndDate = (e: any) => { endDate.value = e.detail.value; };
+const onEndDate = (e: any) => { endDate.value = e.detail.value; endTouched.value = true; };
 const toggleDelivery = (t: number) => {
-  // 编辑草稿阶段可改；发布后由服务端拒绝（D-060、D-086）
+  // 编辑草稿阶段可改；发布后锁定（D-060、D-086），服务端同样拒绝
+  if (published.value) {
+    uni.showToast({ title: '活动发布后不能修改交付方式', icon: 'none' });
+    return;
+  }
   const cur = form.value.delivery_types;
   if (cur.includes(t)) {
     if (cur.length === 1) {
@@ -340,10 +425,13 @@ const loadCopySource = async (srcId: string) => {
   const base = src.start_time || src.publish_date || src.create_date;
   let duration = (src.end_time || 0) - (base || 0);
   if (!(duration > 0)) duration = 3 * 24 * 3600 * 1000;
+  // 源活动时长超过 7 天的（D-135 之前创建）按 7 天预填，与服务端 activityCopy 一致
+  duration = Math.min(duration, WINDOW_MS);
   startDate.value = toDate(now);
   startTime.value = toTime(now);
   endDate.value = toDate(now + duration);
   endTime.value = toTime(now + duration);
+  endTouched.value = true;
   const all = src.goods || [];
   // 红线③：被平台下架的商品不复制，预先告知
   goods.value = all.filter((g: any) => g.governance_status !== 1);
@@ -367,10 +455,10 @@ const persist = async () => {
       // 要在写回请求之前关：小程序 loading 与 toast 共用一个层，晚关会把接口的错误提示一起关掉
       uni.hideLoading();
     }
-    await guarded(api.activity.activityUpdateDraft(Object.assign({ activity_id: id }, buildPayload(), {
+    lastSave = (await guarded(api.activity.activityUpdateDraft(Object.assign({ activity_id: id }, buildPayload(), {
       cover_image: cover.value.length ? cover.value[0].file : null,
       images: images.value.map((it) => it.file),
-    })));
+    })))) || null;
     return true;
   } catch (e) {
     /* 统一提示 */
@@ -378,7 +466,34 @@ const persist = async () => {
   }
 };
 
+let lastSave: any = null;
+
+/**
+ * 已发布活动保存修改（D-120）：服务端只认真正变化的字段。
+ * 改了标题 / 说明 / 图片会转入审核中，先告知再返回；只改截止时间、自提点等即时生效
+ */
+const saveChanges = async () => {
+  const miss = missingForPublish();
+  if (miss) { uni.showToast({ title: miss, icon: 'none' }); return; }
+  saving.value = true;
+  try {
+    if (!(await persist())) return;
+    const r = lastSave || {};
+    const back = () => safeBack('/pages/activity/manage?id=' + draftId.value);
+    if (r.need_recheck) {
+      uni.showModal({ title: '活动已转入审核中', content: '你修改了标题、说明或图片，需要重新审核；审核通过前参与者暂时不能下单。', showCancel: false, success: back });
+    } else {
+      uni.showToast({ title: r.unchanged ? '没有改动' : '已保存', icon: 'none' });
+      setTimeout(back, 600);
+    }
+  } finally {
+    saving.value = false;
+  }
+};
+
 const saveDraft = async () => {
+  const tw = timeWindowError();
+  if (tw) { uni.showToast({ title: tw, icon: 'none' }); return; }
   saving.value = true;
   try {
     if (await persist()) uni.showToast({ title: '草稿已保存', icon: 'none' });
@@ -388,12 +503,24 @@ const saveDraft = async () => {
 };
 
 // —— 图片：只记本地路径，不上传 ——
+// 手机上选图会打开系统相册，返回时 faqi 的 onShow 会再次触发；若不打标记，会被当成「从其他 tab 切入」
+// 而 reset() 清空已填的标题、说明。选图期间按「去子页」处理（同 toChild）。
+// 有的平台（如 H5）选图不隐藏页面、不会触发 onShow，标记会残留到下次真正切 tab，
+// 所以选完稍等再清一次（onShow 已消费过则无影响）。
+const pickKeepingForm = async (count: number) => {
+  leftForChild = true;
+  try {
+    return await pickImages(count);
+  } finally {
+    setTimeout(() => { leftForChild = false; }, 800);
+  }
+};
 const chooseCover = async () => {
-  const picked = await pickImages(1);
+  const picked = await pickKeepingForm(1);
   if (picked.length) cover.value = picked;
 };
 const chooseImages = async () => {
-  const picked = await pickImages(MAX_IMAGES - images.value.length);
+  const picked = await pickKeepingForm(MAX_IMAGES - images.value.length);
   images.value = images.value.concat(picked);
 };
 
@@ -421,6 +548,14 @@ const addGoods = async () => {
   if (!id) return;
   toChild({
     url: '/pages/activity/goods-edit?activity_id=' + id,
+    events: { saved: () => reloadGoods() },
+  });
+};
+// 管理排序：复用 goods-sort 页；只改本活动顺序，返回后刷新商品
+const goSort = () => {
+  if (!draftId.value) return;
+  toChild({
+    url: '/pages/activity/goods-sort?activity_id=' + draftId.value,
     events: { saved: () => reloadGoods() },
   });
 };
@@ -491,10 +626,12 @@ const reset = () => {
   createKey = newCreateKey();
   goods.value = [];
   draftId.value = '';
-  endDate.value = '';
-  endTime.value = '18:00';
-  startDate.value = toDate(Date.now());
-  startTime.value = toTime(Date.now());
+  const now = Date.now();
+  startDate.value = toDate(now);
+  startTime.value = toTime(now);
+  endDate.value = toDate(now + DEFAULT_END_MS);
+  endTime.value = toTime(now + DEFAULT_END_MS);
+  endTouched.value = false;
   sendStart.value = true;
   startLocked.value = false;
   copySourceId.value = '';
@@ -545,17 +682,29 @@ if (props.activityId) loadDraft();
 .af__block { background: #fff; border-radius: 16rpx; padding: 24rpx; margin-bottom: 16rpx; }
 .af__block-head { display: flex; align-items: center; justify-content: space-between; }
 .af__block-title { font-size: 28rpx; color: $go-ink; font-weight: 600; }
+.af__block-ops { display: flex; align-items: center; gap: 24rpx; }
 .af__link { font-size: 24rpx; color: $go-primary; }
+/* 小类小标题 */
+/* 小类分段：整条浅色标题栏 + 下面缩进的商品行，层次分明 */
+.goods-sec { margin-top: 16rpx; }
+.goods-sec__head { display: flex; align-items: center; padding: 14rpx 18rpx; border-radius: 12rpx; background: $go-primary-soft; color: $go-primary-dark; font-size: 25rpx; font-weight: 700; }
+.goods-sec__head::before { content: ''; width: 6rpx; height: 24rpx; background: $go-primary; border-radius: 4rpx; margin-right: 12rpx; }
+.goods-sec__head--none { background: $go-orange-soft; color: $go-orange-text; }
+.goods-sec__head--none::before { background: $go-orange; }
+.goods-sec__cnt { margin-left: auto; font-size: 22rpx; font-weight: 400; opacity: 0.75; }
 .goods-row { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid $go-soft; }
+.goods-row:last-child { border-bottom: 0; }
+/* 有小类标题时：商品行缩进 + 左侧细线，视觉上挂在小类标题下面 */
+.goods-sec--named .goods-row { padding: 20rpx 16rpx; margin-left: 18rpx; border-left: 2rpx solid $go-line; }
 .goods-row__main { flex: 1; min-width: 0; }
-.goods-row__name { font-size: 28rpx; color: $go-ink; }
-.goods-row__meta { display: block; font-size: 22rpx; color: $go-muted; margin-top: 4rpx; }
+.goods-row__name { font-size: 28rpx; color: $go-ink; font-weight: 500; }
+.goods-row__meta { display: block; font-size: 22rpx; color: $go-muted; margin-top: 6rpx; }
 .af__copy-tip { font-size: 22rpx; color: $go-primary-dark; background: $go-primary-soft; border-radius: 12rpx; padding: 14rpx 18rpx; margin-top: 16rpx; line-height: 1.6; }
 .af__pending-tip { font-size: 22rpx; color: $go-orange-text; background: $go-orange-soft; border-radius: 12rpx; padding: 14rpx 18rpx; margin-top: 16rpx; }
 .goods-row__edit { font-size: 24rpx; color: $go-primary; padding: 0 12rpx; }
 .goods-row__del { font-size: 24rpx; color: $go-red; padding: 0 4rpx; }
-.af__actions { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 20rpx; }
-.af__btn { margin: 0; font-size: 24rpx; color: $go-primary; background: $go-primary-soft; }
+.af__actions { display: flex; gap: 20rpx; margin-top: 24rpx; }
+.af__btn { flex: 1; margin: 0; height: 76rpx; line-height: 76rpx; border-radius: 16rpx; font-size: 26rpx; color: $go-primary; background: $go-primary-soft; }
 .af__btn::after { border: none; }
 .af__btn--primary { color: #fff; background: $go-primary; font-weight: 600; }
 .af__btn--outline { color: $go-primary-dark; background: #fff; border: 2rpx solid $go-primary; }

@@ -108,19 +108,23 @@ const go = (key: string) => {
   }
   &__center-btn {
     position: absolute;
-    top: -28rpx;
+    top: -43rpx;
     width: 96rpx;
     height: 96rpx;
+    box-sizing: border-box;
     border-radius: 50%;
-    background: $go-primary;
-    box-shadow: 0 6rpx 20rpx rgba($go-primary, 0.4);
+    // 渐变 + 白色外圈，比纯色更醒目，并从栏顶的边框线上跳出来
+    background: linear-gradient(135deg, #2bb673 0%, $go-primary-dark 100%);
+    border: 6rpx solid #fff;
+    box-shadow: 0 8rpx 24rpx rgba($go-primary, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
   }
   &__center-plus {
     color: #fff;
-    font-size: 52rpx;
+    font-size: 56rpx;
+    font-weight: bold;
     line-height: 1;
   }
   &__center-label {

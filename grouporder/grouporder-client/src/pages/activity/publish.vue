@@ -7,21 +7,33 @@
 <template>
   <go-result v-if="loadFailed" type="unknown" detail="页面加载失败，请检查网络后重试" @retry="load" />
   <view class="page" v-if="loaded">
-    <view class="mode-bar">预览模式 · 下面是参与者将看到的活动内容</view>
     <view class="banner" :class="{ 'banner--bad': act.review_result === 2 && act.status === 0 }" v-if="statusText">{{ statusText }}</view>
 
+    <!-- 两大块用醒目的分区标题隔开（D-136）：发布前检查（仅草稿）/ 用户预览 -->
     <!-- 发布前检查（仅草稿）：缺项标红并可去补；服务端 activitySubmitReview 会再校验一次 -->
+    <view v-if="act.status === 0" class="sec"><text class="sec__t">发布前检查</text><text class="sec__s">{{ allOk ? '可以提交' : `还有 ${failed.length} 项需要补充` }}</text></view>
     <view v-if="act.status === 0" class="check">
-      <view class="check__title">发布前检查</view>
-      <view v-for="c in checks" :key="c.key" class="check__row" :class="{ 'check__row--bad': !c.ok }" @click="!c.ok && fix(c)">
-        <text class="check__icon">{{ c.ok ? '✓' : '!' }}</text>
+      <!-- 只列未满足的项；全部满足时给一行肯定提示 -->
+      <view v-for="c in failed" :key="c.key" class="check__row check__row--bad" @click="fix(c)">
+        <text class="check__icon">!</text>
         <text class="check__text">{{ c.text }}</text>
-        <text v-if="!c.ok" class="check__go">去补充 ›</text>
+        <text class="check__go">去补充 ›</text>
+      </view>
+      <view v-if="allOk" class="check__row">
+        <text class="check__icon">✓</text>
+        <text class="check__text">资料已满足发布要求</text>
+      </view>
+      <!-- 团长名片（D-103 / D-109）：选填、不阻止提交；电话、微信都没填时提示（只有头像昵称仍联系不到）-->
+      <view v-if="!hasContactWay" class="check__row check__row--opt" @click="goContact">
+        <text class="check__icon">i</text>
+        <text class="check__text">团长名片未填联系电话或微信（选填），参与者有问题时联系不到你</text>
+        <text class="check__go">去设置 ›</text>
       </view>
     </view>
 
     <!-- 参与者视角预览：与 M-13 共用组件，所见即所得 -->
-    <go-activity-view :act="act" preview>
+    <view class="sec"><text class="sec__t">用户预览</text><text class="sec__s">参与者打开活动后看到的样子</text></view>
+    <go-activity-view :act="act" preview @open-goods="openGoods">
       <template #goods-ctrl>
         <text class="pv-tag">预览</text>
       </template>
@@ -43,7 +55,13 @@
         <view class="note">审核中，通过后可分享。图片检测不阻塞放行。</view>
       </template>
       <template v-else-if="act.status === 2">
-        <button v-if="canShare" class="btn btn--primary" type="primary" @click="openShare">分享给好友接龙</button>
+        <!-- 分享到微信与生成海报并列（D-112；海报仅 H5） -->
+        <view v-if="canShare" class="footer__row">
+          <button class="btn btn--primary" type="primary" @click="openShare">分享到微信</button>
+          <!-- #ifdef H5 -->
+          <button class="btn btn--ghost" @click="openPoster">生成海报</button>
+          <!-- #endif -->
+        </view>
         <view v-else class="note">活动已被平台下架，暂不能分享</view>
         <button class="btn" @click="goManage">去管理</button>
       </template>
@@ -57,11 +75,15 @@
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
+import { fmtDateTime } from '@/common/grouporder/activity-time.js';
 import { computed, ref } from 'vue';
 import GoResult from '@/components/go-result/go-result.vue';
 import { onLoad, onShow, onShareAppMessage } from '@dcloudio/uni-app';
 // @ts-ignore
 import { safeBack, backTo } from '@/common/grouporder/nav.js';
+// @ts-ignore
+import { openHallSub } from '@/common/grouporder/hall.js';
 // @ts-ignore
 import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
@@ -81,20 +103,25 @@ const checks = computed(() => {
   const a = act.value;
   const goods = a.goods || [];
   const now = Date.now();
-  const noCover = goods.find((g: any) => !(g.cover_image && g.cover_image.url));
-  const list = [
-    { key: 'cover', ok: !!(a.cover_image && a.cover_image.url), text: '活动封面图', fix: 'form' },
-    { key: 'goods', ok: goods.length > 0, text: '至少添加 1 个商品', fix: 'form' },
-    { key: 'goodsCover', ok: goods.length > 0 && !noCover, text: noCover ? `商品「${noCover.name}」缺少封面图` : '每个商品都有封面图', fix: 'goods', goodsId: noCover && noCover._id },
-    { key: 'end', ok: !!a.end_time && a.end_time > now, text: '截止时间晚于当前时间', fix: 'form' },
-    { key: 'start', ok: !a.start_time || a.start_time < a.end_time, text: '起始时间早于截止时间', fix: 'form' },
+  // text 是未满足时的说法（页面只列未满足项）；缺封面的商品逐件列出
+  const list: any[] = [
+    { key: 'cover', ok: !!(a.cover_image && a.cover_image.url), text: '缺少活动封面图', fix: 'form' },
+    { key: 'goods', ok: goods.length > 0, text: '还没有添加商品，至少需要 1 个', fix: 'form' },
   ];
+  goods.filter((g: any) => !(g.cover_image && g.cover_image.url)).forEach((g: any) => {
+    list.push({ key: 'goodsCover_' + g._id, ok: false, text: `商品「${g.name}」缺少封面图`, fix: 'goods', goodsId: g._id });
+  });
+  list.push(
+    { key: 'end', ok: !!a.end_time && a.end_time > now, text: '截止时间已过，需要晚于当前时间', fix: 'form' },
+    { key: 'start', ok: !a.start_time || a.start_time < a.end_time, text: '起始时间需要早于截止时间', fix: 'form' },
+  );
   if ((a.delivery_types || []).includes(2)) {
-    list.push({ key: 'pickup', ok: !!String(a.pickup_address || '').trim(), text: '已填写自提地址', fix: 'form' });
+    list.push({ key: 'pickup', ok: !!String(a.pickup_address || '').trim(), text: '支持自提，但还没填写自提地址', fix: 'form' });
   }
   return list;
 });
-const allOk = computed(() => checks.value.every((c) => c.ok));
+const failed = computed(() => checks.value.filter((c: any) => !c.ok));
+const allOk = computed(() => failed.value.length === 0);
 
 /** 去补缺项：商品封面进商品编辑；其余回活动表单（来自表单就直接返回，保留未保存内容） */
 const fix = (c: any) => {
@@ -109,6 +136,15 @@ const fix = (c: any) => {
   else uni.navigateTo({ url: '/pages/activity/edit?id=' + activityId.value });
 };
 
+// 团长联系方式是账号级设置（D-103），回到本页 onShow 重新加载后预览即带出
+const hasContactWay = computed(() => {
+  const c = act.value.leader_contact;
+  return !!(c && (c.mobile || c.wechat));
+});
+// 商品详情（M-37，D-146）：预览模式只看不选
+const openGoods = (g: any) => uni.navigateTo({ url: `/pages/activity/goods-detail?activity_id=${activityId.value}&goods_id=${g._id}&preview=1` });
+const goContact = () => uni.navigateTo({ url: '/pages/account/contact' });
+
 const statusText = computed(() => {
   if (act.value.status === 1) return '审核中';
   // 已通过但未到起始时间（D-087）
@@ -118,7 +154,8 @@ const statusText = computed(() => {
   return '';
 });
 
-const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+// 统一格式 yyyy/mm/dd hh:mm（D-145）
+const fmt = (ts: number) => fmtDateTime(ts);
 
 const loadInner = async () => {
   if (!activityId.value) return;
@@ -144,7 +181,8 @@ const submit = async () => {
   try {
     const r = (await guarded(api.activity.activitySubmitReview({ activity_id: activityId.value }))) || {};
     uni.showToast({ title: r.auto_passed ? '已自动通过' : '已提交审核', icon: 'none' });
-    await load();
+    // 提交成功后回到「接龙」tab 的「我发起的」列表，让团长看到刚发布的活动
+    setTimeout(() => openHallSub('lead'), 700);
   } catch (e) {} finally { busy.value = false; }
 };
 
@@ -181,6 +219,7 @@ const loadShareEntry = async () => {
 const shareSheet = ref<any>(null);
 const shareCard = ref<any>(null);
 const openShare = () => shareSheet.value && shareSheet.value.open({ _id: activityId.value });
+const openPoster = () => shareSheet.value && shareSheet.value.openPoster({ _id: activityId.value });
 const onShareReady = (c: any) => { shareCard.value = c; };
 
 onShareAppMessage(() => {
@@ -203,18 +242,22 @@ onShow(() => load());
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; padding-bottom: 220rpx; background: $go-canvas; }
-.mode-bar { font-size: 24rpx; color: $go-primary-dark; background: $go-primary-soft; padding: 18rpx 32rpx; }
+/* 顶部留内边距：否则第一个分区标题的上外边距会折叠到容器外，露出白底、看着贴着导航栏 */
+.page { min-height: 100vh; padding-top: 12rpx; padding-bottom: 220rpx; background: $go-canvas; box-sizing: border-box; }
 .banner { background: $go-orange-soft; color: $go-orange; font-size: 26rpx; padding: 20rpx 32rpx; }
 .banner--bad { background: $go-red-soft; color: $go-red; }
-.check { background: #fff; margin: 24rpx 32rpx; border-radius: 32rpx; padding: 24rpx 30rpx; border: 1rpx solid $go-line; }
-.check__title { font-size: 28rpx; font-weight: 600; color: $go-ink; margin-bottom: 8rpx; }
+.sec { display: flex; align-items: baseline; gap: 16rpx; margin: 32rpx 32rpx 16rpx; padding-left: 18rpx; border-left: 8rpx solid $go-primary; }
+.sec__t { font-size: 32rpx; font-weight: 700; color: $go-ink; line-height: 1.2; }
+.sec__s { font-size: 22rpx; color: $go-muted; }
+.check { background: #fff; margin: 0 32rpx 8rpx; border-radius: 32rpx; padding: 24rpx 30rpx; border: 1rpx solid $go-line; }
 .check__row { display: flex; align-items: center; padding: 14rpx 0; font-size: 26rpx; color: $go-text; }
 .check__icon { width: 36rpx; height: 36rpx; line-height: 36rpx; text-align: center; border-radius: 50%; font-size: 22rpx; margin-right: 16rpx; background: $go-primary-soft; color: $go-primary; }
 .check__row--bad .check__icon { background: $go-red-soft; color: $go-red; }
 .check__row--bad .check__text { color: $go-red; }
 .check__text { flex: 1; }
 .check__go { font-size: 24rpx; color: $go-primary; }
+.check__row--opt .check__icon { background: $go-tag-bg; color: $go-muted; }
+.check__row--opt .check__text { color: $go-muted; }
 .pv-tag { font-size: 20rpx; padding: 6rpx 16rpx; border-radius: 999rpx; background: $go-tag-bg; color: $go-tag-text; }
 .review-note { margin: 0 32rpx 24rpx; font-size: 22rpx; color: $go-muted; line-height: 1.6; }
 .footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $go-line; display: flex; flex-direction: column; gap: 12rpx; }
@@ -223,5 +266,7 @@ onShow(() => load());
 .footer__row .btn--primary { flex: 2; }
 .btn { margin: 0; font-size: 30rpx; background: $go-soft; color: $go-text; }
 .btn--primary { background: $go-primary; color: #fff; }
+.btn--ghost { background: #fff; color: $go-primary-dark; border: 2rpx solid $go-primary; }
+.btn--ghost::after { border: none; }
 .note { font-size: 22rpx; color: $go-muted; text-align: center; }
 </style>

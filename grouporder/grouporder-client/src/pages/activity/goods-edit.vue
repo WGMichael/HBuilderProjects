@@ -58,14 +58,20 @@
       <switch :checked="form.is_recommend === 1" @change="onRecommend" color="#168a55" />
     </view>
     <view class="tip tip--block">推荐只表现为角标与高亮，不改变排序位置（D-065）。</view>
-    <!-- 商品库分类（D-088）：保存时随沉淀写入商品库，活动商品本身不带分类，参与者看不到 -->
+    <!-- 分类（D-088 + D-066 修订）：选大类→小类；所选小类既用于商品库归类，也作为买家详情里的分组小标题 -->
     <view class="field field--row">
-      <text class="label">商品库分类</text>
-      <picker :range="libCatNames" :value="libCatIndex" @change="onLibCat">
-        <text class="picker-v">{{ libCatNames[libCatIndex] }} ›</text>
+      <text class="label">大类</text>
+      <picker :range="parentNames" :value="parentIdx" @change="onParent">
+        <text class="picker-v">{{ parentNames[parentIdx] }} ›</text>
       </picker>
     </view>
-    <view class="tip tip--block">只用于你在商品库里归类查找，参与者看不到。</view>
+    <view class="field field--row">
+      <text class="label">小类</text>
+      <picker :range="childNames" :value="childIdx" @change="onChild" :disabled="parentIdx === 0">
+        <text class="picker-v" :class="{ 'picker-v--dis': parentIdx === 0 }">{{ childNames[childIdx] }} ›</text>
+      </picker>
+    </view>
+    <view class="tip tip--block">所选小类会作为买家详情里的分组小标题；不选即「未分组」。</view>
 
     <view class="footer">
       <button class="save" type="primary" :loading="saving" :disabled="!valid" @click="save">保存</button>
@@ -103,24 +109,33 @@ const valid = computed(() => !!form.value.name.trim() && priceYuan.value !== '' 
 
 const onRecommend = (e: any) => { form.value.is_recommend = e.detail.value ? 1 : 0; };
 
-// —— 商品库分类（D-088）——
-// 第一项是「不指定」：新商品归入未分组、已有同名库商品保持原分类，避免默认值把已有归类冲掉
-const libCats = ref<any[]>([]);
-const libCatIndex = ref(0);
-const libCatOptions = computed(() => [
-  { id: undefined, name: goodsId.value ? '保持商品库原分类' : '未分组（默认）' },
-  ...(goodsId.value ? [{ id: '', name: '未分组' }] : []),
-  ...libCats.value.map((c: any) => ({ id: c._id, name: c.name })),
-]);
-const libCatNames = computed(() => libCatOptions.value.map((o) => o.name));
-const onLibCat = (e: any) => { libCatIndex.value = Number(e.detail.value); };
+// —— 分类（两级：大类→小类，D-088 + D-066 修订）——
+// parentIdx / childIdx 的 0 都表示「未选」；未选到小类即未分组
+const libTree = ref<any[]>([]); // 真实大类（含 children 小类），不含虚拟「未分类」
+const parentIdx = ref(0);
+const childIdx = ref(0);
+const parentNames = computed(() => ['未分组', ...libTree.value.map((p: any) => p.name)]);
+const curChildren = computed<any[]>(() => (parentIdx.value > 0 ? libTree.value[parentIdx.value - 1].children || [] : []));
+const childNames = computed(() => ['请选择小类', ...curChildren.value.map((c: any) => c.name)]);
+const onParent = (e: any) => { parentIdx.value = Number(e.detail.value); childIdx.value = 0; };
+const onChild = (e: any) => { childIdx.value = Number(e.detail.value); };
 const loadLibCats = async () => {
-  try { libCats.value = ((await api.goodsLib.categoryList()) || {}).list || []; } catch (e) { libCats.value = []; }
+  try { libTree.value = (((await api.goodsLib.categoryList()) || {}).tree || []).filter((p: any) => !p.is_virtual); } catch (e) { libTree.value = []; }
 };
-/** 选了具体分类才带 lib_category_id；「不指定」不带 */
+// 按已有商品的小类名回填两个选择器（best-effort：改名/删类匹配不到就落回未分组）
+const preselectCategory = (catName: string) => {
+  const n = String(catName || '').trim();
+  parentIdx.value = 0; childIdx.value = 0;
+  if (!n) return;
+  for (let i = 0; i < libTree.value.length; i++) {
+    const ci = (libTree.value[i].children || []).findIndex((c: any) => c.name === n);
+    if (ci >= 0) { parentIdx.value = i + 1; childIdx.value = ci + 1; return; }
+  }
+};
+/** 选到小类就带该小类 id，否则按未分组（''） */
 const libCatParam = () => {
-  const o = libCatOptions.value[libCatIndex.value];
-  return o && o.id !== undefined ? { lib_category_id: o.id } : {};
+  if (parentIdx.value > 0 && childIdx.value > 0) return { lib_category_id: curChildren.value[childIdx.value - 1]._id };
+  return { lib_category_id: '' };
 };
 
 // 编辑前的库存与限购：保存时比对，有变化才调 goodsAdjustStock
@@ -143,6 +158,7 @@ const load = async () => {
     priceYuan.value = fen2yuan(g.price);
     origStock = g.total_stock || 0;
     origLimit = g.per_user_limit || 0;
+    preselectCategory(g.category_name);
   }
 };
 
@@ -283,8 +299,8 @@ onLoad((q: any = {}) => {
   const pages = getCurrentPages();
   const cur: any = pages[pages.length - 1];
   if (cur && cur.getOpenerEventChannel) eventChannel = cur.getOpenerEventChannel();
-  load();
-  loadLibCats();
+  // 先载入分类树，load() 里才能按商品的小类名回填两个选择器
+  loadLibCats().then(() => load());
 });
 </script>
 
@@ -305,6 +321,7 @@ onLoad((q: any = {}) => {
 .tip { display: block; font-size: 22rpx; color: $go-muted; margin-top: 8rpx; }
 .tip--block { padding: 0 24rpx; }
 .picker-v { font-size: 28rpx; color: $go-ink; }
+.picker-v--dis { color: $go-placeholder; }
 .footer { position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid $go-line; }
 .save { margin: 0; font-size: 30rpx; }
 </style>

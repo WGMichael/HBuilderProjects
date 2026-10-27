@@ -12,7 +12,7 @@
     <go-result v-if="loadFailed" type="unknown" detail="页面加载失败，请检查网络后重试" @retry="load" />
     <block v-if="loaded">
       <!-- 活动内容：与 M-12 发布预览共用同一组件，团长预览所见即参与者所见 -->
-      <go-activity-view :act="act">
+      <go-activity-view :act="act" @open-goods="openGoods">
         <template #after-head>
           <!-- 不可接龙提示 -->
           <view v-if="!act.joinable" class="closed-bar">{{ closedReason }}</view>
@@ -44,6 +44,8 @@
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
+import { fmtDateTime } from '@/common/grouporder/activity-time.js';
 import { computed, ref } from 'vue';
 import GoResult from '@/components/go-result/go-result.vue';
 import { onLoad, onShow, onHide, onUnload, onShareAppMessage } from '@dcloudio/uni-app';
@@ -52,7 +54,7 @@ import { serverOffset, scheduleBoundary } from '@/common/grouporder/activity-tim
 // @ts-ignore
 import api, { guarded, ensureLogin, takeLoginIntent } from '@/common/grouporder/request.js';
 // @ts-ignore
-import { fen2yuan } from '@/common/grouporder/dict.js';
+import { fen2yuan, maxBuyQty } from '@/common/grouporder/dict.js';
 import GoActivityView from '@/components/go-activity-view/go-activity-view.vue';
 import GoShareSheet from '@/components/go-share-sheet/go-share-sheet.vue';
 
@@ -69,7 +71,7 @@ const qty = ref<Record<string, number>>({});
 const closedReason = computed(() => {
   // 未开始：能看不能下单（D-087）
   if (act.value.not_started) return `活动 ${fmt(act.value.start_time)} 开始，届时可下单`;
-  if (act.value.status === 3) return '活动已截止，不能再下单';
+  if (act.value.status === 3) return '活动已结束，不能再下单';
   if (act.value.status === 4) return '活动已被团长取消';
   if (act.value.governance_status === 1) return '活动已被平台下架';
   return '当前不可接龙';
@@ -80,13 +82,35 @@ const canBuy = (g: any) => act.value.joinable && g.on_sale === 1 && g.governance
 const estAmount = computed(() => (act.value.goods || []).reduce((s: number, g: any) => s + (qty.value[g._id] || 0) * (g.price || 0), 0));
 const totalQty = computed(() => Object.values(qty.value).reduce((s, n) => s + (n || 0), 0));
 
-const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+// 统一格式 yyyy/mm/dd hh:mm（D-145）
+const fmt = (ts: number) => fmtDateTime(ts);
 
 const inc = (g: any) => {
   const cur = qty.value[g._id] || 0;
-  if (!canBuy(g) && cur >= (ownQty.value[g._id] || 0)) { uni.showToast({ title: '该商品当前不可增加', icon: 'none' }); return; }
-  if (g.total_stock > 0 && cur >= g.remain_qty + (ownQty.value[g._id] || 0)) { uni.showToast({ title: '超过剩余量', icon: 'none' }); return; }
+  const own = ownQty.value[g._id] || 0;
+  if (!canBuy(g) && cur >= own) { uni.showToast({ title: '该商品当前不可增加', icon: 'none' }); return; }
+  // 超出库存或限购：数量改为最多可买的份数，并提示操作失败（服务端下单仍会校验）
+  const { max, reason } = maxBuyQty(g, own, (act.value.my_bought_qty || {})[g._id] || 0);
+  if (cur + 1 > max) {
+    qty.value = { ...qty.value, [g._id]: max };
+    const unit = g.unit || '份';
+    const why = reason === 'limit' ? `每人限购 ${g.per_user_limit} ${unit}` : '库存不足';
+    uni.showToast({ title: `操作失败：${why}，已改为最多可买的 ${max} ${unit}`, icon: 'none', duration: 2500 });
+    return;
+  }
   qty.value = { ...qty.value, [g._id]: cur + 1 };
+};
+// 商品详情（M-37，D-146）：带上当前已选数量，详情页里的加减实时回传
+const openGoods = (g: any) => {
+  uni.navigateTo({
+    url: `/pages/activity/goods-detail?activity_id=${activityId.value}&goods_id=${g._id}`,
+    events: {
+      qty: (d: any) => { if (d && d.goods_id) qty.value = { ...qty.value, [d.goods_id]: Math.max(0, d.qty || 0) }; },
+    },
+    success: (res: any) => {
+      res.eventChannel && res.eventChannel.emit('init', { qty: qty.value[g._id] || 0, own_qty: ownQty.value[g._id] || 0 });
+    },
+  });
 };
 const dec = (g: any) => {
   const cur = qty.value[g._id] || 0;
@@ -166,7 +190,7 @@ onLoad((q: any = {}) => {
   activityId.value = q.id || q.activity_id || '';
   orderId.value = q.order_id || '';
 });
-// 起止时间点：页面开着时到点刷新一次（未开始 → 可下单、进行中 → 已截止），隐藏即取消
+// 起止时间点：页面开着时到点刷新一次（未开始 → 可下单、进行中 → 已结束），隐藏即取消
 let cancelTick = () => {};
 const armTick = () => {
   cancelTick();

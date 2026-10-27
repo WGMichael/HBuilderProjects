@@ -18,7 +18,7 @@
       </view>
       <view class="field">
         <text class="field__k">自提时间</text>
-        <input class="field__v" v-model="form.pickup_time_desc" placeholder="如「周六 9:00–18:00」" maxlength="100" />
+        <input class="field__v" v-model="form.pickup_time_desc" placeholder="如「周六 9:00–18:00」，不填表示时间不限" maxlength="100" />
       </view>
       <view class="field">
         <text class="field__k">现场联系人</text>

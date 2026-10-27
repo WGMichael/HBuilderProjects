@@ -1,5 +1,5 @@
 <!--
-  M-24 清单预览与导出（团长，活动已截止后）
+  M-24 清单预览与导出（团长，活动已结束后）
 
   职责：商品汇总、参与者明细、Excel 生成和受控下载。
   D-071：下载时换取新的临时地址（有效期有限），页面不缓存 / 不复用历史地址。
@@ -28,6 +28,11 @@
           <text>{{ o.consignee_name }} {{ o.consignee_mobile }}</text>
           <text class="drow__qty">{{ o.qty }} 份 · ￥{{ fen2yuan(o.amount) }}</text>
         </view>
+        <!-- 团长记录（D-100）：Excel 里同样有两列，以生成时为准 -->
+        <view v-if="o.leader_paid || o.leader_delivered" class="drow__marks">
+          <text v-if="o.leader_paid" class="drow__mark">已收款</text>
+          <text v-if="o.leader_delivered" class="drow__mark">已取货</text>
+        </view>
         <view class="drow__items">{{ o.items.join('，') }}</view>
         <view v-if="o.consignee_address" class="drow__addr">{{ o.consignee_address }}</view>
       </view>
@@ -37,7 +42,7 @@
       <button class="btn" :loading="generating" @click="generate">生成清单</button>
       <button class="btn btn--primary" type="primary" :disabled="!fileVersion" :loading="downloading" @click="download">下载清单</button>
     </view>
-    <view class="note">下载时会重新校验权限并换取有效期有限的临时链接，页面不保存历史链接。</view>
+    <view class="note">下载时会重新校验权限并换取有效期有限的临时链接，页面不保存历史链接。清单里的收款 / 取货记录以生成时为准，记录有变化时请重新生成。</view>
   </view>
 </template>
 
@@ -61,7 +66,7 @@ const orderRows = computed(() => {
   const map = new Map<string, any>();
   for (const d of preview.value.detail || []) {
     if (!map.has(d.order_no)) {
-      map.set(d.order_no, { order_no: d.order_no, consignee_name: d.consignee_name, consignee_mobile: d.consignee_mobile, consignee_address: d.consignee_address, qty: 0, amount: 0, items: [] });
+      map.set(d.order_no, { order_no: d.order_no, consignee_name: d.consignee_name, consignee_mobile: d.consignee_mobile, consignee_address: d.consignee_address, leader_paid: d.leader_paid, leader_delivered: d.leader_delivered, qty: 0, amount: 0, items: [] });
     }
     const o = map.get(d.order_no);
     o.qty += d.qty || 0;
@@ -127,4 +132,6 @@ onShow(() => load());
 .btn { flex: 1; margin: 0; font-size: 30rpx; background: #fff; color: $go-text; }
 .btn--primary { background: $go-primary; color: #fff; }
 .note { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; font-size: 20rpx; color: $go-muted; padding: 12rpx; }
+.drow__marks { display: flex; gap: 12rpx; margin-top: 8rpx; }
+.drow__mark { font-size: 20rpx; color: $go-primary; background: $go-primary-soft; padding: 2rpx 12rpx; border-radius: 8rpx; }
 </style>

@@ -637,6 +637,9 @@ button { cursor: pointer; }
   /* ===== 分享弹窗效果图追加样式（其余全部沿用 v3） ===== */
   .phone-frame { position: relative; }
   .share-cta { display: block; width: calc(100% - 32px); margin: 14px 16px 0; padding: 13px 0; border: 0; border-radius: 14px; background: var(--green); color: #fff; font-size: 15px; font-weight: 700; box-shadow: 0 8px 18px rgba(22,138,85,.22); }
+  .share-row { display: flex; gap: 10px; margin: 14px 16px 0; }
+  .share-row .share-cta { flex: 1; width: auto; margin: 0; }
+  .share-cta.ghost { background: #fff; color: var(--green-dark); border: 1.5px solid var(--green); box-shadow: none; }
   .share-cta small { display: block; font-size: 10.5px; font-weight: 500; opacity: .85; margin-top: 3px; }
   .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 16px 0; }
   .stat-row .stat-card strong { font-size: 18px; }
@@ -692,7 +695,7 @@ button { cursor: pointer; }
 
   <section class="group">
     <h2>A · 活动管理页（M-20）的便捷分享按钮</h2>
-    <p>进行中且未被平台下架时，统计区下方出现醒目的绿色「分享给好友接龙」按钮；原功能列表里的同名一行移除，避免重复。草稿、审核中、已截止、已取消或已下架时不显示。</p>
+    <p>进行中且未被平台下架时，统计区下方出现醒目的绿色「分享给好友接龙」按钮；原功能列表里的同名一行移除，避免重复。草稿、审核中、已结束、已取消或已下架时不显示。</p>
     <div class="shots">
       <figure class="shot">
         <div class="phone-frame">
@@ -712,7 +715,7 @@ button { cursor: pointer; }
                 <div class="stat-card"><span>预计金额</span><strong>¥2,140</strong></div>
               </div>
               <div class="dlv-line"><span>送货上门 30 单 / 98 份</span><span>自提 12 单 / 38 份</span></div>
-              <button class="share-cta hl">分享给好友接龙<small>转发卡片给微信好友或群</small></button>
+              <div class="share-row hl"><button class="share-cta">分享到微信<small>转发给微信好友或群</small></button><button class="share-cta ghost">生成海报<small>保存图片发朋友圈</small></button></div>
               <div class="cells">
                 <div class="c">订单与统计<span>›</span></div>
                 <div class="c">商品管理<span>›</span></div>
@@ -726,7 +729,7 @@ button { cursor: pointer; }
           </section>
 
         </div>
-        <figcaption><b><span class="pill lg-new">新增</span>活动管理 · 进行中</b><small>橙色虚线框为新增按钮。点击打开 B 组分享弹窗。划线行为原列表项，本次移除。</small></figcaption>
+        <figcaption><b><span class="pill lg-new">新增</span>活动管理 · 进行中</b><small>橙色虚线框为新增按钮（D-112 起拆成两个并列按钮）：「分享到微信」打开 B 组分享弹窗；「生成海报」直接复核并出海报（H5，小程序待小程序码）。划线行为原列表项，本次移除。</small></figcaption>
       </figure>
       <figure class="shot">
         <div class="phone-frame">
@@ -746,7 +749,7 @@ button { cursor: pointer; }
                 <div class="stat-card"><span>预计金额</span><strong>¥2,140</strong></div>
               </div>
               <div class="dlv-line"><span>送货上门 30 单 / 98 份</span><span>自提 12 单 / 38 份</span></div>
-              <button class="share-cta">分享给好友接龙<small>转发卡片给微信好友或群</small></button>
+              <div class="share-row"><button class="share-cta">分享到微信<small>转发给微信好友或群</small></button><button class="share-cta ghost">生成海报<small>保存图片发朋友圈</small></button></div>
               <div class="cells">
                 <div class="c">订单与统计<span>›</span></div>
                 <div class="c">商品管理<span>›</span></div>
@@ -820,7 +823,7 @@ button { cursor: pointer; }
                 <div class="stat-card"><span>预计金额</span><strong>¥2,140</strong></div>
               </div>
               <div class="dlv-line"><span>送货上门 30 单 / 98 份</span><span>自提 12 单 / 38 份</span></div>
-              <button class="share-cta">分享给好友接龙<small>转发卡片给微信好友或群</small></button>
+              <div class="share-row"><button class="share-cta">分享到微信<small>转发给微信好友或群</small></button><button class="share-cta ghost">生成海报<small>保存图片发朋友圈</small></button></div>
               <div class="cells">
                 <div class="c">订单与统计<span>›</span></div>
                 <div class="c">商品管理<span>›</span></div>
@@ -864,7 +867,7 @@ button { cursor: pointer; }
                 <div class="stat-card"><span>预计金额</span><strong>¥2,140</strong></div>
               </div>
               <div class="dlv-line"><span>送货上门 30 单 / 98 份</span><span>自提 12 单 / 38 份</span></div>
-              <button class="share-cta">分享给好友接龙<small>转发卡片给微信好友或群</small></button>
+              <div class="share-row"><button class="share-cta">分享到微信<small>转发给微信好友或群</small></button><button class="share-cta ghost">生成海报<small>保存图片发朋友圈</small></button></div>
               <div class="cells">
                 <div class="c">订单与统计<span>›</span></div>
                 <div class="c">商品管理<span>›</span></div>
@@ -913,7 +916,7 @@ button { cursor: pointer; }
                 <div class="stat-card"><span>预计金额</span><strong>¥2,140</strong></div>
               </div>
               <div class="dlv-line"><span>送货上门 30 单 / 98 份</span><span>自提 12 单 / 38 份</span></div>
-              <button class="share-cta">分享给好友接龙<small>转发卡片给微信好友或群</small></button>
+              <div class="share-row"><button class="share-cta">分享到微信<small>转发给微信好友或群</small></button><button class="share-cta ghost">生成海报<small>保存图片发朋友圈</small></button></div>
               <div class="cells">
                 <div class="c">订单与统计<span>›</span></div>
                 <div class="c">商品管理<span>›</span></div>
@@ -963,7 +966,7 @@ button { cursor: pointer; }
                 <div class="stat-card"><span>预计金额</span><strong>¥2,140</strong></div>
               </div>
               <div class="dlv-line"><span>送货上门 30 单 / 98 份</span><span>自提 12 单 / 38 份</span></div>
-              <button class="share-cta">分享给好友接龙<small>转发卡片给微信好友或群</small></button>
+              <div class="share-row"><button class="share-cta">分享到微信<small>转发给微信好友或群</small></button><button class="share-cta ghost">生成海报<small>保存图片发朋友圈</small></button></div>
               <div class="cells">
                 <div class="c">订单与统计<span>›</span></div>
                 <div class="c">商品管理<span>›</span></div>
@@ -1012,7 +1015,7 @@ button { cursor: pointer; }
                 <div class="stat-card"><span>预计金额</span><strong>¥2,140</strong></div>
               </div>
               <div class="dlv-line"><span>送货上门 30 单 / 98 份</span><span>自提 12 单 / 38 份</span></div>
-              <button class="share-cta">分享给好友接龙<small>转发卡片给微信好友或群</small></button>
+              <div class="share-row"><button class="share-cta">分享到微信<small>转发给微信好友或群</small></button><button class="share-cta ghost">生成海报<small>保存图片发朋友圈</small></button></div>
               <div class="cells">
                 <div class="c">订单与统计<span>›</span></div>
                 <div class="c">商品管理<span>›</span></div>
@@ -1036,7 +1039,7 @@ button { cursor: pointer; }
             </div>
           </div>
         </div>
-        <figcaption><b><span class="pill lg-upd">分支</span>弹窗 · 复核未通过</b><small>活动已下架 / 已截止 / 已取消时不给转发，说明原因；文案随服务端返回的原因变化。</small></figcaption>
+        <figcaption><b><span class="pill lg-upd">分支</span>弹窗 · 复核未通过</b><small>活动已下架 / 已结束 / 已取消时不给转发，说明原因；文案随服务端返回的原因变化。</small></figcaption>
       </figure>
     </div>
   </section>

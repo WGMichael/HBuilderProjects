@@ -14,5 +14,25 @@
       ],
       "MgoIsUnique": false
     }
+  },
+  {
+    "IndexName": "user_parent_sort",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "user_id",
+          "Direction": "1"
+        },
+        {
+          "Name": "parent_id",
+          "Direction": "1"
+        },
+        {
+          "Name": "sort",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
   }
 ]

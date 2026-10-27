@@ -141,7 +141,7 @@ function assertGoodsSelectable (goods) {
   }
 }
 
-/** 活动是否已到达终态（已截止 / 已取消） */
+/** 活动是否已到达终态（已结束 / 已取消） */
 function isActivityFinal (activity) {
   return activity.status === ACTIVITY.CLOSED || activity.status === ACTIVITY.CANCELLED
 }
@@ -156,7 +156,7 @@ function goodsCapability (goods, activity, now) {
   return {
     // 产生过有效明细即永久禁止删除（D-026），sold_qty 回落到 0 也不放开
     canDelete: !everOrdered,
-    // 活动已截止或已取消时禁止恢复售卖（D-028）
+    // 活动已结束或已取消时禁止恢复售卖（D-028）
     canRestoreOnSale: !finalState && activity.status === ACTIVITY.ONGOING,
     // 有限库存不得低于已购买份数
     minStock: goods.sold_qty || 0

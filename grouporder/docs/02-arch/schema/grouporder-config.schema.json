@@ -18,14 +18,14 @@
     "config_key": {
       "bsonType": "string",
       "title": "配置键",
-      "description": "全局唯一。首版仅 review_mode（D-057）",
+      "description": "全局唯一。review_mode（D-057）；member_gate（D-106，会员功能闸门）",
       "minLength": 1,
       "maxLength": 50
     },
     "config_value": {
       "bsonType": "object",
       "title": "配置值",
-      "description": "如 review_mode 的值为 { \"mode\": 1 }，1自动审核 2人工审核"
+      "description": "如 review_mode 的值为 { \"mode\": 1 }，1自动审核 2人工审核；member_gate 的值为 { \"leader_stats\": false }，某功能为 true 时只对会员开放，缺省或 false 对所有人开放"
     },
     "description": {
       "bsonType": "string",

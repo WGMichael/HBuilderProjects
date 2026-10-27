@@ -9,7 +9,10 @@
     <view class="ok">
       <view class="ok__icon">✓</view>
       <view class="ok__title">下单成功</view>
-      <view class="ok__no" v-if="order.order_no">订单号 {{ order.order_no }}</view>
+      <!-- 接龙码（D-115）：取货、付款时报给团长 -->
+      <view class="ok__code" v-if="order.order_code">接龙码 <text class="ok__code-v">{{ order.order_code }}</text></view>
+      <view class="ok__no" v-if="order.order_code">取货、付款时把接龙码报给团长</view>
+      <view class="ok__no" v-else-if="order.order_no">订单号 {{ order.order_no }}</view>
     </view>
 
     <view class="card" v-if="order._id">
@@ -77,4 +80,6 @@ onShow(() => load());
 .actions { margin-top: 32rpx; display: flex; flex-direction: column; gap: 16rpx; }
 .btn { margin: 0; font-size: 30rpx; background: #fff; color: $go-text; }
 .btn--primary { background: $go-primary; color: #fff; }
+.ok__code { font-size: 26rpx; color: $go-text; margin-top: 16rpx; }
+.ok__code-v { font-size: 48rpx; font-weight: 700; color: $go-primary-dark; letter-spacing: 8rpx; margin-left: 8rpx; }
 </style>

@@ -11,6 +11,13 @@
   <view class="page" v-if="loaded">
     <view class="status-bar" :class="'st' + order.status">{{ labelOf(ORDER_STATUS, order.status) }}</view>
 
+    <!-- 接龙码（D-115）：取货、付款时报给团长，团长按码搜索核销 -->
+    <view v-if="order.order_code" class="code-card">
+      <text class="code-card__l">接龙码</text>
+      <text class="code-card__v">{{ order.order_code }}</text>
+      <text class="code-card__h">取货、付款时报给团长</text>
+    </view>
+
     <view class="card">
       <view class="card__title">{{ (order.activity && order.activity.title) || '' }}</view>
       <view class="line" v-for="it in order.items || []" :key="it.goods_id">
@@ -18,6 +25,12 @@
         <text class="line__amt">￥{{ fen2yuan(it.amount) }}</text>
       </view>
       <view class="total">预计合计 <text class="total__amt">￥{{ fen2yuan(order.total_amount) }}</text></view>
+      <!-- 团长记录（D-100）：只读；平台不收款，这里只反映团长自己的登记 -->
+      <view class="marks" v-if="order.leader_paid || order.leader_delivered">
+        <text class="marks__l">团长已记录：</text>
+        <text v-if="order.leader_paid" class="marks__t">已收款</text>
+        <text v-if="order.leader_delivered" class="marks__t">已取货</text>
+      </view>
     </view>
 
     <view class="card">
@@ -37,6 +50,9 @@
       :contact-name="order.pickup.contact_name"
       :contact-mobile="order.pickup.contact_mobile"
     />
+
+    <!-- 团长名片（D-103 / D-109）：付款、问交付时找团长 -->
+    <go-leader-contact :contact="order.leader_contact" variant="order" />
 
     <view class="card" v-if="order.cancel_reason || order.void_reason">
       <view class="kv" v-if="order.cancel_reason">取消原因：{{ order.cancel_reason }}</view>
@@ -59,6 +75,7 @@ import api, { guarded } from '@/common/grouporder/request.js';
 // @ts-ignore
 import { ORDER_STATUS, DELIVERY_TYPE, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
 import GoPickup from '@/components/go-pickup/go-pickup.vue';
+import GoLeaderContact from '@/components/go-leader-contact/go-leader-contact.vue';
 
 const orderId = ref('');
 const order = ref<any>({});
@@ -89,14 +106,15 @@ const edit = () => {
 
 const cancel = () => {
   uni.showModal({
-    title: '取消订单',
-    content: '取消后本单不再计入有效份数，确认取消？',
+    // editable 确认框会把 content 预填进输入框，说明放标题，输入框留空（D-113）
+    title: '确认取消这张订单？',
+    content: '',
     editable: true,
     placeholderText: '取消原因（选填）',
     success: async (r: any) => {
       if (!r.confirm) return;
       try {
-        await guarded(api.order.orderCancel({ order_id: orderId.value, reason: r.content || '' }));
+        await guarded(api.order.orderCancel({ order_id: orderId.value, reason: String(r.content || '').trim() }));
         uni.showToast({ title: '已取消', icon: 'none' });
         load();
       } catch (e) {}
@@ -123,4 +141,10 @@ onShow(() => load());
 .actions { display: flex; gap: 16rpx; margin-top: 8rpx; }
 .btn { flex: 1; margin: 0; font-size: 28rpx; background: #fff; color: $go-text; }
 .btn--warn { color: $go-red; }
+.marks { display: flex; align-items: center; gap: 12rpx; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid $go-soft; font-size: 24rpx; color: $go-muted; }
+.marks__t { font-size: 22rpx; color: $go-primary; background: $go-primary-soft; padding: 2rpx 14rpx; border-radius: 8rpx; }
+.code-card { display: flex; align-items: baseline; gap: 16rpx; margin: 20rpx 20rpx 0; padding: 24rpx 28rpx; background: #fff; border-radius: 16rpx; }
+.code-card__l { font-size: 24rpx; color: $go-muted; }
+.code-card__v { font-size: 44rpx; font-weight: 700; color: $go-primary-dark; letter-spacing: 8rpx; }
+.code-card__h { margin-left: auto; font-size: 22rpx; color: $go-muted; }
 </style>

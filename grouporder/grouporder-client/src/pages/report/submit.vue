@@ -42,6 +42,8 @@
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
+import { fmtDateTime } from '@/common/grouporder/activity-time.js';
 import { computed, ref } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 // @ts-ignore
@@ -58,7 +60,8 @@ const myReports = ref<any[]>([]);
 
 const reasonNames = REPORT_REASON_OPTIONS.map((o) => o.text);
 const valid = computed(() => reasonIndex.value >= 0 && !!desc.value.trim() && !!activityId.value);
-const fmt = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+// 统一格式 yyyy/mm/dd hh:mm（D-145）
+const fmt = (ts: number) => fmtDateTime(ts);
 
 const onReason = (e: any) => { reasonIndex.value = Number(e.detail.value); };
 

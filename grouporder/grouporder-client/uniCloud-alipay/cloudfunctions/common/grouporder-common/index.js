@@ -34,5 +34,8 @@ module.exports = {
   review: require('./review'),
   files: require('./files'),
   deliverystat: require('./deliverystat'),
-  lifecycle: require('./lifecycle')
+  lifecycle: require('./lifecycle'),
+  leadercontact: require('./leadercontact'),
+  membership: require('./membership'),
+  fileurl: require('./fileurl')
 }

@@ -52,7 +52,7 @@
 					},
 					{
 						url:privacyUrl,
-						title:"隐私政策条款"
+						title:"隐私政策"
 					}
 				]
 			}
@@ -95,6 +95,11 @@
 				url,
 				title
 			}) {
+				// 群接龙：本项目协议是原生页面（D-099），以 / 开头的地址直接打开，不走 webview
+				if (url && url.charAt(0) === '/') {
+					uni.navigateTo({ url })
+					return
+				}
 				uni.navigateTo({
 					url: '/uni_modules/uni-id-pages/pages/common/webview/webview?url=' + url + '&title=' + title,
 					success: res => {},

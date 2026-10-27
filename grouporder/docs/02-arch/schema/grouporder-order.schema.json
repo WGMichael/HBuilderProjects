@@ -29,6 +29,13 @@
       "minLength": 1,
       "maxLength": 32
     },
+    "order_code": {
+      "bsonType": "string",
+      "title": "接龙码",
+      "description": "D-115：同一活动内唯一的 4 位数字（1000～9999，随机），取货时参与者报码、团长按码搜索核销。下单落库后立即分配；D-115 之前的老订单在任何人查看时补发。不建唯一索引（老订单缺失该字段），由服务端写前查重、写后复核保证唯一",
+      "minLength": 4,
+      "maxLength": 4
+    },
     "idempotent_key": {
       "bsonType": "string",
       "title": "幂等键",
@@ -188,6 +195,42 @@
           "text": "是"
         }
       ]
+    },
+    "leader_paid": {
+      "bsonType": "int",
+      "title": "团长记录·已收款",
+      "description": "团长自己的线下收款记录（D-100）：0/缺失 未标记 1 已收款。平台不收款、不核实，不影响库存、限购、统计口径与清单版本；仅团长可改、参与者只读。只统计单数，不汇总已收金额（红线⑧）",
+      "defaultValue": 0,
+      "enum": [
+        { "value": 0, "text": "未标记" },
+        { "value": 1, "text": "已收款" }
+      ]
+    },
+    "leader_paid_time": {
+      "bsonType": "timestamp",
+      "title": "收款记录时间",
+      "description": "团长标记已收款的时间；撤销标记时置 0"
+    },
+    "leader_paid_amount": {
+      "bsonType": "int",
+      "title": "标记收款时的金额",
+      "description": "单位为分。标记收款时本单 total_amount 的快照；之后参与者改单使金额不同时，团长端提示核对。撤销时置 0",
+      "minimum": 0
+    },
+    "leader_delivered": {
+      "bsonType": "int",
+      "title": "团长记录·已交付",
+      "description": "团长自己的交付记录（D-100）：0/缺失 未标记 1 已交付（送达或已自提）。规则同 leader_paid",
+      "defaultValue": 0,
+      "enum": [
+        { "value": 0, "text": "未标记" },
+        { "value": 1, "text": "已交付" }
+      ]
+    },
+    "leader_delivered_time": {
+      "bsonType": "timestamp",
+      "title": "交付记录时间",
+      "description": "团长标记已交付的时间；撤销标记时置 0"
     },
     "editing_until": {
       "bsonType": "timestamp",

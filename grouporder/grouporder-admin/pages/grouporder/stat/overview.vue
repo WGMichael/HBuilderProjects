@@ -119,7 +119,7 @@
   const STATUS_COUNT_FIELDS = [
     { key: 'reviewing_count', text: '审核中' },
     { key: 'ongoing_count', text: '进行中' },
-    { key: 'closed_count', text: '已截止' },
+    { key: 'closed_count', text: '已结束' },
     { key: 'cancelled_count', text: '已取消' },
   ];
 

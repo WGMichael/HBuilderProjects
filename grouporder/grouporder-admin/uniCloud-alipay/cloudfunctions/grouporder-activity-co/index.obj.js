@@ -8,17 +8,28 @@
  */
 const {
   auth, errors, paging, idempotent, state,
-  snapshot, goodslib, config, contentcheck, restriction, review, oplog, files, deliverystat, lifecycle, bindMethods
+  snapshot, goodslib, config, contentcheck, restriction, review, oplog, files, deliverystat, lifecycle, leadercontact, bindMethods
 } = require('grouporder-common')
+const { fileurl } = require('grouporder-common')
+const crypto = require('crypto')
 
 const { throwBiz, assertParam, ok } = errors
-const { ACTIVITY, GOVERNANCE, REVIEW_RESULT, END_TYPE, DELIVERY, REVIEW_MODE } = state
+const { ACTIVITY, GOVERNANCE, REVIEW_RESULT, END_TYPE, DELIVERY, REVIEW_MODE, ORDER } = state
 
 // 容量约束（D-024）
+// 起止时间窗口（D-135）：起始时间最多设在 7 天之内；截止时间距起始时间不超过 7 天。
+// 表单精确到分钟，留 1 分钟余量，避免卡在边界上的整点被误判
+const TIME_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+const TIME_WINDOW_SLACK_MS = 60 * 1000
 const MAX_GOODS_PER_ACTIVITY = 50
 // 每活动推荐上限（D-065），服务端校验，只做前端限制不够
 const MAX_RECOMMEND_PER_ACTIVITY = 5
 const MAX_IMAGES = 9
+
+// 海报封面代下载的大小上限（D-117）：dataURL 会再大三分之一，控制在云函数响应限制以内
+const POSTER_COVER_MAX = 3 * 1024 * 1024
+// 每个账号每天按活动码查找「没查到」的次数上限（D-104，防枚举；查到的不计数）
+const CODE_MISS_DAILY_LIMIT = 50
 
 module.exports = {
   async _before () {
@@ -28,10 +39,11 @@ module.exports = {
     this.dbCmd = this.ctx.db.command
   },
 
-  _after (error, result) {
+  async _after (error, result) {
     // 使用中自动续期登录（auth.attachNewToken）
     if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
-    return auth.attachNewToken(this.ctx, result)
+    // 图片地址以 fileID 为准换成新的访问地址（D-119，common/fileurl）
+    return auth.attachNewToken(this.ctx, await fileurl.refresh(result))
   },
 
   // ==========================================================================
@@ -64,7 +76,7 @@ module.exports = {
   async _assertEditable (activity) {
     if (!review.canEditContent(activity, this.ctx.now)) {
       if (activity.status === ACTIVITY.CANCELLED) throwBiz('ACTIVITY_CANCELLED')
-      throwBiz('ACTIVITY_CLOSED', '活动已截止，不能再修改内容')
+      throwBiz('ACTIVITY_CLOSED', '活动已结束，不能再修改内容')
     }
     if (activity.governance_status === GOVERNANCE.OFF) {
       throwBiz('ACTIVITY_OFFLINE', '活动已被平台下架，不能修改内容')
@@ -119,6 +131,17 @@ module.exports = {
     const types = state.normalizeDeliveryTypes(raw)
     assertParam(types, '请至少选择一种交付方式（送货上门 / 自提）')
     return types
+  },
+
+  /**
+   * 起止时间窗口校验（D-135）。start 为 0 / 缺失时按当前时间算（发布即开始）。
+   * checkAhead：是否校验「起始时间距现在不超过 7 天」——只在起始时间本次被设置 / 提交审核时校验，
+   * 已开始的活动起始时间早于现在，不受影响
+   */
+  _assertTimeWindow (start, end, now, checkAhead = true) {
+    const s = start || now
+    if (checkAhead) assertParam(s - now <= TIME_WINDOW_MS + TIME_WINDOW_SLACK_MS, '起始时间最多只能设在 7 天之内')
+    assertParam(end - s <= TIME_WINDOW_MS + TIME_WINDOW_SLACK_MS, '截止时间距起始时间不能超过 7 天')
   },
 
   /**
@@ -202,6 +225,7 @@ module.exports = {
     // 起始时间（D-087）：默认当前时间；草稿阶段允许早于当前（发布时已过即视为立即开始）
     const startTime = this._startTimeParam(params.start_time, ctx.now)
     assertParam(startTime < params.end_time, '起始时间必须早于截止时间')
+    this._assertTimeWindow(startTime, params.end_time, ctx.now)
 
     return this._createActivityOnce(params.idempotent_key, uid, async () => {
       const shortCode = await idempotent.allocShortCode(ctx)
@@ -269,8 +293,11 @@ module.exports = {
     }
     if (params.end_time !== undefined) {
       assertParam(Number.isFinite(params.end_time), '截止时间格式不正确')
-      assertParam(params.end_time > ctx.now, '截止时间必须晚于当前时间')
-      patch.end_time = params.end_time
+      // 表单只精确到分钟：同一分钟视为未改（D-120），整表保存时不误判、也不因已临近截止而报错
+      if (Math.floor(params.end_time / 60000) !== Math.floor((activity.end_time || 0) / 60000)) {
+        assertParam(params.end_time > ctx.now, '截止时间必须晚于当前时间')
+        patch.end_time = params.end_time
+      }
     }
     // 起始时间（D-087）。表单只精确到分钟，按分钟比较才算真正改动，避免整表保存时误判
     if (params.start_time !== undefined) {
@@ -289,6 +316,8 @@ module.exports = {
       const nextS = patch.start_time !== undefined ? patch.start_time : state.startTimeOf(activity)
       const nextE = patch.end_time !== undefined ? patch.end_time : activity.end_time
       assertParam(!nextS || nextS < nextE, '起始时间必须早于截止时间')
+      // 没有起始时间的老活动按发布时间算（发布即开始）；起始时间本次改了才校验「7 天之内」
+      this._assertTimeWindow(nextS || activity.publish_date || ctx.now, nextE, ctx.now, patch.start_time !== undefined)
     }
     const currentTypes = state.deliveryTypesOf(activity)
     const wantTypes = this._deliveryTypesParam(params)
@@ -303,7 +332,25 @@ module.exports = {
     const nextTypes = patch.delivery_types || currentTypes
     Object.assign(patch, this._pickPickup(params, nextTypes.includes(DELIVERY.SELF_PICK), patch.delivery_types === undefined))
 
-    assertParam(Object.keys(patch).length > 0, '没有需要修改的内容')
+    // 只保留真正变化的字段（D-120）：编辑页整表提交，若按「带了哪些字段」判断，团长只延长截止时间或改自提点
+    // 也会因为带着标题、封面而被当成内容改动、打回审核中。图片按 fileID 比较（地址会刷新，D-119），其余按值比较
+    const sameFiles = (a, b) => files.fileIdsOf(a).join('|') === files.fileIdsOf(b).join('|')
+    for (const k of Object.keys(patch)) {
+      if (k === 'cover_image' || k === 'images') {
+        if (sameFiles(patch[k], activity[k] || (k === 'images' ? [] : null))) delete patch[k]
+        continue
+      }
+      const prev = activity[k] === undefined || activity[k] === null ? '' : activity[k]
+      const next = patch[k] === undefined || patch[k] === null ? '' : patch[k]
+      if (Array.isArray(prev) || Array.isArray(next)) {
+        if (JSON.stringify(prev) === JSON.stringify(next)) delete patch[k]
+      } else if (prev === next) {
+        delete patch[k]
+      }
+    }
+    if (!Object.keys(patch).length) {
+      return ok({ activity_id: activity._id, need_recheck: false, status: activity.status, unchanged: true })
+    }
     await this.db.collection('grouporder-activity').doc(activity._id).update(files.toDbPatch(ctx, patch))
 
     // 换下来的封面 / 轮播图，无人引用时从云存储删除
@@ -330,7 +377,7 @@ module.exports = {
    * 不触发重新审核】（类比价格与库存调整 D-048），不受 _assertEditable
    * 那套「内容改动」限制。交付方式集合的「发布后锁死」与此无关，不受影响。
    *
-   * 已截止的活动仍可改：截止后参与者正要去取货，地址写错了更需要纠正。
+   * 已结束的活动仍可改：截止后参与者正要去取货，地址写错了更需要纠正。
    * 已取消的活动没有履约可言，拒绝。
    */
   async activityUpdatePickup (params = {}) {
@@ -391,6 +438,8 @@ module.exports = {
     if (activity.governance_status === GOVERNANCE.OFF) throwBiz('ACTIVITY_OFFLINE')
     assertParam(activity.end_time > ctx.now, '截止时间已过，请先修改截止时间')
     assertParam(state.startTimeOf(activity) < activity.end_time, '起始时间必须早于截止时间')
+    // 草稿可能存了很久：提交时按当下再校验一次时间窗口（D-135）；起始时间已过的按现在算
+    this._assertTimeWindow(Math.max(state.startTimeOf(activity), ctx.now), activity.end_time, ctx.now)
 
     // 资料齐全性统一在发布时检查，编辑过程中不拦（D-041）
     assertParam(files.fileIdsOf(activity.cover_image).length > 0, '请先上传活动封面图')
@@ -472,7 +521,8 @@ module.exports = {
     // 空间仅 32^4 ≈ 105 万，而本方法走 optionalLogin——未登录即可查，
     // 两者叠加等于允许脚本遍历短码批量拉取全平台进行中活动的标题、商品、
     // 价格与自提点真实地址（D-077），变相公开了活动列表，与 D-059 相悖。
-    // short_code 保留原用途：订单号拼装与口头引用，不再作为查询入口。
+    // 本方法仍只认 activity_id。按活动码查找由 D-104 另设 activityFindByCode：
+    // 须登录、每日限次、新活动码 6 位，且只回 activity_id，打开后仍经本方法的可见性校验。
     assertParam(params.activity_id, '缺少活动标识')
     const activity = await this._getActivity(params.activity_id)
     // 读时补截止：已过截止时间而定时任务还没扫到的，当场按同一口径截止（common/lifecycle）
@@ -529,6 +579,7 @@ module.exports = {
         on_sale: g.on_sale,
         governance_status: g.governance_status,
         is_recommend: g.is_recommend || 0,
+        category_name: g.category_name || '', // 展示小类（买家详情按它分组）
         sort: g.sort || 0,
         // 剩余量不落库，仅按需计算；total_stock = 0 表示不限
         remain_qty: g.total_stock > 0 ? Math.max(0, g.total_stock - (g.sold_qty || 0)) : null
@@ -539,6 +590,23 @@ module.exports = {
         activity.governance_status === GOVERNANCE.NORMAL &&
         ctx.now >= state.startTimeOf(activity) &&
         ctx.now < activity.end_time
+    }
+
+    // 团长联系方式（D-103）：账号级，对能看到本活动的人公开；被平台下架的活动不再向访问者展示，
+    // 避免下架后仍借联系方式私下成交（团长本人始终可见，便于在预览里核对）
+    base.leader_contact = (isLeader || activity.governance_status !== GOVERNANCE.OFF)
+      ? await leadercontact.get(ctx, activity.leader_uid)
+      : null
+
+    // 本人在本活动各商品的已购份数（有效订单，含正在修改的那一单），{ goods_id: qty }。
+    // 详情页 ＋ 号据此按「限购 − 已购」算最多还能买几份；口径同 stock.checkUserLimit，服务端下单仍会校验
+    base.my_bought_qty = {}
+    if (uid) {
+      const agg = await this.db.collection('grouporder-order-item').aggregate()
+        .match({ activity_id: activity._id, user_id: uid, status: ORDER.VALID })
+        .group({ _id: '$goods_id', total: { $sum: '$qty' } })
+        .end()
+      for (const r of (agg.data || [])) base.my_bought_qty[r._id] = r.total || 0
     }
 
     if (!isLeader) return ok(base)
@@ -563,6 +631,8 @@ module.exports = {
       governance_reason: activity.governance_reason || '',
       ever_governed: activity.ever_governed || 0,
       cancel_reason: activity.cancel_reason || '',
+      // 授权复制（D-155）：有令牌即已授权；令牌只给团长本人，用于拼分享链接
+      copy_token: activity.copy_token || '',
       stat: {
         valid_order_count: orderAgg.total || 0,
         valid_total_qty: agg.qty || 0,
@@ -661,21 +731,29 @@ module.exports = {
 
   /**
    * 取消活动（M-23）
-   * 仅允许草稿或进行中；已截止不可取消（D-027）；进行中必须填原因。
+   * 仅允许草稿或开始前的进行中活动；已结束不可取消（D-027）；进行中必须填原因。
+   * D-111：活动一旦到了起始时间（含没有 start_time、发布即开始的老活动）就不能取消，只能截止。
    */
   async activityCancel (params = {}) {
     const ctx = this.ctx
     const activity = await auth.requireLeader(ctx, params.activity_id)
     state.assertActivityTransition(activity.status, ACTIVITY.CANCELLED)
 
+    const ongoing = activity.status === ACTIVITY.ONGOING
+    if (ongoing && !state.isNotStarted(activity, ctx.now)) {
+      throwBiz('PRECONDITION_UNMET', '活动已开始，不能取消；如需提前结束，请截止活动')
+    }
     const reason = String(params.reason || '').trim()
-    if (activity.status === ACTIVITY.ONGOING) {
+    if (ongoing) {
       assertParam(reason, '取消进行中的活动必须填写原因')
     }
 
-    // 带当前状态条件更新：期间被定时任务截止或被其他请求改了状态时，不覆盖已写的截止信息
+    // 带当前状态条件更新：期间被定时任务截止或被其他请求改了状态时，不覆盖已写的截止信息；
+    // 进行中的再带「起始时间未到」条件，卡在开始那一刻的请求不会越过 D-111
+    const where = { _id: activity._id, status: activity.status }
+    if (ongoing) where.start_time = this.dbCmd.gt(ctx.now)
     const res = await this.db.collection('grouporder-activity')
-      .where({ _id: activity._id, status: activity.status })
+      .where(where)
       .update({
         status: ACTIVITY.CANCELLED,
         cancel_uid: ctx.uid,
@@ -748,7 +826,7 @@ module.exports = {
 
   /**
    * 可复制的历史活动（M-31）
-   * 仅本人发起、业务状态为已截止（自动截止与团长提前截止均可）的活动可作为源；
+   * 仅本人发起、业务状态为已结束（自动截止与团长提前截止均可）的活动可作为源；
    * 草稿、审核中、进行中、已取消不可；被平台下架的活动一律不可（D-085 取代 D-080，AC-AC-006）。
    */
   async activityCopySourceList (params = {}) {
@@ -759,7 +837,7 @@ module.exports = {
       allowOrderFields: ['create_date', 'end_time']
     })
 
-    // 复制源只认已截止：先把本人已到期而定时任务还没扫到的活动补截止，避免刚到点的活动查不到
+    // 复制源只认已结束：先把本人已到期而定时任务还没扫到的活动补截止，避免刚到点的活动查不到
     const { data: expired } = await this.db.collection('grouporder-activity')
       .where({ leader_uid: uid, status: this.dbCmd.in([ACTIVITY.REVIEWING, ACTIVITY.ONGOING]), end_time: this.dbCmd.lte(ctx.now) })
       .field({ _id: true, status: true, end_time: true })
@@ -806,9 +884,9 @@ module.exports = {
     if (source.governance_status === GOVERNANCE.OFF) {
       throwBiz('ACTIVITY_OFFLINE', '该活动已被平台下架，不能作为复制来源')
     }
-    // 只有已截止的活动可作为源（D-085，取代 D-080 与 AC-AC-007 的范围）
+    // 只有已结束的活动可作为源（D-085，取代 D-080 与 AC-AC-007 的范围）
     if (source.status !== ACTIVITY.CLOSED) {
-      throwBiz('PRECONDITION_UNMET', '只有已截止的活动才能作为复制来源')
+      throwBiz('PRECONDITION_UNMET', '只有已结束的活动才能作为复制来源')
     }
 
     // 幂等（AC-AC-013、D-081）：同一 idempotent_key 只复制一次，取代原「同团长 + 同标题 + 60 秒」弱判重
@@ -821,14 +899,21 @@ module.exports = {
       })
   },
 
-  /** activityCopy 的实际复制：新建草稿并逐个复制未被下架的商品 */
-  async _copyFrom (source, uid, idempotentKey) {
+  /**
+   * activityCopy 的实际复制：新建草稿并逐个复制未被下架的商品。
+   * opts.forOther = true：授权复制给他人（D-155）。内容完整照搬（含自提点），只清空商品的 lib_id——
+   * 它指向原团长的商品库记录，留着会让他人商品被下架时反写封禁原团长的库记录（goodslib.blockLibByGoods），
+   * 商品库同步（D-143）也靠它认商品。复制给他人同样不沉淀商品库（不是他的商品）。
+   */
+  async _copyFrom (source, uid, idempotentKey, opts = {}) {
     const ctx = this.ctx
     // 截止时间按源活动的时长节奏推算（D-067）；新草稿起始时间取当前时间（D-087），
     // 时长 = 源截止 − 源起始；旧活动没有起始时间时沿用发布时间 / 创建时间
     const base = source.start_time || source.publish_date || source.create_date
     let duration = source.end_time - base
     if (!(duration > 0)) duration = 3 * 24 * 60 * 60 * 1000  // 兜底 3 天
+    // 源活动时长超过 7 天的（D-135 之前创建）按 7 天预填
+    duration = Math.min(duration, TIME_WINDOW_MS)
     const endTime = ctx.now + duration
 
     const shortCode = await idempotent.allocShortCode(ctx)
@@ -872,7 +957,12 @@ module.exports = {
       }
       await this.db.collection('grouporder-goods').add({
         activity_id: newActivity.id,
-        lib_id: g.lib_id || '',            // 来源仍是同一条库记录，治理链路保持连通
+        // 本人复制：来源仍是同一条库记录，治理链路保持连通；复制给他人：断开（见方法说明）
+        lib_id: opts.forOther ? '' : (g.lib_id || ''),
+        // 授权复制来的商品打标记（D-155 修订）：复制者之后编辑保存也不沉淀到他的商品库；本人再复制时沿用标记
+        copy_origin: opts.forOther ? 1 : (g.copy_origin || 0),
+        category_name: g.category_name || '',               // 分类快照随商品带过去（D-066 修订、D-149）
+        category_parent_name: g.category_parent_name || '',
         is_recommend: g.is_recommend || 0,
         name: g.name,
         description: g.description || '',
@@ -904,6 +994,150 @@ module.exports = {
   },
 
   // ==========================================================================
+  // 授权复制（D-155）：团长授权后，他人凭链接一键复制并发布一模一样的接龙
+  // ==========================================================================
+
+  /** 授权复制的来源活动须审核通过（进行中 / 已结束）且未被平台下架 */
+  _assertCopyable (activity) {
+    if (activity.governance_status === GOVERNANCE.OFF) throwBiz('ACTIVITY_OFFLINE', '该活动已被平台下架，不能复制')
+    if (activity.status !== ACTIVITY.ONGOING && activity.status !== ACTIVITY.CLOSED) {
+      throwBiz('PRECONDITION_UNMET', '只有审核通过的活动才能授权复制')
+    }
+  },
+
+  /** 凭令牌取来源活动；令牌无效（未授权 / 已取消授权）一律按不存在处理，不暴露活动是否存在 */
+  async _getCopySource (token) {
+    const t = String(token || '').trim()
+    assertParam(/^[a-f0-9]{24}$/.test(t), '复制链接无效')
+    const { data } = await this.db.collection('grouporder-activity').where({ copy_token: t }).limit(1).get()
+    const source = data && data[0]
+    if (!source) throwBiz('NOT_FOUND', '复制链接已失效：团长已取消授权或链接有误')
+    this._assertCopyable(source)
+    return source
+  },
+
+  /** 新活动的起止时间：起始 = 现在，截止 = 现在 + 源活动时长（最长 7 天，兜底 3 天），同 _copyFrom */
+  _copyTimes (source, now) {
+    const base = source.start_time || source.publish_date || source.create_date
+    let duration = source.end_time - base
+    if (!(duration > 0)) duration = 3 * 24 * 60 * 60 * 1000
+    duration = Math.min(duration, TIME_WINDOW_MS)
+    return { start_time: now, end_time: now + duration }
+  },
+
+  /**
+   * 开启 / 取消授权复制（M-20「⋯ → 授权复制」）
+   * 入参 { activity_id, enable }。开启：已有令牌沿用，没有则生成；取消：清空令牌，旧链接立即失效。
+   * 再次开启会生成新令牌（取消前转出去的链接不会复活）。
+   */
+  async activityCopyAuthorize (params = {}) {
+    const ctx = this.ctx
+    const activity = await auth.requireLeader(ctx, params.activity_id)
+    if (params.enable === false) {
+      await this.db.collection('grouporder-activity').doc(activity._id).update({ copy_token: '', copy_auth_time: 0 })
+      return ok({ activity_id: activity._id, copy_token: '', asOf: ctx.now })
+    }
+    this._assertCopyable(activity)
+    let token = activity.copy_token || ''
+    if (!token) {
+      token = crypto.randomBytes(12).toString('hex')
+      await this.db.collection('grouporder-activity').doc(activity._id).update({ copy_token: token, copy_auth_time: ctx.now })
+    }
+    return ok({ activity_id: activity._id, copy_token: token, title: activity.title, cover_image: activity.cover_image, asOf: ctx.now })
+  },
+
+  /**
+   * 复制预览（复制落地页）：须登录；只读，不写库。
+   * 返回将要生成的接龙内容（与原活动一致）与自动计算的起止时间；不返回销量、订单与原团长信息。
+   */
+  async activityCopyPreview (params = {}) {
+    const ctx = this.ctx
+    auth.requireLogin(ctx)
+    const source = await this._getCopySource(params.token)
+    const goodsList = (await this._listGoods(source._id)).filter(g => g.governance_status !== GOVERNANCE.OFF)
+    const times = this._copyTimes(source, ctx.now)
+    return ok({
+      title: source.title,
+      description: source.description || '',
+      cover_image: source.cover_image,
+      images: source.images || [],
+      delivery_types: state.deliveryTypesOf(source),
+      pickup_address: source.pickup_address || '',
+      pickup_time_desc: source.pickup_time_desc || '',
+      pickup_contact_name: source.pickup_contact_name || '',
+      pickup_contact_mobile: source.pickup_contact_mobile || '',
+      // 预览口径：将要生成的是一场待发布的新活动（go-activity-view 按 status 0 显示「待发布」）
+      status: ACTIVITY.DRAFT,
+      governance_status: GOVERNANCE.NORMAL,
+      start_time: times.start_time,
+      end_time: times.end_time,
+      goods: goodsList.map(g => ({
+        _id: g._id,
+        name: g.name,
+        description: g.description || '',
+        cover_image: g.cover_image,
+        detail_images: g.detail_images || [],
+        price: g.price,
+        unit: g.unit,
+        total_stock: g.total_stock,
+        sold_qty: 0,
+        per_user_limit: g.per_user_limit,
+        on_sale: 1,
+        governance_status: GOVERNANCE.NORMAL,
+        is_recommend: g.is_recommend || 0,
+        category_name: g.category_name || '',
+        sort: g.sort || 0,
+        remain_qty: g.total_stock > 0 ? g.total_stock : null
+      })),
+      asOf: ctx.now
+    })
+  },
+
+  /**
+   * 凭授权链接复制（复制落地页）：须登录、须有发布权限。
+   * 完整复制原活动为本人的新活动。submit 默认 true =「直接发布」：复制后直接提交审核（走平台审核，同正常发起）；
+   * submit = false =「修改后再发布」（D-155 修订）：只生成草稿，由复制者在编辑页修改后走正常发布流程。
+   * 幂等：同一 idempotent_key 只生成一场；重复提交返回已生成的那一场。
+   * 提交审核失败时新活动保留为草稿，返回 submit_error 说明原因。
+   */
+  async activityCopyByToken (params = {}) {
+    const ctx = this.ctx
+    const uid = auth.requireLogin(ctx)
+    await restriction.assertCanPublish(ctx, uid)
+    const source = await this._getCopySource(params.token)
+
+    let created = null
+    await this._createActivityOnce(params.idempotent_key, uid,
+      async () => {
+        const r = await this._copyFrom(source, uid, params.idempotent_key, { forOther: true })
+        created = r.data
+        return r
+      },
+      async (existed) => ok({ activity_id: existed._id, duplicated: true }))
+
+    if (!created) {
+      // 重复提交：返回已生成的那一场当前状态
+      const { data } = await this.db.collection('grouporder-activity')
+        .where({ idempotent_key: params.idempotent_key }).limit(1).get()
+      const a = data && data[0]
+      return ok({ activity_id: a && a._id, status: a && a.status, duplicated: true })
+    }
+    if (params.submit === false) {
+      return ok({ activity_id: created.activity_id, status: ACTIVITY.DRAFT, excluded: created.excluded })
+    }
+    if (!created.copied_count) {
+      return ok({ activity_id: created.activity_id, status: ACTIVITY.DRAFT, submit_error: '原活动没有可复制的商品，已保存为草稿' })
+    }
+    try {
+      const sub = await this.activitySubmitReview({ activity_id: created.activity_id })
+      const d = (sub && sub.data) || {}
+      return ok({ activity_id: created.activity_id, status: d.status, auto_passed: !!d.auto_passed, excluded: created.excluded })
+    } catch (e) {
+      return ok({ activity_id: created.activity_id, status: ACTIVITY.DRAFT, submit_error: (e && e.errMsg) || '提交审核失败，已保存为草稿' })
+    }
+  },
+
+  // ==========================================================================
   // 4.2 活动内商品
   // 商品的 governance_status 只能由 grouporder-ops-co 设置，以下方法一律不改写它。
   // ==========================================================================
@@ -922,9 +1156,9 @@ module.exports = {
     assertParam(name.length >= 1 && name.length <= 50, '商品名称为 1–50 字')
     assertParam(String(params.description || '').length <= 500, '商品说明不超过 500 字')
     assertParam(params.cover_image, '商品必须包含封面图')
-    // 沉淀到商品库时归入的分类（D-088）；活动商品本身不带分类（D-066）
+    // 归入的商品库小类（D-088）；同时把小类名快照到活动商品，买家详情按它分组（D-066 修订）
     const libCategoryId = params.lib_category_id
-    await goodslib.assertOwnCategory(ctx, activity.leader_uid, libCategoryId)
+    const libCategory = await goodslib.assertOwnCategory(ctx, activity.leader_uid, libCategoryId)
     this._assertImages(params.detail_images, '详情图')
     assertParam(Number.isInteger(params.price) && params.price >= 0, '商品单价必须是不小于 0 的整数（单位：分）')
     assertParam(Number.isInteger(params.total_stock) && params.total_stock >= 0, '总库存必须是不小于 0 的整数')
@@ -953,6 +1187,8 @@ module.exports = {
     const doc = {
       activity_id: activity._id,
       lib_id: params.lib_id || '',
+      category_name: libCategory ? (libCategory.name || '') : '', // 展示小类快照
+      category_parent_name: await goodslib.parentNameOf(ctx, libCategory), // 大类快照，仅用于 Excel 清单「类别」列（D-149）
       is_recommend: isRecommend,
       name,
       description: String(params.description || ''),
@@ -1016,9 +1252,9 @@ module.exports = {
     if (goods.governance_status === GOVERNANCE.OFF) {
       throwBiz('GOODS_OFFLINE', '该商品已被平台下架，不能修改')
     }
-    // 沉淀到商品库时归入的分类（D-088）；undefined 表示保持库记录原分类
+    // 归入的商品库小类（D-088）；undefined 表示保持原分类。小类名同步快照到活动商品（D-066 修订）
     const libCategoryId = params.lib_category_id
-    await goodslib.assertOwnCategory(ctx, activity.leader_uid, libCategoryId)
+    const libCategory = await goodslib.assertOwnCategory(ctx, activity.leader_uid, libCategoryId)
 
     const patch = {}
     const traces = []
@@ -1079,6 +1315,13 @@ module.exports = {
       }
       patch.is_recommend = want
     }
+    // 展示小类随之更新（lib_category_id 省略=保持不变）。category_name 不在 review.CONTENT_FIELDS，不触发重审（与推荐同理）
+    if (libCategoryId !== undefined) {
+      const newCatName = libCategory ? (libCategory.name || '') : ''
+      if (newCatName !== String(goods.category_name || '')) patch.category_name = newCatName
+      const newParentName = await goodslib.parentNameOf(ctx, libCategory)
+      if (newParentName !== String(goods.category_parent_name || '')) patch.category_parent_name = newParentName
+    }
     // 库存与限购统一走 goodsAdjustStock，这里不接受，避免两条路径口径不一致
     assertParam(params.total_stock === undefined && params.per_user_limit === undefined,
       '库存与每人限购请使用 goodsAdjustStock 调整')
@@ -1101,8 +1344,10 @@ module.exports = {
         fileIds: [merged.cover_image, ...(merged.detail_images || [])].map(f => (f && f.fileID) || f)
       })
     }
-    // 商品保存即沉淀，同名记录会被更新
-    await goodslib.sinkToLib(ctx, merged, activity.leader_uid, { categoryId: libCategoryId })
+    // 商品保存即沉淀，同名记录会被更新；授权复制来的商品不沉淀（不是复制者自己的商品，D-155 修订）
+    if (goods.copy_origin !== 1) {
+      await goodslib.sinkToLib(ctx, merged, activity.leader_uid, { categoryId: libCategoryId })
+    }
 
     // 沉淀之后再回收：同名库记录已换成新图，旧图若再无人引用才删
     if (patch.cover_image !== undefined || patch.detail_images !== undefined) {
@@ -1149,7 +1394,7 @@ module.exports = {
   /**
    * 停售 / 恢复售卖（M-22）
    * 停售只阻止新增与扩大，已有明细保留并进入清单（D-019、D-050）；
-   * 活动已截止或已取消时禁止恢复（D-028）。
+   * 活动已结束或已取消时禁止恢复（D-028）。
    */
   async goodsSetOnSale (params = {}) {
     const ctx = this.ctx
@@ -1172,7 +1417,7 @@ module.exports = {
     if (params.on_sale === 1) {
       const cap = state.goodsCapability(goods, activity, ctx.now)
       if (!cap.canRestoreOnSale) {
-        throwBiz('ACTIVITY_CLOSED', '活动已截止或已取消，不能恢复售卖')
+        throwBiz('ACTIVITY_CLOSED', '活动已结束或已取消，不能恢复售卖')
       }
     }
 
@@ -1198,7 +1443,7 @@ module.exports = {
 
     const activity = await auth.requireLeader(ctx, goods.activity_id)
     if (state.isActivityFinal(activity)) {
-      throwBiz('ACTIVITY_CLOSED', '活动已截止或已取消，不能再调整库存与限购')
+      throwBiz('ACTIVITY_CLOSED', '活动已结束或已取消，不能再调整库存与限购')
     }
     if (goods.governance_status === GOVERNANCE.OFF) throwBiz('GOODS_OFFLINE')
 
@@ -1236,8 +1481,10 @@ module.exports = {
       { total_stock: patch.total_stock !== undefined ? patch.total_stock : goods.total_stock,
         per_user_limit: patch.per_user_limit !== undefined ? patch.per_user_limit : goods.per_user_limit },
       '调整库存与每人限购')
-    // 活动里保存过的值即下次复用的默认值：同步到同名库记录（GOODS_LIB_SPEC §4.2）
-    await goodslib.syncStockToLib(ctx, Object.assign({}, goods, patch), activity.leader_uid)
+    // 活动里保存过的值即下次复用的默认值：同步到同名库记录（GOODS_LIB_SPEC §4.2）；授权复制来的商品不写商品库（D-155 修订）
+    if (goods.copy_origin !== 1) {
+      await goodslib.syncStockToLib(ctx, Object.assign({}, goods, patch), activity.leader_uid)
+    }
 
     return ok(Object.assign({ goods_id: goods._id }, patch))
   },
@@ -1252,7 +1499,7 @@ module.exports = {
     const ctx = this.ctx
     const activity = await auth.requireLeader(ctx, params.activity_id)
     if (state.isActivityFinal(activity)) {
-      throwBiz('ACTIVITY_CLOSED', '活动已截止或已取消，不能再调整商品顺序')
+      throwBiz('ACTIVITY_CLOSED', '活动已结束或已取消，不能再调整商品顺序')
     }
 
     const ids = params.goods_ids
@@ -1275,5 +1522,115 @@ module.exports = {
     }
     // 排序不是内容改动，不触发重新审核
     return ok({ activity_id: activity._id, sorted: ids.length, asOf: ctx.now })
+  },
+
+  /**
+   * 按活动码查找活动（「接龙」tab「我参与的」搜索，D-104）
+   *
+   * 修订 D-083：活动码重新可用于查找，但只回 activity_id，打开后仍走 activityGetDetail 的可见性校验。
+   * 防枚举：① 必须登录；② 新活动码 6 位（约 10.7 亿种），老活动 4 位保留；③ 每个账号每天最多
+   * CODE_MISS_DAILY_LIMIT 次「没查到」——查到的不计数，正常用户拿的是真实活动码，等于不限次数，
+   * 而猜号的程序几乎每次都落空，很快触顶（格式不对的也不计）；④ 只命中审核通过、未被下架、未取消的活动
+   * （进行中含未开始、已结束），团长本人的活动不限状态；其余情况一律回「没有找到」，不透露是否存在。
+   * 活动码有唯一索引，一个号只对应一个活动。
+   */
+  async activityFindByCode (params = {}) {
+    const ctx = this.ctx
+    const uid = auth.requireLogin(ctx)
+    const code = idempotent.normalizeShortCode(params.code)
+    if (!code) throwBiz('INVALID_PARAM', '活动码是 6 位（早期活动为 4 位）字母或数字，不含 0、O、1、I')
+
+    const used = await this._codeMissCount(uid)
+    if (used >= CODE_MISS_DAILY_LIMIT) {
+      throwBiz('PRECONDITION_UNMET', `今天没查到的次数已达 ${CODE_MISS_DAILY_LIMIT} 次，请核对活动码明天再试，或请团长直接发活动链接`)
+    }
+
+    const { data } = await this.db.collection('grouporder-activity').where({ short_code: code }).limit(1).get()
+    const activity = data && data[0]
+    const visible = !!activity && (activity.leader_uid === uid || (
+      (activity.status === ACTIVITY.ONGOING || activity.status === ACTIVITY.CLOSED) &&
+      activity.governance_status !== GOVERNANCE.OFF
+    ))
+    if (!visible) {
+      const missed = await this._recordCodeMiss(uid)
+      throwBiz('NOT_FOUND', '没有找到这个活动码对应的活动，请核对后重试', { remaining: Math.max(0, CODE_MISS_DAILY_LIMIT - missed) })
+    }
+
+    return ok({ activity_id: activity._id, title: activity.title, asOf: ctx.now })
+  },
+
+  /** 今天（UTC+8）的日期串，活动码落空计数按它切换 */
+  _codeSearchToday () {
+    return new Date(this.ctx.now + 8 * 3600 * 1000).toISOString().slice(0, 10)
+  },
+
+  /** 本账号今天已「没查到」的次数（D-104） */
+  async _codeMissCount (uid) {
+    const { data } = await this.db.collection('grouporder-user-ext').where({ user_id: uid }).limit(1).get()
+    const ext = data && data[0]
+    return ext && ext.code_search_day === this._codeSearchToday() ? (ext.code_search_count || 0) : 0
+  },
+
+  /**
+   * 记一次「没查到」（D-104），返回记完后今天的累计次数。
+   * 当天已有计数用原子 inc；跨天时带「不是今天」条件重置为 1，并发时只有一方重置，另一方重走 inc。
+   * 先查额度、落空后再记，并发下可能略超上限几次，对防枚举无影响
+   */
+  async _recordCodeMiss (uid) {
+    const ctx = this.ctx
+    const cmd = this.dbCmd
+    const coll = this.db.collection('grouporder-user-ext')
+    const today = this._codeSearchToday()
+    const inc = await coll.where({ user_id: uid, code_search_day: today }).update({ code_search_count: cmd.inc(1) })
+    if (!inc.updated) {
+      const { data } = await coll.where({ user_id: uid }).limit(1).get()
+      const ext = data && data[0]
+      if (!ext) {
+        await coll.add({ user_id: uid, publish_restriction: 0, code_search_day: today, code_search_count: 1, create_date: ctx.now, update_date: ctx.now })
+        return 1
+      }
+      const reset = await coll.where({ _id: ext._id, code_search_day: cmd.neq(today) })
+        .update({ code_search_day: today, code_search_count: 1 })
+      if (!reset.updated) return this._recordCodeMiss(uid)
+      return 1
+    }
+    return this._codeMissCount(uid)
+  },
+
+  /**
+   * 海报用封面图（D-117）：云端代为下载本活动封面，转成 dataURL 返回。
+   * 浏览器直接读云存储图片受跨域限制，画进 canvas 后无法导出，海报只能退回默认头图；
+   * 云函数下载不受跨域限制。只取该活动保存的封面（不接受任意 URL，杜绝被当作代理），仅团长本人可调，
+   * 图片超过 POSTER_COVER_MAX 不返回（前端退回默认头图）。
+   */
+  async activityPosterCover (params = {}) {
+    const ctx = this.ctx
+    const activity = await auth.requireLeader(ctx, params.activity_id)
+    const cover = activity.cover_image
+    if (!cover || (!cover.fileID && !cover.url)) return ok({ data_url: '' })
+
+    // 优先用 fileID 换一个新的访问地址，避免存的 url 过期
+    let url = cover.url || ''
+    if (cover.fileID) {
+      try {
+        const r = await uniCloud.getTempFileURL({ fileList: [cover.fileID] })
+        const f = r && r.fileList && r.fileList[0]
+        if (f && f.tempFileURL) url = f.tempFileURL
+      } catch (e) { /* 换取失败就用存的 url */ }
+    }
+    if (!/^https?:\/\//.test(url)) return ok({ data_url: '' })
+
+    try {
+      const res = await uniCloud.httpclient.request(url, { method: 'GET', timeout: 8000 })
+      const buf = res && res.data
+      const type = String((res && res.headers && (res.headers['content-type'] || res.headers['Content-Type'])) || '').split(';')[0].trim()
+      if (!res || res.status !== 200 || !buf || !buf.length || buf.length > POSTER_COVER_MAX || !/^image\//.test(type)) {
+        return ok({ data_url: '' })
+      }
+      return ok({ data_url: `data:${type};base64,${Buffer.from(buf).toString('base64')}` })
+    } catch (e) {
+      console.error('[activity-co] 海报封面下载失败', e)
+      return ok({ data_url: '' })
+    }
   }
 }

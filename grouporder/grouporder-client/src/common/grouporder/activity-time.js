@@ -4,7 +4,7 @@
  * - 时间一律按服务端算：用接口返回的 asOf 求出「服务端 − 本机」时差，本机时间不准也不影响；
  * - 只为【最近的下一个】起止时间点设一个定时器，到点处理完再找下一个；页面隐藏时取消；
  * - 列表页到点只在本地重算状态标签（不发请求）；详情 / 管理页到点刷新一次（可下单状态等需要服务端确认）。
- * 口径与服务端一致：common/lifecycle（到期即已截止）、state.isNotStarted（进行中但未到起始时间）。
+ * 口径与服务端一致：common/lifecycle（到期即已结束）、state.isNotStarted（进行中但未到起始时间）。
  */
 
 const ACTIVITY = { REVIEWING: 1, ONGOING: 2, CLOSED: 3 };
@@ -16,7 +16,7 @@ export function serverOffset(asOf) {
   return asOf ? asOf - Date.now() : 0;
 }
 
-/** 按服务端时间就地重算显示状态：到期显示为已截止，未到起始时间标「未开始」 */
+/** 按服务端时间就地重算显示状态：到期显示为已结束，未到起始时间标「未开始」 */
 export function applyLiveStatus(a, now) {
   if (!a) return a;
   if ((a.status === ACTIVITY.REVIEWING || a.status === ACTIVITY.ONGOING) && a.end_time && now >= a.end_time) {
@@ -49,4 +49,28 @@ export function scheduleBoundary(list, offset, onTick) {
   if (!t) return () => {};
   const h = setTimeout(onTick, Math.min(t - now + 1000, MAX_DELAY));
   return () => clearTimeout(h);
+}
+
+/** 全站统一的日期时间显示：yyyy/mm/dd hh:mm（本机时区，D-145） */
+export function fmtDateTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** 全站统一的日期显示：yyyy/mm/dd（D-145） */
+export function fmtDate(ts) {
+  return fmtDateTime(ts).slice(0, 10);
+}
+
+/**
+ * 活动时间段：「yyyy/mm/dd hh:mm - yyyy/mm/dd hh:mm」（D-110，D-144 起用斜杠）。
+ * 没有起始时间的老活动只显示「截止 yyyy/mm/dd hh:mm」
+ */
+export function timeRange(start, end) {
+  const f = fmtDateTime;
+  if (start && end) return `${f(start)} - ${f(end)}`;
+  if (end) return `截止 ${f(end)}`;
+  return '';
 }

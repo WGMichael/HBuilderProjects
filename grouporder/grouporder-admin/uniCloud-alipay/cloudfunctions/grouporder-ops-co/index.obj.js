@@ -20,6 +20,7 @@ const {
   auth, errors, paging, idempotent, state, oplog, exportlog,
   config, goodslib, restriction, contentcheck, bindMethods
 } = require('grouporder-common')
+const { fileurl } = require('grouporder-common')
 
 const { throwOps, throwBiz, assertParam, ok } = errors
 const { ACTIVITY, GOVERNANCE, ORDER, REVIEW_RESULT, REVIEW_MODE } = state
@@ -45,10 +46,11 @@ module.exports = {
     this.dbCmd = this.ctx.db.command
   },
 
-  _after (error, result) {
+  async _after (error, result) {
     // 使用中自动续期登录（auth.attachNewToken）
     if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
-    return auth.attachNewToken(this.ctx, result)
+    // 图片地址以 fileID 为准换成新的访问地址（D-119，common/fileurl）
+    return auth.attachNewToken(this.ctx, await fileurl.refresh(result))
   },
 
   // ==========================================================================
@@ -419,8 +421,8 @@ module.exports = {
     // 三种禁止情形（OPS §6.2）：一律拒绝并留痕
     let blockReason = ''
     if (activity.status === ACTIVITY.CANCELLED) blockReason = '团长已取消该活动，不能恢复为可参与状态'
-    else if (activity.status === ACTIVITY.CLOSED) blockReason = '活动已截止，不能恢复为可参与状态'
-    else if (activity.end_time && ctx.now >= activity.end_time) blockReason = '活动在下架期间已到达截止时间，按已截止处理'
+    else if (activity.status === ACTIVITY.CLOSED) blockReason = '活动已结束，不能恢复为可参与状态'
+    else if (activity.end_time && ctx.now >= activity.end_time) blockReason = '活动在下架期间已到达截止时间，按已结束处理'
 
     if (blockReason) {
       await oplog.denied(ctx, {
@@ -494,7 +496,7 @@ module.exports = {
 
   /**
    * 活动治理恢复（A-09）
-   * 三种禁止情形必须拒绝：① 团长已取消；② 活动已截止；③ 下架期间到达截止时间。
+   * 三种禁止情形必须拒绝：① 团长已取消；② 活动已结束；③ 下架期间到达截止时间。
    */
   async activityGovernanceOn (params = {}) {
     return this._governanceOn('activity', params)
@@ -1049,14 +1051,14 @@ module.exports = {
     if (params.content_version !== undefined && params.content_version !== activity.content_version) {
       await fail('活动内容已更新，请重新打开最新版本再审核')
     }
-    // 审核中到达截止时间直接进已截止，之后即使审核通过也不重开
+    // 审核中到达截止时间直接进已结束，之后即使审核通过也不重开
     if (activity.end_time && ctx.now >= activity.end_time) {
       await this.db.collection('grouporder-activity').doc(activity._id).update({
         status: ACTIVITY.CLOSED,
         actual_end_time: activity.end_time,
         end_type: state.END_TYPE.AUTO
       })
-      await fail('活动在审核期间已到达截止时间，按已截止处理')
+      await fail('活动在审核期间已到达截止时间，按已结束处理')
     }
 
     const patch = {
@@ -1694,7 +1696,7 @@ module.exports = {
         a.valid_order_count, a.valid_total_qty, this._money(a.estimated_amount)])
     } else {
       sheetName = '团长汇总'
-      header = ['团长标识', '已发布活动数', '进行中', '已截止', '已取消', '当前已下架',
+      header = ['团长标识', '已发布活动数', '进行中', '已结束', '已取消', '当前已下架',
         '累计有效订单数', '有效总份数', '预计金额(元)', '最近发起时间']
       rows = res.data.list.map(r => [r.leader_uid, r.published_activity_count, r.ongoing_count,
         r.closed_count, r.cancelled_count, r.governance_off_count,

@@ -60,9 +60,9 @@
     "short_code": {
       "bsonType": "string",
       "title": "活动短码",
-      "description": "4 位大写字母数字，全局唯一，用于订单号拼装与口头引用",
+      "description": "活动码：大写字母数字（不含 0 O 1 I），全局唯一，用于订单号拼装、口头引用与按号查找活动（D-104）。D-104 起新活动 6 位（加密随机），此前的活动保留 4 位",
       "minLength": 4,
-      "maxLength": 4
+      "maxLength": 6
     },
     "delivery_type": {
       "bsonType": "int",
@@ -130,7 +130,7 @@
     "status": {
       "bsonType": "int",
       "title": "业务状态",
-      "description": "0草稿 1审核中 2进行中 3已截止 4已取消（D-043）",
+      "description": "0草稿 1审核中 2进行中 3已结束 4已取消（D-043）",
       "defaultValue": 0,
       "enum": [
         {
@@ -147,7 +147,7 @@
         },
         {
           "value": 3,
-          "text": "已截止"
+          "text": "已结束"
         },
         {
           "value": 4,
@@ -405,6 +405,17 @@
           "text": "是"
         }
       ]
+    },
+    "copy_token": {
+      "bsonType": "string",
+      "title": "授权复制令牌",
+      "description": "团长授权他人复制本活动时生成（D-155）：24 位随机十六进制，放在复制链接里，他人凭它一键复制并发布同样的接龙；空串表示未授权。取消授权即清空，旧链接立即失效；只对团长本人返回",
+      "maxLength": 32
+    },
+    "copy_auth_time": {
+      "bsonType": "timestamp",
+      "title": "授权复制时间",
+      "description": "最近一次开启授权复制的时间（D-155）；取消授权置 0"
     }
   }
 }

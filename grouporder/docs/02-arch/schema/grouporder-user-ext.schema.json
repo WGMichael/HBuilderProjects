@@ -51,6 +51,94 @@
       "description": "产生当前限制状态的处置编号，便于回溯到 grouporder-restriction 的具体记录",
       "maxLength": 32
     },
+    "leader_contact_mobile": {
+      "bsonType": "string",
+      "title": "团长联系电话",
+      "description": "敏感字段。团长自愿填写的联系电话（D-103），账号级：显示在本人发起的全部活动页（被下架的活动除外）与参与者订单详情，对能看到活动的人公开。只接受号码格式；空串表示未填。注销时随账号资料删除",
+      "maxLength": 20,
+      "trim": "both"
+    },
+    "leader_contact_wechat": {
+      "bsonType": "string",
+      "title": "团长微信号",
+      "description": "敏感字段。团长自愿填写的微信号（D-103），展示范围同 leader_contact_mobile。只接受微信号格式（字母开头 6～20 位）或手机号；空串表示未填",
+      "maxLength": 20,
+      "trim": "both"
+    },
+    "leader_card_nickname": {
+      "bsonType": "string",
+      "title": "团长名片昵称",
+      "description": "团长名片上的昵称（D-109），与账号昵称分开维护；对能看到活动的人公开，保存时同步文本检测，不通过拒绝保存。空串表示未填",
+      "maxLength": 20,
+      "trim": "both"
+    },
+    "leader_card_avatar": {
+      "bsonType": "file",
+      "title": "团长名片头像",
+      "description": "团长名片上的头像（D-109），与账号头像分开维护；保存后送图片检测，img_check_status 为已拦截时不再对外展示。null 表示未设置"
+    },
+    "img_check_status": {
+      "bsonType": "int",
+      "title": "名片头像检测状态",
+      "description": "leader_card_avatar 的图片检测状态（D-109），枚举与 grouporder-goods.img_check_status 一致；回调按 object_type = leader_card 回写。3 已拦截时头像不对外展示",
+      "defaultValue": 0,
+      "enum": [
+        {
+          "value": 0,
+          "text": "待检测"
+        },
+        {
+          "value": 1,
+          "text": "通过"
+        },
+        {
+          "value": 2,
+          "text": "待人工复核"
+        },
+        {
+          "value": 3,
+          "text": "已拦截"
+        }
+      ]
+    },
+    "code_search_day": {
+      "bsonType": "string",
+      "title": "活动码查询日期",
+      "description": "按活动码查找活动的计数所属日期（UTC+8，YYYY-MM-DD，D-104）；与今天不同即视为当天未查过",
+      "maxLength": 10
+    },
+    "code_search_count": {
+      "bsonType": "int",
+      "title": "当天活动码落空次数",
+      "description": "code_search_day 当天按活动码查找「没查到」的次数（查到的不计），每天上限 50 次（防枚举，D-104）",
+      "minimum": 0
+    },
+    "member_level": {
+      "bsonType": "int",
+      "title": "会员等级",
+      "description": "D-106 预留：0/缺失 普通用户，1 会员。会员功能是否只对会员开放由 grouporder-config.member_gate 决定，首版全部开放",
+      "defaultValue": 0,
+      "enum": [
+        { "value": 0, "text": "普通" },
+        { "value": 1, "text": "会员" }
+      ]
+    },
+    "member_expire": {
+      "bsonType": "timestamp",
+      "title": "会员到期时间",
+      "description": "D-106 预留：0/缺失 表示长期有效；已过期读时按普通用户处理，不依赖定时任务"
+    },
+    "member_source": {
+      "bsonType": "string",
+      "title": "会员来源",
+      "description": "D-106 预留：admin 运营后台设置；wxpay 微信购买。两条通道首版均未实现",
+      "enum": ["admin", "wxpay"]
+    },
+    "member_update": {
+      "bsonType": "timestamp",
+      "title": "会员信息更新时间",
+      "description": "D-106 预留"
+    },
     "create_date": {
       "bsonType": "timestamp",
       "title": "创建时间",

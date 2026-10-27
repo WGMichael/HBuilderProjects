@@ -69,7 +69,7 @@
             </view>
           </view>
           <view class="card__side">
-            <!-- 只有已截止且未被下架的活动可作为复制源（D-085） -->
+            <!-- 只有已结束且未被下架的活动可作为复制源（D-085） -->
             <button v-if="a.status === 3 && a.governance_status !== 1" class="mini-btn" size="mini" @click.stop="reuse(a)">再来一次</button>
             <!-- 从未发布过的草稿可删除（D-090）；发布过的只能取消或截止 -->
             <button v-if="canDeleteDraft(a)" class="mini-btn mini-btn--del" size="mini" @click.stop="deleteDraft(a)">删除</button>
@@ -80,6 +80,11 @@
 
       <!-- M-18 我参与的 -->
       <view v-else>
+        <!-- 按活动码查找活动（D-104）：可找任意已发布的活动，不限于参与过的；打开后照常可下单 -->
+        <view class="code-search">
+          <input class="code-search__in" v-model="codeInput" maxlength="8" placeholder="输入活动码查找活动" confirm-type="search" @confirm="searchCode" />
+          <button class="code-search__btn" size="mini" :loading="codeSearching" :disabled="!codeInput.trim()" @click="searchCode">查找</button>
+        </view>
         <view v-if="!joinLoading && !joinList.length" class="empty">你还没有参与过接龙</view>
         <!-- 服务端已按活动分组、按组分页（orderMyList），这里直接展示 -->
         <view v-for="g in joinList" :key="g.activity_id" class="card card--join" @click="openActivity(g.activity_id)">
@@ -92,14 +97,18 @@
               <text v-if="g.not_started" class="tag tag--warn">未开始</text>
             </view>
             <view class="card__meta">
+              <text v-if="g.short_code">活动码 {{ g.short_code }} · </text>
               <text v-if="g.not_started">{{ fmtDate(g.start_time) }} 开始 · </text>
               <text v-if="g.end_time">截止 {{ fmtDate(g.end_time) }} · </text>
               <text>共 {{ g.orders.length }} 张订单</text>
             </view>
             <view v-for="o in g.orders" :key="o._id" class="join-order" @click.stop="openOrder(o._id)">
-              <text>{{ o.order_no }}</text>
+              <!-- 接龙码（D-115）优先显示，老订单在服务端补发前回退到订单号 -->
+              <text>{{ o.order_code ? '接龙码 ' + o.order_code : o.order_no }}</text>
               <text class="join-order__qty">{{ o.total_qty }} 份 · ￥{{ fen2yuan(o.total_amount) }}</text>
               <text class="tag" :class="o.status === 1 ? 'tag--biz' : 'tag--warn'">{{ labelOf(ORDER_STATUS, o.status) }}</text>
+              <!-- 明确的「查看订单」按钮：整行可点，按钮让入口一眼可见 -->
+              <text class="join-order__btn">查看订单 ›</text>
             </view>
           </view>
         </view>
@@ -113,6 +122,8 @@
 </template>
 
 <script setup lang="ts">
+// @ts-ignore
+import { fmtDateTime } from '@/common/grouporder/activity-time.js';
 import { ref } from 'vue';
 import { onShow, onHide, onUnload, onPullDownRefresh } from '@dcloudio/uni-app';
 // @ts-ignore
@@ -126,6 +137,35 @@ import api, { guarded, isLoggedIn, ensureLogin } from '@/common/grouporder/reque
 import { canDeleteDraft, confirmDeleteDraft } from '@/common/grouporder/draft.js';
 // @ts-ignore
 import { ACTIVITY_STATUS, ORDER_STATUS, TODO_LEVEL_LABEL, TODO_TYPE_LABEL, labelOf, fen2yuan } from '@/common/grouporder/dict.js';
+
+// —— 按活动码查找（D-104）——
+// 服务端只命中已发布且未下架 / 未取消的活动；每账号每天最多 50 次「没查到」（查到的不计数），
+// 格式不对在前端先拦下，不占次数
+const CODE_RE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}([ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{2})?$/;
+const codeInput = ref('');
+const codeSearching = ref(false);
+const searchCode = async () => {
+  const code = codeInput.value.replace(/[\s-]/g, '').toUpperCase();
+  if (!code) return;
+  if (!CODE_RE.test(code)) {
+    uni.showModal({ title: '活动码格式不对', content: '活动码是 6 位（早期活动为 4 位）字母或数字，不含 0、O、1、I，请向团长核对。', showCancel: false });
+    return;
+  }
+  if (codeSearching.value || !ensureLogin()) return;
+  codeSearching.value = true;
+  try {
+    const r = (await api.activity.activityFindByCode({ code }, { silent: true })) || {};
+    codeInput.value = '';
+    uni.navigateTo({ url: '/pages/activity/detail?id=' + r.activity_id });
+  } catch (e: any) {
+    // 落空次数快用完时提醒一下（服务端在 detail.remaining 里给出今天剩余的落空次数）
+    const left = e && e.detail && e.detail.remaining;
+    const tail = typeof left === 'number' && left <= 10 ? `\n今天还可再查错 ${left} 次。` : '';
+    uni.showModal({ title: '没有找到', content: ((e && e.errMsg) || '请稍后重试') + tail, showCancel: false });
+  } finally {
+    codeSearching.value = false;
+  }
+};
 
 const subtabs = [
   { key: 'todo', text: '待办' },
@@ -149,7 +189,8 @@ let joinPage = 0;
 let joinSeq = 0; // 重新加载时丢弃上一轮未返回的结果
 
 const todoLabel = (item: any) => TODO_TYPE_LABEL[item.type] || TODO_LEVEL_LABEL[item.level] || '待办';
-const fmtDate = (ts: number) => (ts ? new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
+// 统一格式 yyyy/mm/dd hh:mm（D-145）
+const fmtDate = (ts: number) => fmtDateTime(ts);
 
 // 角标 = 前两档合计（最紧迫的）；关闭待办后就地重算
 const calcBadge = () => { todoBadge.value = todoList.value.filter((t: any) => t.level === 1 || t.level === 2).length; };
@@ -262,7 +303,13 @@ const dismiss = async (item: any) => {
 // 待办点进对应对象
 const openTodo = (item: any) => {
   const t = item.type;
-  if (t === 'activity_offline' || t === 'review_rejected' || t === 'activity_closed_export' || t === 'ending_soon_leader' || t === 'draft_stale') {
+  if (t === 'draft') {
+    // 草稿直接进编辑（D-134）
+    uni.navigateTo({ url: '/pages/activity/edit?id=' + item.object_id });
+  } else if (t === 'closed_pending') {
+    // 直达接龙记录并预选未收款 / 未取货（D-134）
+    uni.navigateTo({ url: `/pages/activity/manage?id=${item.object_id}&tab=records&mark=${item.mark || 'unpaid'}` });
+  } else if (t === 'activity_offline' || t === 'review_rejected' || t === 'ending_soon_leader') {
     uni.navigateTo({ url: '/pages/activity/manage?id=' + item.object_id });
   } else if (t === 'joined_cancelled' || t === 'joined_offline' || t === 'ending_soon_joiner') {
     uni.navigateTo({ url: '/pages/activity/detail?id=' + item.object_id });
@@ -276,7 +323,7 @@ const openLead = (a: any) => uni.navigateTo({ url: '/pages/activity/manage?id=' 
 // —— 删除草稿（D-090）：确认、遮罩、提示统一在 common/grouporder/draft.js ——
 const deleteDraft = async (a: any) => {
   if (!(await confirmDeleteDraft(a))) return;
-  // 先从当前列表移除，立刻看到结果；再向服务端刷新列表与待办（草稿超时提醒随之消失）
+  // 先从当前列表移除，立刻看到结果；再向服务端刷新列表与待办（该草稿的待办随之消失）
   leadList.value = leadList.value.filter((x: any) => x._id !== a._id);
   loadLead();
   loadTodo();
@@ -360,6 +407,11 @@ onPullDownRefresh(async () => {
   padding: 24rpx 32rpx 32rpx;
   box-sizing: border-box;
 }
+.code-search { display: flex; align-items: center; gap: 16rpx; margin: 20rpx 24rpx 4rpx; padding: 10rpx 10rpx 10rpx 24rpx; background: #fff; border-radius: 40rpx; border: 1rpx solid $go-line; }
+.code-search__in { flex: 1; height: 60rpx; font-size: 26rpx; color: $go-ink; letter-spacing: 2rpx; }
+.code-search__btn { margin: 0; border-radius: 32rpx; background: $go-primary; color: #fff; font-size: 24rpx; }
+.code-search__btn[disabled] { background: #9fd3b6 !important; color: #fff !important; }
+.code-search__btn::after { border: none; }
 .empty {
   text-align: center;
   color: $go-muted;
@@ -436,6 +488,16 @@ onPullDownRefresh(async () => {
   border-top: 1rpx solid $go-soft;
   margin-top: 12rpx;
   &__qty { color: $go-ink; }
+  &__btn {
+    flex-shrink: 0;
+    margin-left: 16rpx;
+    padding: 8rpx 18rpx;
+    font-size: 22rpx;
+    color: $go-primary-dark;
+    background: $go-primary-soft;
+    border: 1rpx solid $go-primary;
+    border-radius: 999rpx;
+  }
 }
 .login-tip {
   text-align: center;

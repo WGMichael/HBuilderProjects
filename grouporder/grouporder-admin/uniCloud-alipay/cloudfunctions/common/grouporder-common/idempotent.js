@@ -54,17 +54,29 @@ async function runOnce (ctx, opts) {
 }
 
 /**
- * 短码生成（DATA_MODEL §7）：4 位大写字母数字，排除易混的 0 O 1 I。
+ * 短码（活动码）生成（DATA_MODEL §7、D-104）：6 位大写字母数字，排除易混的 0 O 1 I。
+ * D-104 起活动码可用于搜索活动，由 4 位（约 105 万种）加长到 6 位（约 10.7 亿种），
+ * 并用加密随机数，降低被脚本猜中的概率；D-104 之前的活动保留原 4 位，不改写（订单号与群聊里已在用）。
  * 冲突时重试，不做全局自增序列。
  */
+const crypto = require('crypto')
 const SHORT_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const SHORT_CODE_LENGTH = 6
+// 搜索时接受的格式：新 6 位与老 4 位，字符表相同
+const SHORT_CODE_RE = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}([ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{2})?$/
 
 function randomShortCode () {
   let s = ''
-  for (let i = 0; i < 4; i++) {
-    s += SHORT_CODE_ALPHABET[Math.floor(Math.random() * SHORT_CODE_ALPHABET.length)]
+  for (let i = 0; i < SHORT_CODE_LENGTH; i++) {
+    s += SHORT_CODE_ALPHABET[crypto.randomInt(SHORT_CODE_ALPHABET.length)]
   }
   return s
+}
+
+/** 用户输入的活动码规整：去空格与连字符、转大写；格式不对返回空串 */
+function normalizeShortCode (input) {
+  const code = String(input || '').replace(/[\s-]/g, '').toUpperCase()
+  return SHORT_CODE_RE.test(code) ? code : ''
 }
 
 /** 取一个当前未被占用的短码；重试上限内取不到即报错，不静默降级 */
@@ -104,6 +116,7 @@ module.exports = {
   runOnce,
   allocShortCode,
   randomShortCode,
+  normalizeShortCode,
   buildOrderNo,
   buildBizNo
 }

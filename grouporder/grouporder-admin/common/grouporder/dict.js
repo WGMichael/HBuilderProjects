@@ -28,7 +28,7 @@ export const ACTIVITY_STATUS_OPTIONS = [
   { value: 0, text: '草稿' },
   { value: 1, text: '审核中' },
   { value: 2, text: '进行中' },
-  { value: 3, text: '已截止' },
+  { value: 3, text: '已结束' },
   { value: 4, text: '已取消' },
 ];
 export const ACTIVITY_STATUS = toMap(ACTIVITY_STATUS_OPTIONS);

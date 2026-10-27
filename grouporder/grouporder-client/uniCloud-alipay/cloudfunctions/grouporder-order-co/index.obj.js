@@ -9,11 +9,19 @@
  * - 订单状态变更必须同步更新其全部明细的冗余 status
  */
 const {
-  auth, errors, paging, idempotent, state, stock, snapshot, deliverystat, lifecycle, bindMethods
+  auth, errors, paging, idempotent, state, stock, snapshot, deliverystat, lifecycle, leadercontact, membership, bindMethods
 } = require('grouporder-common')
+const { fileurl } = require('grouporder-common')
 
+const crypto = require('crypto')
 const { throwBiz, assertParam, ok } = errors
 const { ACTIVITY, GOVERNANCE, ORDER, DELIVERY } = state
+
+// 团长统计（D-106）的时间范围：天数；all 不限
+const STAT_RANGES = { '7d': 7, '30d': 30, '90d': 90, all: 0 }
+const DAY_MS = 24 * 3600 * 1000
+// 统计按北京时间切日
+const TZ_OFFSET = 8 * 3600 * 1000
 
 // 订单编辑锁时长（毫秒）：改单、下单写明细期间持有，云函数异常退出时到期自动失效
 const EDIT_LOCK_MS = 30000
@@ -26,10 +34,11 @@ module.exports = {
     this.dbCmd = this.ctx.db.command
   },
 
-  _after (error, result) {
+  async _after (error, result) {
     // 使用中自动续期登录（auth.attachNewToken）
     if (error) return auth.attachNewToken(this.ctx, errors.normalize(error))
-    return auth.attachNewToken(this.ctx, result)
+    // 图片地址以 fileID 为准换成新的访问地址（D-119，common/fileurl）
+    return auth.attachNewToken(this.ctx, await fileurl.refresh(result))
   },
 
   // ==========================================================================
@@ -119,6 +128,76 @@ module.exports = {
     await this.db.collection('grouporder-order-item')
       .where({ order_id: orderId })
       .update({ status })
+  },
+
+  /**
+   * 接龙码（D-115）：同一活动内唯一的 4 位数字（1000～9999），取货时报码、团长搜索核销用。
+   * 随机而非流水号，别人猜不到他人的码。老订单没有，任何人查看时补发（_ensureOrderCodes）。
+   * 不建唯一索引（老订单无此字段，唯一索引会把多条缺失值判为重复）：写入前查重，写入后复核，撞了换号
+   */
+  _randomOrderCode () {
+    return String(1000 + crypto.randomInt(9000))
+  },
+
+  /** 给一张还没有接龙码的订单发码，返回最终的码；并发下别人先发了就用别人的 */
+  async _assignOrderCode (orderId, activityId) {
+    const coll = this.db.collection('grouporder-order')
+    const cmd = this.dbCmd
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const code = this._randomOrderCode()
+      const { total: taken } = await coll.where({ activity_id: activityId, order_code: code }).count()
+      if (taken) continue
+      // 只给还没码的订单写，并发补发时不会互相覆盖
+      const res = await coll.where({ _id: orderId, order_code: cmd.exists(false) }).update({ order_code: code })
+      if (!res.updated) {
+        const { data } = await coll.doc(orderId).field({ order_code: true }).get()
+        return (data && data[0] && data[0].order_code) || ''
+      }
+      // 写后复核：两单同时拿到同一个空闲码时，后写的一方让出重来
+      const { total: same } = await coll.where({ activity_id: activityId, order_code: code, _id: cmd.neq(orderId) }).count()
+      if (!same) return code
+      await coll.where({ _id: orderId, order_code: code }).update({ order_code: cmd.remove() })
+    }
+    console.error('[order-co] 接龙码分配失败', orderId)
+    return ''
+  },
+
+  /**
+   * 下单账号的用户名（D-116）：团长在接龙记录与订单详情看到「谁下的单」，区别于收货人姓名。
+   * 只读 username；没有用户名的账号（如仅微信登录）回退昵称。返回 Map(user_id → 显示名)
+   */
+  async _buyerNames (userIds) {
+    const ids = [...new Set((userIds || []).filter(Boolean))]
+    const map = new Map()
+    if (!ids.length) return map
+    const users = await paging.fetchAllByIds(ids, part => this.db.collection('uni-id-users')
+      .where({ _id: this.dbCmd.in(part) }).field({ username: true, nickname: true }).orderBy('_id', 'asc'))
+    for (const u of users) map.set(u._id, u.username || u.nickname || '')
+    return map
+  },
+
+  /** 列表 / 详情读出的订单补齐接龙码（就地写回对象）；失败不影响主流程 */
+  async _ensureOrderCodes (orders, activityId) {
+    for (const o of orders || []) {
+      if (o.order_code) continue
+      try { o.order_code = await this._assignOrderCode(o._id, activityId || o.activity_id) } catch (e) { console.error('[order-co] 补发接龙码失败', e) }
+    }
+  },
+
+  /**
+   * 团长记录字段（D-100）的统一输出：老订单没有这些字段，一律按未标记返回。
+   * paid_amount_changed：标记收款后参与者又改了单、金额与标记时不同，提醒团长核对
+   */
+  _leaderMarks (o) {
+    const paid = o.leader_paid === 1
+    return {
+      leader_paid: paid ? 1 : 0,
+      leader_paid_time: paid ? (o.leader_paid_time || 0) : 0,
+      leader_paid_amount: paid ? (o.leader_paid_amount || 0) : 0,
+      paid_amount_changed: paid && typeof o.leader_paid_amount === 'number' && o.leader_paid_amount !== o.total_amount,
+      leader_delivered: o.leader_delivered === 1 ? 1 : 0,
+      leader_delivered_time: o.leader_delivered === 1 ? (o.leader_delivered_time || 0) : 0
+    }
   },
 
   /** 读订单并校验本人 */
@@ -422,6 +501,9 @@ module.exports = {
       await this._rollbackCreate(orderId, plans)
       stock.throwLimitExceeded(exceeded.goods)
     }
+    // 接龙码（D-115）：落库后立即发码；失败只记日志，之后有人查看时会补发
+    let orderCode = ''
+    try { orderCode = await this._assignOrderCode(orderId, activity._id) } catch (e) { console.error('[order-co] 接龙码分配失败', e) }
     await this._releaseLock(orderId, lockUntil)
 
     // ever_ordered 置 1 后永不回退，即使明细后来全部取消（D-026）
@@ -432,6 +514,7 @@ module.exports = {
     return ok({
       order_id: orderId,
       order_no: orderNo,
+      order_code: orderCode,
       total_qty: sum.total_qty,
       total_amount: sum.total_amount,
       duplicated: false
@@ -459,7 +542,7 @@ module.exports = {
 
     // 1) 本人订单分批读完：单次读取有条数上限，不能只读第一批
     const orders = await paging.fetchAll(() => this.db.collection('grouporder-order').where(where)
-      .field({ order_no: true, activity_id: true, status: true, delivery_type: true, total_qty: true, total_amount: true, create_date: true })
+      .field({ order_no: true, order_code: true, activity_id: true, status: true, delivery_type: true, total_qty: true, total_amount: true, create_date: true })
       .orderBy('create_date', 'desc').orderBy('_id', 'asc'))
 
     // 2) 按活动归组；订单已按下单时间倒序，组的先后即最近一次下单的先后
@@ -476,11 +559,13 @@ module.exports = {
     const activities = await paging.fetchAllByIds(pageGroups.map(([id]) => id), ids =>
       this.db.collection('grouporder-activity').where({ _id: this.dbCmd.in(ids) }).orderBy('_id', 'asc'))
     const actMap = new Map(activities.map(a => [a._id, a]))
-    // 读时补截止：已过截止时间的活动此刻即显示为已截止，不等定时任务
+    // 读时补截止：已过截止时间的活动此刻即显示为已结束，不等定时任务
     await lifecycle.closeExpiredIn(ctx, [...actMap.values()])
 
     const pageOrderIds = pageGroups.reduce((acc, [, list]) => acc.concat(list.map(o => o._id)), [])
     const itemMap = await this._itemsByOrder(pageOrderIds)
+    // 本页订单补齐接龙码（D-115）
+    for (const [, list] of pageGroups) await this._ensureOrderCodes(list)
 
     // 4) 组装：组内保持订单的时间倒序
     const groups = pageGroups.map(([activityId, list]) => {
@@ -488,6 +573,8 @@ module.exports = {
       return {
         activity_id: activityId,
         title: a ? a.title : '',
+        // 活动码（D-104）：卡片上显示，便于口头核对
+        short_code: a ? (a.short_code || '') : '',
         cover_image: a ? a.cover_image : null,
         activity_status: a ? a.status : null,
         governance_status: a ? a.governance_status : null,
@@ -499,6 +586,7 @@ module.exports = {
         orders: list.map(o => ({
           _id: o._id,
           order_no: o.order_no,
+          order_code: o.order_code || '',
           status: o.status,
           delivery_type: state.orderDeliveryTypeOf(o, a),
           total_qty: o.total_qty,
@@ -516,6 +604,7 @@ module.exports = {
     const ctx = this.ctx
     const uid = auth.requireLogin(ctx)
     const order = await this._getOwnOrder(uid, params.order_id)
+    await this._ensureOrderCodes([order])
     const items = await this._getItems(order._id)
     const activity = await this._getActivity(order.activity_id)
     const deliveryType = state.orderDeliveryTypeOf(order, activity)
@@ -523,6 +612,8 @@ module.exports = {
     return ok({
       _id: order._id,
       order_no: order.order_no,
+      // 接龙码（D-115）：取货时报给团长
+      order_code: order.order_code || '',
       status: order.status,
       // 本单交付方式（D-086）；活动支持的全部方式供改单时切换
       delivery_type: deliveryType,
@@ -536,6 +627,8 @@ module.exports = {
       },
       // 自提点不随订单快照固化：团长改了地址，已下单的人看到的也要是新地址（D-077）
       pickup: deliveryType === DELIVERY.SELF_PICK ? this._pickupOf(activity) : null,
+      // 团长联系方式（D-103）：已下单的参与者需要找团长付款、问交付，活动下架后仍展示
+      leader_contact: await leadercontact.get(ctx, activity.leader_uid),
       // 收货快照：改地址簿不影响历史订单
       consignee_name: order.consignee_name,
       consignee_mobile: order.consignee_mobile,
@@ -548,6 +641,9 @@ module.exports = {
       void_time: order.void_time || null,
       void_reason: order.void_reason || '',
       create_date: order.create_date,
+      // 团长记录（D-100）：参与者只读，便于确认团长是否已登记收款 / 交付
+      leader_paid: order.leader_paid === 1 ? 1 : 0,
+      leader_delivered: order.leader_delivered === 1 ? 1 : 0,
       items: items.map(it => ({
         goods_id: it.goods_id,
         goods_name: it.goods_name,
@@ -837,7 +933,7 @@ module.exports = {
     const ctx = this.ctx
     const activity = await auth.requireLeader(ctx, params.activity_id)
 
-    const [orderCount, cancelCount, voidCount, itemAgg, goodsAgg, byDelivery] = await Promise.all([
+    const [orderCount, cancelCount, voidCount, itemAgg, goodsAgg, byDelivery, paidCount, deliveredCount] = await Promise.all([
       this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VALID }).count(),
       this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.CANCELLED }).count(),
       this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VOIDED }).count(),
@@ -857,7 +953,10 @@ module.exports = {
         // 显式上限：不依赖平台默认返回条数，商品多时不截断
         .limit(paging.AGG_LIMIT)
         .end(),
-      deliverystat.breakdown(ctx, activity)
+      deliverystat.breakdown(ctx, activity),
+      // 团长记录（D-100）：只统计单数，不汇总「已收金额」——平台不经手资金，不出现实收口径（红线⑧）
+      this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VALID, leader_paid: 1 }).count(),
+      this.db.collection('grouporder-order').where({ activity_id: activity._id, status: ORDER.VALID, leader_delivered: 1 }).count()
     ])
 
     const total = (itemAgg.data && itemAgg.data[0]) || { qty: 0, amount: 0 }
@@ -875,6 +974,8 @@ module.exports = {
       valid_order_count: orderCount.total || 0,
       cancelled_order_count: cancelCount.total || 0,
       voided_order_count: voidCount.total || 0,
+      paid_order_count: paidCount.total || 0,
+      delivered_order_count: deliveredCount.total || 0,
       valid_total_qty: total.qty || 0,
       estimated_amount: total.amount || 0,
       // 按交付方式拆分的有效单数与份数（D-086）
@@ -910,23 +1011,62 @@ module.exports = {
 
     const where = { activity_id: activity._id }
     where.status = p.filters.status || ORDER.VALID
-
-    const coll = this.db.collection('grouporder-order').where(where)
-    const [listRes, countRes] = await Promise.all([
-      // 加 _id 作次排序：同一时间的订单翻页时顺序稳定，不重复不遗漏
-      coll.orderBy(p.orderBy.field, p.orderBy.direction).orderBy('_id', 'asc').skip(p.skip).limit(p.pageSize).get(),
-      coll.count()
-    ])
+    // 按团长记录筛选（D-100）：1 已标记；0 未标记——neq(1) 同时匹配没有该字段的老订单
+    for (const f of ['leader_paid', 'leader_delivered']) {
+      const v = p.filters[f]
+      if (v === 1) where[f] = 1
+      else if (v === 0) where[f] = this.dbCmd.neq(1)
+    }
+    // 搜索（D-115）：4 位数字按接龙码精确或电话尾号匹配；其他按收货人姓名 / 电话包含匹配。
+    // 正则用 JS 原生 RegExp（支付宝云底层为 MongoDB，原生正则直接转成库内正则查询；旧的 db.RegExp 写法不一定支持）。
+    // 万一库不接受正则查询，退回不用正则的精确匹配（接龙码 / 姓名），并记日志，不让整个列表报错
+    const kw = String(p.filters.keyword || '').trim().slice(0, 20)
+    const isCode = /^\d{4}$/.test(kw)
+    const condOf = (useRegex) => {
+      if (!kw) return where
+      let or
+      if (useRegex) {
+        const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        or = isCode
+          ? [{ order_code: kw }, { consignee_mobile: new RegExp(esc + '$') }]
+          : [{ consignee_name: new RegExp(esc, 'i') }, { consignee_mobile: new RegExp(esc) }]
+      } else {
+        or = isCode ? [{ order_code: kw }] : [{ consignee_name: kw }]
+      }
+      return this.dbCmd.and([where, this.dbCmd.or(or)])
+    }
+    const query = (cond) => {
+      const coll = this.db.collection('grouporder-order').where(cond)
+      return Promise.all([
+        // 加 _id 作次排序：同一时间的订单翻页时顺序稳定，不重复不遗漏
+        coll.orderBy(p.orderBy.field, p.orderBy.direction).orderBy('_id', 'asc').skip(p.skip).limit(p.pageSize).get(),
+        coll.count()
+      ])
+    }
+    let listRes, countRes
+    try {
+      [listRes, countRes] = await query(condOf(true))
+    } catch (e) {
+      if (!kw) throw e
+      console.error('[order-co] 订单搜索的正则查询失败，改用精确匹配：', e)
+      ;[listRes, countRes] = await query(condOf(false))
+    }
     const orders = listRes.data || []
+    await this._ensureOrderCodes(orders, activity._id)
 
     // 本页订单的明细分批读完（每单可有多件商品）
-    const itemMap = await this._itemsByOrder(orders.map(o => o._id))
+    const [itemMap, buyerMap] = await Promise.all([
+      this._itemsByOrder(orders.map(o => o._id)),
+      this._buyerNames(orders.map(o => o.user_id))
+    ])
 
     const list = orders.map(o => {
       const deliveryType = state.orderDeliveryTypeOf(o, activity)
       return {
         _id: o._id,
         order_no: o.order_no,
+        order_code: o.order_code || '',
+        buyer_name: buyerMap.get(o.user_id) || '',
         status: o.status,
         delivery_type: deliveryType,
         consignee_name: o.consignee_name,
@@ -938,10 +1078,397 @@ module.exports = {
         total_amount: o.total_amount,
         create_date: o.create_date,
         void_reason: o.void_reason || '',
+        ...this._leaderMarks(o),
         items: itemMap.get(o._id) || []
       }
     })
 
-    return ok(paging.wrap(list, countRes.total, ctx.now))
+    // 子 tab 计数（D-115）：只在第一页、且查的是有效订单时给出，不受搜索词影响
+    const out = paging.wrap(list, countRes.total, ctx.now)
+    if (p.page === 1 && where.status === ORDER.VALID) {
+      const base = { activity_id: activity._id, status: ORDER.VALID }
+      const oc = this.db.collection('grouporder-order')
+      const [all, unpaid, undelivered] = await Promise.all([
+        oc.where(base).count(),
+        oc.where(Object.assign({ leader_paid: this.dbCmd.neq(1) }, base)).count(),
+        oc.where(Object.assign({ leader_delivered: this.dbCmd.neq(1) }, base)).count()
+      ])
+      out.counts = { all: all.total || 0, unpaid: unpaid.total || 0, undelivered: undelivered.total || 0 }
+    }
+    return ok(out)
+  },
+
+  /**
+   * 团长查看单张订单（M-36 订单管理，D-116）
+   * 只能看本人活动的订单（与 orderLeaderList 同一权限，D-016）；返回核销所需的全部信息，
+   * 操作仍走 orderLeaderMark / orderVoid。
+   */
+  async orderLeaderDetail (params = {}) {
+    const ctx = this.ctx
+    auth.requireLogin(ctx)
+    assertParam(params.order_id, '缺少订单标识')
+    const { data } = await this.db.collection('grouporder-order').doc(params.order_id).get()
+    const order = data && data[0]
+    if (!order) throwBiz('NOT_FOUND', '订单不存在')
+    const activity = await auth.requireLeader(ctx, order.activity_id)
+    await this._ensureOrderCodes([order], activity._id)
+
+    const [items, buyerMap] = await Promise.all([
+      this._getItems(order._id),
+      this._buyerNames([order.user_id])
+    ])
+    const deliveryType = state.orderDeliveryTypeOf(order, activity)
+    return ok({
+      _id: order._id,
+      order_no: order.order_no,
+      order_code: order.order_code || '',
+      buyer_name: buyerMap.get(order.user_id) || '',
+      status: order.status,
+      activity: { _id: activity._id, title: activity.title, status: activity.status, end_time: activity.end_time },
+      delivery_type: deliveryType,
+      consignee_name: order.consignee_name,
+      consignee_mobile: order.consignee_mobile,
+      consignee_address: deliveryType === DELIVERY.SELF_PICK ? '' : (order.consignee_address || ''),
+      pickup: deliveryType === DELIVERY.SELF_PICK ? this._pickupOf(activity) : null,
+      buyer_remark: order.buyer_remark || '',
+      total_qty: order.total_qty,
+      total_amount: order.total_amount,
+      create_date: order.create_date,
+      cancel_time: order.cancel_time || null,
+      cancel_reason: order.cancel_reason || '',
+      void_time: order.void_time || null,
+      void_reason: order.void_reason || '',
+      ...this._leaderMarks(order),
+      items: items.map(it => ({
+        goods_id: it.goods_id, goods_name: it.goods_name, unit: it.unit_snapshot,
+        price: it.price_snapshot, qty: it.qty, amount: it.amount
+      })),
+      // 可做的操作：已取消的活动不再记录；作废只在截止后（D-051）
+      can_mark: order.status === ORDER.VALID && activity.status !== ACTIVITY.CANCELLED && order.anonymized !== 1,
+      can_void: order.status === ORDER.VALID && (activity.status === ACTIVITY.CLOSED || (!!activity.end_time && ctx.now >= activity.end_time)),
+      asOf: ctx.now
+    })
+  },
+
+  /**
+   * 团长记录收款 / 交付（M-21，D-100）
+   * 仅为团长自己的线下对账记录：平台不收款、不核实，不影响库存、限购与统计口径，也不使清单版本失效。
+   * 入参 { order_id, paid?: boolean, delivered?: boolean }，至少传一项；可标记也可撤销。
+   * 只能记录本人活动中的有效订单；活动已取消、订单已匿名化时不再记录。
+   */
+  async orderLeaderMark (params = {}) {
+    const ctx = this.ctx
+    auth.requireLogin(ctx)
+    assertParam(params.order_id, '缺少订单标识')
+    const hasPaid = typeof params.paid === 'boolean'
+    const hasDelivered = typeof params.delivered === 'boolean'
+    assertParam(hasPaid || hasDelivered, '请指定要记录的收款或交付状态')
+
+    const { data } = await this.db.collection('grouporder-order').doc(params.order_id).get()
+    const order = data && data[0]
+    if (!order) throwBiz('NOT_FOUND', '订单不存在')
+    const activity = await auth.requireLeader(ctx, order.activity_id)
+    if (activity.status === ACTIVITY.CANCELLED) throwBiz('ACTIVITY_CANCELLED', '活动已取消，不再记录收款与交付')
+    if (order.status !== ORDER.VALID) throwBiz('STATE_CHANGED', '订单已取消或作废，不能记录收款与交付')
+    if (order.anonymized === 1) throwBiz('PRECONDITION_UNMET', '订单已超过保存期限，不能再记录')
+
+    const patch = {}
+    if (hasPaid) {
+      patch.leader_paid = params.paid ? 1 : 0
+      patch.leader_paid_time = params.paid ? ctx.now : 0
+      // 记下标记时的金额：之后参与者改单导致金额变化时提醒团长核对
+      patch.leader_paid_amount = params.paid ? order.total_amount : 0
+    }
+    if (hasDelivered) {
+      patch.leader_delivered = params.delivered ? 1 : 0
+      patch.leader_delivered_time = params.delivered ? ctx.now : 0
+    }
+    // 只改团长记录字段，与改单的编辑锁无关；带有效状态条件，防止与取消 / 作废并发时写到失效订单上
+    const res = await this.db.collection('grouporder-order')
+      .where({ _id: order._id, status: ORDER.VALID })
+      .update(patch)
+    if (!res.updated) {
+      // 值未变化时 updated 也为 0：重读区分「状态已变」与「重复提交」
+      const { data: again } = await this.db.collection('grouporder-order').doc(order._id).get()
+      if (!again || !again[0] || again[0].status !== ORDER.VALID) throwBiz('STATE_CHANGED', '订单状态已变化，请刷新后重试')
+    }
+    const { data: latest } = await this.db.collection('grouporder-order').doc(order._id).get()
+    return ok(Object.assign({ order_id: order._id }, this._leaderMarks(latest[0] || order)))
+  },
+
+  /**
+   * 一键记录收款 / 交付（M-14，D-153）：把本人活动里所有「有效、未匿名化、尚未标记」的订单一次标为已收款或已交付。
+   * 入参 { activity_id, mark: 'paid' | 'delivered' }。只做标记，不提供一键撤销（撤销仍逐单二次确认，D-100）。
+   * 校验口径同 orderLeaderMark：本人活动、活动未取消；逐单带有效状态条件写入，并发取消 / 作废的订单自然跳过。
+   * 收款逐单记下当时金额（leader_paid_amount），供改单后提醒核对。返回 { marked, skipped }。
+   */
+  async orderLeaderMarkAll (params = {}) {
+    const ctx = this.ctx
+    const mark = params.mark
+    assertParam(mark === 'paid' || mark === 'delivered', '请指定一键收款或一键交付')
+    const activity = await auth.requireLeader(ctx, params.activity_id)
+    if (activity.status === ACTIVITY.CANCELLED) throwBiz('ACTIVITY_CANCELLED', '活动已取消，不再记录收款与交付')
+
+    const flag = mark === 'paid' ? 'leader_paid' : 'leader_delivered'
+    const orders = await paging.fetchAll(() => this.db.collection('grouporder-order')
+      .where({ activity_id: activity._id, status: ORDER.VALID, [flag]: this.dbCmd.neq(1) })
+      .field({ _id: true, total_amount: true, anonymized: true })
+      .orderBy('create_date', 'asc').orderBy('_id', 'asc'))
+    const targets = orders.filter(o => o.anonymized !== 1)
+
+    let marked = 0
+    // 分组并发写入，避免订单多时串行超时；每单带有效状态条件
+    for (const part of paging.chunk(targets, 20)) {
+      const results = await Promise.all(part.map(o => {
+        const patch = mark === 'paid'
+          ? { leader_paid: 1, leader_paid_time: ctx.now, leader_paid_amount: o.total_amount }
+          : { leader_delivered: 1, leader_delivered_time: ctx.now }
+        return this.db.collection('grouporder-order').where({ _id: o._id, status: ORDER.VALID }).update(patch)
+      }))
+      marked += results.filter(r => r && r.updated).length
+    }
+    return ok({ activity_id: activity._id, mark, marked, skipped: orders.length - marked, asOf: ctx.now })
+  },
+
+  /**
+   * 文字清单数据（M-21「复制文字清单」，D-101）
+   * 本人活动的全部有效订单与明细，分批读完不截断；文字由前端按格式拼接（姓名脱敏、是否附团长记录由团长选择）。
+   * 只返回拼接所需字段：电话只给尾号，不返回地址与备注——文字清单通常要贴到群里。
+   */
+  async orderLeaderBrief (params = {}) {
+    const ctx = this.ctx
+    const activity = await auth.requireLeader(ctx, params.activity_id)
+    // 已取消活动的订单不再进入有效履约（D-052），不出文字清单
+    if (activity.status === ACTIVITY.CANCELLED) throwBiz('ACTIVITY_CANCELLED', '活动已取消，不生成清单')
+
+    const orders = await paging.fetchAll(() => this.db.collection('grouporder-order')
+      .where({ activity_id: activity._id, status: ORDER.VALID })
+      .orderBy('create_date', 'asc').orderBy('_id', 'asc'))
+    const items = await paging.fetchAllByIds(orders.map(o => o._id), ids =>
+      this.db.collection('grouporder-order-item')
+        .where({ order_id: this.dbCmd.in(ids), status: ORDER.VALID })
+        .orderBy('_id', 'asc'))
+    const itemMap = new Map()
+    for (const it of items) {
+      if (!itemMap.has(it.order_id)) itemMap.set(it.order_id, [])
+      itemMap.get(it.order_id).push(it)
+    }
+
+    // 商品汇总：与活动详情页同一排序（sort ASC, create_date ASC），没人买的商品也列出（0 份）
+    const { data: goodsList } = await this.db.collection('grouporder-goods')
+      .where({ activity_id: activity._id })
+      .orderBy('sort', 'asc').orderBy('create_date', 'asc').limit(60).get()
+    const qtyMap = new Map()
+    for (const it of items) qtyMap.set(it.goods_id, (qtyMap.get(it.goods_id) || 0) + it.qty)
+
+    return ok({
+      activity_id: activity._id,
+      title: activity.title,
+      status: activity.status,
+      end_time: activity.end_time,
+      delivery_types: state.deliveryTypesOf(activity),
+      goods_summary: (goodsList || []).map(g => ({
+        goods_id: g._id, goods_name: g.name, unit: g.unit, sold_qty: qtyMap.get(g._id) || 0
+      })),
+      orders: orders.map(o => ({
+        order_no: o.order_no,
+        order_code: o.order_code || '',
+        consignee_name: o.consignee_name,
+        mobile_tail: String(o.consignee_mobile || '').slice(-4),
+        delivery_type: state.orderDeliveryTypeOf(o, activity),
+        total_qty: o.total_qty,
+        leader_paid: o.leader_paid === 1 ? 1 : 0,
+        leader_delivered: o.leader_delivered === 1 ? 1 : 0,
+        items: (itemMap.get(o._id) || []).map(it => ({ goods_name: it.goods_name, unit: it.unit_snapshot, qty: it.qty }))
+      })),
+      asOf: ctx.now
+    })
+  },
+
+  /**
+   * 团长统计（「我的 → 工具 → 团长统计」，D-106，会员功能）
+   *
+   * 跨本人全部已发布活动（进行中、已结束；草稿、审核中、已取消不计）的汇总，只看有效订单。
+   * 时间范围按下单时间筛选，「发起活动」按发布时间；「待处理」是当前状态，不受时间范围影响。
+   * 金额只称预计金额，不出现销售额 / 实收（红线⑧）。回头客姓名脱敏、电话只给尾号。
+   * 实时计算：分批读完订单与明细不截断；数据量大后可改为定时预计算，出参不变。
+   * 会员闸门：membership.requireFeature，首版闸门关闭、所有人可用。
+   */
+  async leaderStatOverview (params = {}) {
+    const ctx = this.ctx
+    const uid = auth.requireLogin(ctx)
+    const { gated, member } = await membership.requireFeature(ctx, uid, membership.FEATURE.LEADER_STATS)
+    const range = Object.prototype.hasOwnProperty.call(STAT_RANGES, params.range) ? params.range : '30d'
+    const days = STAT_RANGES[range]
+    const since = days ? this._statDayStart(ctx.now) - (days - 1) * DAY_MS : 0
+
+    const activities = await paging.fetchAll(() => this.db.collection('grouporder-activity')
+      .where({ leader_uid: uid, status: this.dbCmd.in([ACTIVITY.ONGOING, ACTIVITY.CLOSED]) })
+      .field({ title: true, status: true, publish_date: true, create_date: true, end_time: true, short_code: true })
+      .orderBy('_id', 'asc'))
+    const actMap = new Map(activities.map(a => [a._id, a]))
+    const actIds = activities.map(a => a._id)
+
+    const allOrders = actIds.length ? await paging.fetchAllByIds(actIds, ids => this.db.collection('grouporder-order')
+      .where({ activity_id: this.dbCmd.in(ids), status: ORDER.VALID })
+      .field({ activity_id: true, user_id: true, consignee_name: true, consignee_mobile: true, total_qty: true, total_amount: true, create_date: true, leader_paid: true, leader_delivered: true })
+      .orderBy('_id', 'asc')) : []
+    const orders = since ? allOrders.filter(o => (o.create_date || 0) >= since) : allOrders
+
+    // —— 概览 ——
+    const overview = {
+      activity_count: activities.filter(a => !since || (a.publish_date || a.create_date || 0) >= since).length,
+      ongoing_count: activities.filter(a => a.status === ACTIVITY.ONGOING && (!a.end_time || ctx.now < a.end_time)).length,
+      valid_order_count: orders.length,
+      valid_total_qty: 0,
+      estimated_amount: 0,
+      participant_count: 0,
+      repeat_customer_count: 0
+    }
+    const byUser = new Map()
+    const byAct = new Map()
+    for (const o of orders) {
+      overview.valid_total_qty += o.total_qty || 0
+      overview.estimated_amount += o.total_amount || 0
+      let u = byUser.get(o.user_id)
+      if (!u) { u = { acts: new Set(), order_count: 0, total_qty: 0, last: o }; byUser.set(o.user_id, u) }
+      u.acts.add(o.activity_id); u.order_count++; u.total_qty += o.total_qty || 0
+      if ((o.create_date || 0) >= (u.last.create_date || 0)) u.last = o
+      let a = byAct.get(o.activity_id)
+      if (!a) { a = { order_count: 0, total_qty: 0 }; byAct.set(o.activity_id, a) }
+      a.order_count++; a.total_qty += o.total_qty || 0
+    }
+    overview.participant_count = byUser.size
+    const repeaters = [...byUser.values()].filter(u => u.acts.size >= 2)
+    overview.repeat_customer_count = repeaters.length
+
+    // —— 排行 ——
+    const activityTop = [...byAct.entries()]
+      .sort((x, y) => y[1].order_count - x[1].order_count || y[1].total_qty - x[1].total_qty)
+      .slice(0, 10)
+      .map(([id, v]) => {
+        const a = actMap.get(id) || {}
+        return { activity_id: id, title: a.title || '', short_code: a.short_code || '', status: a.status, order_count: v.order_count, total_qty: v.total_qty }
+      })
+    const customerTop = repeaters
+      .sort((x, y) => y.acts.size - x.acts.size || y.order_count - x.order_count)
+      .slice(0, 10)
+      .map(u => ({
+        name_masked: this._maskName(u.last.consignee_name),
+        mobile_tail: String(u.last.consignee_mobile || '').slice(-4),
+        activity_count: u.acts.size,
+        order_count: u.order_count,
+        total_qty: u.total_qty
+      }))
+
+    // 商品排行：按「商品名 + 单位」合并（同一商品在不同活动是不同记录，名字相同即视为同一商品）
+    const items = orders.length ? await paging.fetchAllByIds(orders.map(o => o._id), ids => this.db.collection('grouporder-order-item')
+      .where({ order_id: this.dbCmd.in(ids), status: ORDER.VALID })
+      .field({ goods_name: true, unit_snapshot: true, qty: true })
+      .orderBy('_id', 'asc')) : []
+    const goodsMap = new Map()
+    for (const it of items) {
+      const key = (it.goods_name || '') + '\u0000' + (it.unit_snapshot || '')
+      const g = goodsMap.get(key) || { goods_name: it.goods_name || '', unit: it.unit_snapshot || '', total_qty: 0, order_count: 0 }
+      g.total_qty += it.qty || 0; g.order_count++
+      goodsMap.set(key, g)
+    }
+    const goodsTop = [...goodsMap.values()].sort((x, y) => y.total_qty - x.total_qty).slice(0, 10)
+
+    // —— 待处理（团长记录 D-100）：当前全部有效订单，不受时间范围影响 ——
+    const pendingMap = new Map()
+    let unpaid = 0
+    let undelivered = 0
+    for (const o of allOrders) {
+      const np = o.leader_paid !== 1
+      const nd = o.leader_delivered !== 1
+      if (np) unpaid++
+      if (nd) undelivered++
+      if (!np && !nd) continue
+      const p = pendingMap.get(o.activity_id) || { unpaid: 0, undelivered: 0 }
+      if (np) p.unpaid++
+      if (nd) p.undelivered++
+      pendingMap.set(o.activity_id, p)
+    }
+    const pendingActivities = [...pendingMap.entries()]
+      .sort((x, y) => (y[1].unpaid + y[1].undelivered) - (x[1].unpaid + x[1].undelivered))
+      .slice(0, 20)
+      .map(([id, v]) => ({ activity_id: id, title: (actMap.get(id) || {}).title || '', unpaid: v.unpaid, undelivered: v.undelivered }))
+
+    return ok({
+      range,
+      since,
+      overview,
+      trend: this._statTrend(orders, range, since, ctx.now),
+      activity_top: activityTop,
+      goods_top: goodsTop,
+      customer_top: customerTop,
+      pending: { unpaid_order_count: unpaid, undelivered_order_count: undelivered, activities: pendingActivities },
+      // 会员信息（D-106）：首版闸门关闭，前端只用于展示
+      member: { is_member: member.is_member, expire: member.expire, gated },
+      asOf: ctx.now
+    })
+  },
+
+  /** 北京时间当天 0 点的时间戳 */
+  _statDayStart (ts) {
+    return Math.floor((ts + TZ_OFFSET) / DAY_MS) * DAY_MS - TZ_OFFSET
+  },
+
+  /** 姓名脱敏：两字留姓，三字及以上留首尾（与文字清单 D-101 一致） */
+  _maskName (n) {
+    const s = String(n || '')
+    if (s.length <= 1) return s
+    if (s.length === 2) return s[0] + '*'
+    return s[0] + '*'.repeat(s.length - 2) + s[s.length - 1]
+  },
+
+  /**
+   * 订单趋势：7 / 30 天按天，90 天按周（13 桶），全部按月（最近 12 个月）；空桶补 0，柱状图连续
+   * @returns {{ unit: 'day'|'week'|'month', buckets: [{ label, start, order_count, total_qty }] }}
+   */
+  _statTrend (orders, range, since, now) {
+    const buckets = []
+    let unit = 'day'
+    let indexOf
+    if (range === '7d' || range === '30d') {
+      const n = range === '7d' ? 7 : 30
+      for (let i = 0; i < n; i++) {
+        const start = since + i * DAY_MS
+        const d = new Date(start + TZ_OFFSET)
+        buckets.push({ label: `${d.getUTCMonth() + 1}/${d.getUTCDate()}`, start, order_count: 0, total_qty: 0 })
+      }
+      indexOf = (t) => Math.floor((t - since) / DAY_MS)
+    } else if (range === '90d') {
+      unit = 'week'
+      const n = 13
+      const first = since + 90 * DAY_MS - n * 7 * DAY_MS
+      for (let i = 0; i < n; i++) {
+        const start = first + i * 7 * DAY_MS
+        const d = new Date(Math.max(start, since) + TZ_OFFSET)
+        buckets.push({ label: `${d.getUTCMonth() + 1}/${d.getUTCDate()}`, start, order_count: 0, total_qty: 0 })
+      }
+      indexOf = (t) => Math.floor((t - first) / (7 * DAY_MS))
+    } else {
+      unit = 'month'
+      const cur = new Date(now + TZ_OFFSET)
+      const keys = []
+      for (let i = 11; i >= 0; i--) {
+        const y = cur.getUTCFullYear()
+        const m = cur.getUTCMonth() - i
+        const dt = new Date(Date.UTC(y, m, 1))
+        keys.push(dt.getUTCFullYear() * 12 + dt.getUTCMonth())
+        buckets.push({ label: `${dt.getUTCFullYear() % 100}/${dt.getUTCMonth() + 1}`, start: dt.getTime() - TZ_OFFSET, order_count: 0, total_qty: 0 })
+      }
+      indexOf = (t) => {
+        const d = new Date(t + TZ_OFFSET)
+        return keys.indexOf(d.getUTCFullYear() * 12 + d.getUTCMonth())
+      }
+    }
+    for (const o of orders) {
+      const i = indexOf(o.create_date || 0)
+      if (i >= 0 && i < buckets.length) { buckets[i].order_count++; buckets[i].total_qty += o.total_qty || 0 }
+    }
+    return { unit, buckets }
   }
 }

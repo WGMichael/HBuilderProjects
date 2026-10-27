@@ -199,11 +199,23 @@ async function syncStockToLib (ctx, goodsDoc, leaderUid) {
  * 校验商品库分类属于该用户（D-088）。空串 / undefined 表示未分组或不指定，直接通过
  */
 async function assertOwnCategory (ctx, uid, categoryId) {
-  if (!categoryId) return
+  if (!categoryId) return null
   const { data } = await ctx.db.collection('grouporder-goods-category').doc(categoryId).get()
   const cat = data && data[0]
   if (!cat) throwBiz('NOT_FOUND', '分类不存在')
   if (cat.user_id !== uid) throwBiz('FORBIDDEN', '无权使用他人的分类')
+  return cat // 返回分类文档，调用方可取 name 做展示小类快照（D-066 修订）
 }
 
-module.exports = { sinkToLib, syncStockToLib, blockLibByGoods, unblockLibByGoods, assertOwnCategory }
+/**
+ * 小类所属大类的名称，供活动商品快照 category_parent_name（Excel 清单「类别」列，D-149）。
+ * 传入已校验归属的小类文档；大类本身或查不到时返回空串
+ */
+async function parentNameOf (ctx, cat) {
+  if (!cat || !cat.parent_id) return ''
+  const { data } = await ctx.db.collection('grouporder-goods-category').doc(cat.parent_id).get()
+  const parent = data && data[0]
+  return (parent && parent.user_id === cat.user_id) ? (parent.name || '') : ''
+}
+
+module.exports = { sinkToLib, syncStockToLib, blockLibByGoods, unblockLibByGoods, assertOwnCategory, parentNameOf }
